@@ -11,7 +11,14 @@ export const metadata: Metadata = {
   },
   description:
     "Official competition management and scoring for International Tent Pegging Federation championships.",
-  icons: { icon: "/brand/itpf-logo-light.webp" },
+  icons: {
+    icon: "/brand/itpf-logo-light.webp",
+    apple: "/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    title: "ITPF",
+    statusBarStyle: "black-translucent",
+  },
   robots: { index: false, follow: false },
 };
 
