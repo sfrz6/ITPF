@@ -5,19 +5,28 @@ import { cn } from "@/lib/cn";
  * Dense data table used for squads, scoring and standings.
  *
  * The wrapper scrolls horizontally on narrow screens rather than wrapping
- * cells, because a scoring row has to stay readable as a single line.
+ * cells, because a scoring row has to stay readable as a single line. A
+ * touchscreen has no visible scrollbar track to hint that there is more to
+ * see, so `scroll-shadow-x` paints a soft edge shadow that only shows on the
+ * side that still has unscrolled content. The ref is forwarded so a table
+ * with sticky columns (see `StandingsTable`) can track the scroll position
+ * itself and shadow the sticky cells instead, which sit on top of this
+ * wrapper's own background.
  */
-export function TableWrapper({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      className={cn(
-        "w-full overflow-x-auto rounded-lg border border-border bg-surface-raised",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
+export const TableWrapper = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(
+  function TableWrapper({ className, ...props }, ref) {
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          "scroll-shadow-x w-full overflow-x-auto rounded-lg border border-border bg-surface-raised",
+          className,
+        )}
+        {...props}
+      />
+    );
+  },
+);
 
 export function Table({ className, ...props }: React.ComponentProps<"table">) {
   return <table className={cn("w-full caption-bottom text-sm", className)} {...props} />;

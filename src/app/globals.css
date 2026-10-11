@@ -222,6 +222,59 @@
     border-top-style: solid;
     border-color: var(--border);
   }
+
+  /*
+   * Edge shadows for a horizontally scrolling container, in the direction the
+   * reader's own locale scrolls. A table wide enough to scroll gives no other
+   * sign of it on a touchscreen, where there is no visible scrollbar track to
+   * notice; this paints a soft shadow over whichever edge still has more
+   * content, and the browser removes it on its own once that edge is reached,
+   * because the shadow layers scroll with the content while the covering
+   * layers that hide them stay fixed to the viewport. Written as two literal,
+   * direction specific rules rather than one with a custom property inside the
+   * gradient keyword, which some engines resolve inconsistently.
+   */
+  .scroll-shadow-x {
+    background-repeat: no-repeat;
+    background-size: 24px 100%, 24px 100%, 14px 100%, 14px 100%;
+    background-attachment: local, local, scroll, scroll;
+    background-image:
+      linear-gradient(to right, var(--surface-raised) 40%, transparent),
+      linear-gradient(to left, var(--surface-raised) 40%, transparent),
+      linear-gradient(to right, rgba(0, 0, 0, 0.18), transparent 18px),
+      linear-gradient(to left, rgba(0, 0, 0, 0.18), transparent 18px);
+    background-position: left top, right top, left top, right top;
+  }
+
+  /* Mirrored for Arabic, matching Tailwind's own `[dir="rtl"]` convention. */
+  [dir="rtl"] .scroll-shadow-x {
+    background-image:
+      linear-gradient(to left, var(--surface-raised) 40%, transparent),
+      linear-gradient(to right, var(--surface-raised) 40%, transparent),
+      linear-gradient(to left, rgba(0, 0, 0, 0.18), transparent 18px),
+      linear-gradient(to right, rgba(0, 0, 0, 0.18), transparent 18px);
+    background-position: right top, left top, right top, left top;
+  }
+
+  /*
+   * The equivalent shadow for a table with sticky edge columns (the
+   * standings table): those columns sit on top of `scroll-shadow-x`'s own
+   * background and would hide it, so the shadow is painted on the sticky
+   * cells themselves instead, driven by `useHorizontalScrollEdges` toggling
+   * the `data-can-scroll-*` attribute on the scrolling wrapper.
+   */
+  [data-can-scroll-start] .standings-sticky-name {
+    box-shadow: 8px 0 8px -6px rgba(0, 0, 0, 0.25);
+  }
+  [data-can-scroll-end] .standings-sticky-end {
+    box-shadow: -8px 0 8px -6px rgba(0, 0, 0, 0.25);
+  }
+  [dir="rtl"] [data-can-scroll-start] .standings-sticky-name {
+    box-shadow: -8px 0 8px -6px rgba(0, 0, 0, 0.25);
+  }
+  [dir="rtl"] [data-can-scroll-end] .standings-sticky-end {
+    box-shadow: 8px 0 8px -6px rgba(0, 0, 0, 0.25);
+  }
 }
 
 /*

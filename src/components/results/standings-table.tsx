@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { cn } from "@/lib/cn";
 import { CountryFlag } from "@/components/common/country-flag";
 import { Badge, EmptyState } from "@/components/ui/surfaces";
@@ -12,33 +13,117 @@ import type { StandingRow } from "./standings-data";
  * The standings table shared by the internal results tab and the public
  * results page, so an official and a spectator read exactly the same numbers.
  *
- * Rank, name and total stay pinned while the day columns scroll, which keeps
- * the table readable on a 375px wide screen without hiding any value.
+ * Rank, name and total stay pinned while any remaining columns scroll, which
+ * keeps the table readable on a narrow phone without hiding any value.
  */
 
 const STICKY_START = "sticky start-0 z-20";
-const STICKY_NAME = "sticky start-14 z-20";
-const STICKY_END = "sticky end-0 z-20";
+const STICKY_NAME = "standings-sticky-name sticky start-14 z-20";
+const STICKY_END = "standings-sticky-end sticky end-0 z-20";
+
+/**
+ * Tracks whether a horizontally scrolling element has more content hidden
+ * before or after the current scroll position, so a caller can shadow its own
+ * sticky edge columns.
+ *
+ * `TableWrapper`'s own `scroll-shadow-x` background works for a plain table,
+ * but here the sticky Rank, name and total cells sit on top of that
+ * background and would hide it completely, so the shadow has to be painted on
+ * the sticky cells themselves instead, driven by this hook.
+ *
+ * Reads `scrollLeft` against the standardised RTL convention (0 at the start,
+ * negative towards the end) that current Chrome, Safari and Firefox all share,
+ * which this project targets through evergreen iOS and Android browsers.
+ */
+function useHorizontalScrollEdges<T extends HTMLElement>(): {
+  ref: React.RefObject<T | null>;
+  canScrollStart: boolean;
+  canScrollEnd: boolean;
+} {
+  const ref = React.useRef<T | null>(null);
+  // Direction cannot change without a full remount (switching locale reloads
+  // the page), so it is read once rather than on every scroll tick, which
+  // would otherwise force a style recalculation on a hot path.
+  const isRtlRef = React.useRef(false);
+  const [canScrollStart, setCanScrollStart] = React.useState(false);
+  const [canScrollEnd, setCanScrollEnd] = React.useState(false);
+
+  const update = React.useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    if (maxScroll <= 1) {
+      setCanScrollStart(false);
+      setCanScrollEnd(false);
+      return;
+    }
+    if (isRtlRef.current) {
+      setCanScrollStart(el.scrollLeft < -1);
+      setCanScrollEnd(el.scrollLeft > -(maxScroll - 1));
+    } else {
+      setCanScrollStart(el.scrollLeft > 1);
+      setCanScrollEnd(el.scrollLeft < maxScroll - 1);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    isRtlRef.current = getComputedStyle(el).direction === "rtl";
+    update();
+
+    const resizeObserver = new ResizeObserver(() => {
+      isRtlRef.current = getComputedStyle(el).direction === "rtl";
+      update();
+    });
+    resizeObserver.observe(el);
+    el.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+
+    return () => {
+      resizeObserver.disconnect();
+      el.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [update]);
+
+  return { ref, canScrollStart, canScrollEnd };
+}
 
 export function StandingsTable({
   subject,
+  scope,
   days,
   rows,
 }: {
   subject: StandingsSubject;
+  /**
+   * The day by day breakdown columns only add information in the overall
+   * view: once a single day is selected, the Total column already is that
+   * day's value, so repeating it as its own column plus showing every other
+   * day would only widen the table on exactly the device where width matters
+   * most, for no new information.
+   */
+  scope: StandingsScope;
   days: readonly DayNumber[];
   rows: readonly StandingRow[];
 }) {
   const { t } = useI18n();
+  const { ref: scrollRef, canScrollStart, canScrollEnd } = useHorizontalScrollEdges<HTMLDivElement>();
 
   if (rows.length === 0) {
     return <EmptyState title={t("results.noData")} />;
   }
 
   const isCountry = subject === "COUNTRY";
+  const showDayBreakdown = scope === "OVERALL" && days.length > 1;
 
   return (
-    <TableWrapper>
+    <TableWrapper
+      ref={scrollRef}
+      data-can-scroll-start={canScrollStart || undefined}
+      data-can-scroll-end={canScrollEnd || undefined}
+    >
       <Table>
         <THead>
           <Tr>
@@ -54,11 +139,13 @@ export function StandingsTable({
                 <ThNum className="whitespace-nowrap">{t("results.countryFaults")}</ThNum>
               </>
             ) : null}
-            {days.map((day) => (
-              <ThNum key={day} className="whitespace-nowrap">
-                {t("results.dayResults", { day })}
-              </ThNum>
-            ))}
+            {showDayBreakdown
+              ? days.map((day) => (
+                  <ThNum key={day} className="whitespace-nowrap">
+                    {t("results.dayResults", { day })}
+                  </ThNum>
+                ))
+              : null}
             <ThNum className={cn(STICKY_END, "bg-surface-sunken border-s border-border")}>
               {t("common.total")}
             </ThNum>
@@ -66,11 +153,14 @@ export function StandingsTable({
         </THead>
         <TBody>
           {rows.map((row) => {
-            // Rank 1, 2 and 3 read slightly stronger. This is official
-            // software, so a placing carries no other decoration.
-            const strong = row.rank <= 3;
+            // Rank 1, 2 and 3 are the podium: they read slightly stronger
+            // (this is official software, so a placing carries no other
+            // decoration), and it's the only part of the table where a tie
+            // is worth flagging — further down, a tie carries no separate
+            // consequence, so the badge would only be noise.
+            const isPodium = row.rank <= 3;
             return (
-              <Tr key={row.key} className={cn(strong && "font-medium")}>
+              <Tr key={row.key} className={cn(isPodium && "font-medium")}>
                 <TdNum
                   className={cn(STICKY_START, "w-14 bg-surface-raised text-center text-muted")}
                 >
@@ -87,7 +177,7 @@ export function StandingsTable({
                         </span>
                       )}
                     </span>
-                    {row.isTiedAfterTieBreak ? (
+                    {row.isTiedAfterTieBreak && isPodium ? (
                       <Badge tone="warning" className="shrink-0">
                         {t("results.tied")}
                       </Badge>
@@ -100,11 +190,13 @@ export function StandingsTable({
                     <TdNum className="text-muted">{row.countryFaults}</TdNum>
                   </>
                 ) : null}
-                {row.dayValues.map((value) => (
-                  <TdNum key={value.day} className="text-muted">
-                    {value.value}
-                  </TdNum>
-                ))}
+                {showDayBreakdown
+                  ? row.dayValues.map((value) => (
+                      <TdNum key={value.day} className="text-muted">
+                        {value.value}
+                      </TdNum>
+                    ))
+                  : null}
                 <TdNum
                   className={cn(
                     STICKY_END,
@@ -157,7 +249,11 @@ export function StandingsToggle<T extends string>({
           aria-checked={option.value === value}
           onClick={() => onChange(option.value)}
           className={cn(
-            "h-8 whitespace-nowrap border-s border-border-strong px-3 text-xs transition-colors first:border-s-0",
+            // Taller than usual below the sm breakpoint, where this is most
+            // likely a visitor's phone and finger sized touch targets matter
+            // more than the density an operator's tablet or laptop benefits
+            // from.
+            "h-10 whitespace-nowrap border-s border-border-strong px-3 text-xs transition-colors first:border-s-0 sm:h-8",
             option.value === value
               ? "bg-primary font-semibold text-primary-foreground"
               : "bg-surface-raised text-foreground hover:bg-surface-sunken",

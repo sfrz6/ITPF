@@ -44,9 +44,17 @@ export default async function PublicResultsIndexPage() {
               <Card className="flex h-full flex-col">
                 <CardHeader className="flex-col items-start gap-1">
                   <CardTitle className="text-base">{championship.name}</CardTitle>
+                  {/*
+                    Location is an untranslated proper noun. In Arabic, left
+                    as plain text it can be torn apart mid-phrase by the
+                    browser's bidi reordering when the line wraps; `bdi`
+                    isolates it as one atomic run so it wraps as a whole
+                    without disturbing the date's own (already correct)
+                    right-to-left flow.
+                  */}
                   <p className="text-sm text-muted">
                     {formatCompetitionDate(championship.startDate, locale)} ·{" "}
-                    {championship.location}
+                    <bdi>{championship.location}</bdi>
                   </p>
                 </CardHeader>
                 <CardContent className="mt-auto space-y-3">

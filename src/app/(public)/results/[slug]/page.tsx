@@ -88,9 +88,21 @@ export default async function PublicChampionshipResultsPage({
           <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
             {championship.name}
           </h1>
+          {/*
+            Location and organizer are untranslated proper nouns. In Arabic,
+            left as plain text either can be torn apart mid-phrase by the
+            browser's bidi reordering when the line wraps; `bdi` isolates each
+            as one atomic run so it wraps as a whole without disturbing the
+            date's own (already correct) right-to-left flow.
+          */}
           <p className="text-sm text-muted">
-            {formatCompetitionDate(championship.startDate, locale)} · {championship.location}
-            {championship.organizer ? ` · ${championship.organizer}` : ""}
+            {formatCompetitionDate(championship.startDate, locale)} · <bdi>{championship.location}</bdi>
+            {championship.organizer ? (
+              <>
+                {" "}
+                · <bdi>{championship.organizer}</bdi>
+              </>
+            ) : null}
           </p>
           <p className="text-xs text-muted">{t("publicResults.subtitle")}</p>
         </div>
