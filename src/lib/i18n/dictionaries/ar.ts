@@ -383,9 +383,12 @@ export const ar: Dictionary = {
     countryStandings: "ترتيب الدول",
     confirmedRunsOnly: "تُحدَّث النتائج كلما اعتمد المسؤولون شوطاً جديداً.",
     backToChampionships: "جميع البطولات",
+    backToResults: "العودة إلى النتائج",
     confirmedRuns: "تم اعتماد {count} شوط",
     nextRun: "الشوط القادم",
     championshipComplete: "تم اعتماد جميع الأشواط",
+    participatingCountries: "الدول المشاركة",
+    noParticipantsYet: "لم تتم إضافة أي دولة بعد.",
   },
   print: {
     roundSheet: "كشف الشوط",

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, Trophy } from "lucide-react";
+import { ChevronRight, Trophy, Users } from "lucide-react";
 import { championshipDisplayName, formatCompetitionDate } from "@/components/common/formatting";
 import { Button } from "@/components/ui/button";
 import { Badge, Card, CardContent, CardHeader, CardTitle, EmptyState, PageHeader } from "@/components/ui/surfaces";
@@ -73,12 +73,20 @@ export default async function PublicResultsIndexPage() {
                       {t("publicResults.confirmedRuns", { count: championship.confirmedRuns })}
                     </span>
                   </p>
-                  <Button variant="secondary" size="sm" asChild>
-                    <Link href={`/results/${championship.slug}`}>
-                      {t("publicResults.viewResults")}
-                      <ChevronRight className="rtl:rotate-180" aria-hidden />
-                    </Link>
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="secondary" size="sm" asChild>
+                      <Link href={`/results/${championship.slug}`}>
+                        {t("publicResults.viewResults")}
+                        <ChevronRight className="rtl:rotate-180" aria-hidden />
+                      </Link>
+                    </Button>
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link href={`/results/${championship.slug}/participants`}>
+                        <Users aria-hidden />
+                        {t("publicResults.participatingCountries")}
+                      </Link>
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </li>

@@ -382,9 +382,12 @@ export const en = {
     countryStandings: "Country standings",
     confirmedRunsOnly: "Results update as each run is confirmed by the officials.",
     backToChampionships: "All championships",
+    backToResults: "Back to results",
     confirmedRuns: "{count} run(s) confirmed",
     nextRun: "Next run",
     championshipComplete: "All runs confirmed",
+    participatingCountries: "Participating countries",
+    noParticipantsYet: "No countries have been added yet.",
   },
   print: {
     roundSheet: "Round sheet",
