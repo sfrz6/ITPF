@@ -1,7 +1,18 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ItpfLogo } from "@/components/common/itpf-logo";
 import { LocaleSwitcher, ThemeToggle } from "@/components/layout/toolbar";
 import { getTranslator } from "@/lib/i18n/server";
+
+/**
+ * Overrides the root app's manifest (start_url "/", the sign-in-gated
+ * dashboard) with one whose start_url is the public results index, so a
+ * visitor who adds this section to their home screen launches back into the
+ * results they were reading instead of the officials' sign-in page.
+ */
+export const metadata: Metadata = {
+  manifest: "/manifest-public.webmanifest",
+};
 
 /**
  * Shell for the published results.
