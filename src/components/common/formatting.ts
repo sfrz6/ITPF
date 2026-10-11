@@ -17,6 +17,20 @@ export function formatCompetitionDate(isoDate: string, locale: Locale): string {
   }).format(Date.UTC(year, month - 1, day));
 }
 
+/**
+ * A championship's Arabic name is optional, entered separately from the
+ * English one (never translated automatically), so this only swaps to it on
+ * an Arabic-locale page when one was actually set, falling back to the
+ * English name otherwise.
+ */
+export function championshipDisplayName(
+  name: string,
+  nameAr: string | null,
+  locale: Locale,
+): string {
+  return locale === "ar" && nameAr ? nameAr : name;
+}
+
 export function formatDateTime(value: Date, locale: Locale): string {
   return new Intl.DateTimeFormat(intlTagOf(locale), {
     dateStyle: "medium",

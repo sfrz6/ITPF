@@ -139,6 +139,7 @@ export const ar: Dictionary = {
     subtitle: "إنشاء المنافسات الرسمية وإدارتها",
     newChampionship: "بطولة جديدة",
     championshipName: "اسم البطولة",
+    championshipNameAr: "اسم البطولة (بالعربية)",
     startDate: "تاريخ البداية",
     location: "المكان",
     organizer: "الجهة المنظمة",

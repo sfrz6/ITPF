@@ -71,7 +71,7 @@ test("create a championship from the template", async ({ page }) => {
   await page.getByRole("button", { name: "Next" }).click();
 
   // Step 2: details.
-  await page.getByLabel("Championship name").fill(CHAMPIONSHIP_NAME);
+  await page.getByLabel("Championship name", { exact: true }).fill(CHAMPIONSHIP_NAME);
   await page.getByLabel("Start date").fill("2026-09-18");
   await page.getByLabel("Location").fill("Amman");
   await page.getByLabel("Organizer").fill("Royal Jordanian Equestrian Federation");

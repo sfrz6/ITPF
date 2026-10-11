@@ -169,6 +169,7 @@ export async function createChampionshipFixture(options: {
     createChampionshipFromTemplate(tx, options.actor, {
       templateId: options.templateId,
       name: options.name ?? `Test championship ${Math.random().toString(36).slice(2, 8)}`,
+      nameAr: null,
       startDate: "2026-09-18",
       location: "Amman",
       organizer: "Royal Jordanian Equestrian Federation",

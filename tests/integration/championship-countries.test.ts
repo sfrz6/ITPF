@@ -61,6 +61,7 @@ suite("championship country order and optional squads", () => {
       createChampionshipFromTemplate(tx, actor, {
         templateId,
         name: "Order test",
+        nameAr: null,
         startDate: "2026-09-18",
         location: "Amman",
         organizer: null,
@@ -90,6 +91,7 @@ suite("championship country order and optional squads", () => {
       createChampionshipFromTemplate(tx, actor, {
         templateId,
         name: "Optional riders test",
+        nameAr: null,
         startDate: "2026-09-18",
         location: "Amman",
         organizer: null,
@@ -137,6 +139,7 @@ suite("championship country order and optional squads", () => {
       createChampionshipFromTemplate(tx, actor, {
         templateId,
         name: "Empty squad run test",
+        nameAr: null,
         startDate: "2026-09-18",
         location: "Amman",
         organizer: null,

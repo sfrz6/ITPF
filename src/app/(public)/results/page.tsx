@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronRight, Trophy } from "lucide-react";
-import { formatCompetitionDate } from "@/components/common/formatting";
+import { championshipDisplayName, formatCompetitionDate } from "@/components/common/formatting";
 import { Button } from "@/components/ui/button";
 import { Badge, Card, CardContent, CardHeader, CardTitle, EmptyState, PageHeader } from "@/components/ui/surfaces";
 import { getTranslator } from "@/lib/i18n/server";
 import { listChampionships } from "@/server/services/championships";
+import { AutoRefresh } from "./auto-refresh";
 
 /**
  * The root layout keeps the application out of search indexes, because every
@@ -33,6 +34,12 @@ export default async function PublicResultsIndexPage() {
 
   return (
     <>
+      {/* Lets a visitor who opens this page before anything is published
+          still see a championship appear the moment it goes live, without
+          needing to reload: see the component for how it avoids resetting
+          any client-side state. */}
+      <AutoRefresh intervalMs={15_000} />
+
       <PageHeader title={t("publicResults.title")} description={t("publicResults.subtitle")} />
 
       {championships.length === 0 ? (
@@ -43,7 +50,9 @@ export default async function PublicResultsIndexPage() {
             <li key={championship.id}>
               <Card className="flex h-full flex-col">
                 <CardHeader className="flex-col items-start gap-1">
-                  <CardTitle className="text-base">{championship.name}</CardTitle>
+                  <CardTitle className="text-base">
+                    {championshipDisplayName(championship.name, championship.nameAr, locale)}
+                  </CardTitle>
                   {/*
                     Location is an untranslated proper noun. In Arabic, left
                     as plain text it can be torn apart mid-phrase by the

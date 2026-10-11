@@ -33,6 +33,7 @@ export default async function ChampionshipSchedulePage({
           championship={{
             id: championship.id,
             name: championship.name,
+            nameAr: championship.nameAr,
             location: championship.location,
             organizer: championship.organizer,
             status: championship.status,

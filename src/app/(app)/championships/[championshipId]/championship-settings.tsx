@@ -17,6 +17,7 @@ import {
 export interface ChampionshipSettingsData {
   readonly id: string;
   readonly name: string;
+  readonly nameAr: string | null;
   readonly location: string;
   readonly organizer: string | null;
   readonly status: "DRAFT" | "ACTIVE" | "COMPLETED";
@@ -39,6 +40,7 @@ export function ChampionshipSettings({
   const [pending, startTransition] = React.useTransition();
   const [form, setForm] = React.useState({
     name: championship.name,
+    nameAr: championship.nameAr ?? "",
     location: championship.location,
     organizer: championship.organizer ?? "",
     status: championship.status,
@@ -50,6 +52,7 @@ export function ChampionshipSettings({
       const result = await updateChampionshipAction({
         championshipId: championship.id,
         name: form.name.trim(),
+        nameAr: form.nameAr.trim() || null,
         location: form.location.trim(),
         organizer: form.organizer.trim() || null,
         status: form.status,
@@ -119,6 +122,15 @@ export function ChampionshipSettings({
                 onChange={(event) => setForm({ ...form, name: event.target.value })}
                 maxLength={160}
                 required
+              />
+            </Field>
+            <Field label={t("championships.championshipNameAr")} htmlFor="ch-name-ar">
+              <Input
+                id="ch-name-ar"
+                dir="rtl"
+                value={form.nameAr}
+                onChange={(event) => setForm({ ...form, nameAr: event.target.value })}
+                maxLength={160}
               />
             </Field>
             <Field label={t("championships.location")} htmlFor="ch-location" required>

@@ -38,6 +38,7 @@ export interface SquadInput {
 export interface CreateChampionshipInput {
   readonly templateId: string;
   readonly name: string;
+  readonly nameAr: string | null;
   readonly startDate: string;
   readonly location: string;
   readonly organizer: string | null;
@@ -290,6 +291,7 @@ export async function createChampionshipFromTemplate(
     .insert(championships)
     .values({
       name: input.name,
+      nameAr: input.nameAr,
       startDate: input.startDate,
       location: input.location,
       organizer: input.organizer,

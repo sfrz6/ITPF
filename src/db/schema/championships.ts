@@ -27,6 +27,8 @@ export const championships = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     name: text("name").notNull(),
+    /** Shown instead of `name` on an Arabic-locale page when set. */
+    nameAr: text("name_ar"),
     startDate: date("start_date").notNull(),
     location: text("location").notNull(),
     organizer: text("organizer"),

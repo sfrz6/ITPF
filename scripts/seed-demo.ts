@@ -193,6 +193,7 @@ async function main(): Promise<void> {
     createChampionshipFromTemplate(tx, actor, {
       templateId: template.id,
       name: CHAMPIONSHIP_NAME,
+      nameAr: "تجريبي: بطولة التأهل لكأس العالم، الأردن 2026",
       startDate: "2026-09-18",
       location: "Amman, Jordan",
       organizer: "Royal Jordanian Equestrian Federation",

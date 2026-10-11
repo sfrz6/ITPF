@@ -138,6 +138,7 @@ export const en = {
     subtitle: "Create and operate official competitions",
     newChampionship: "New championship",
     championshipName: "Championship name",
+    championshipNameAr: "Championship name (Arabic)",
     startDate: "Start date",
     location: "Location",
     organizer: "Organizer",

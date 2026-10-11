@@ -45,7 +45,7 @@ test("the wizard lets a country's squad be left empty", async ({ page }) => {
   await page.getByRole("button", { name: new RegExp(TEMPLATE_NAME, "i") }).click();
   await page.getByRole("button", { name: "Next" }).click();
 
-  await page.getByLabel("Championship name").fill(CHAMPIONSHIP_NAME);
+  await page.getByLabel("Championship name", { exact: true }).fill(CHAMPIONSHIP_NAME);
   await page.getByLabel("Start date").fill("2026-10-01");
   await page.getByLabel("Location").fill("Muscat");
   await page.getByRole("button", { name: "Next" }).click();

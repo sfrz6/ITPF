@@ -3,7 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft, Trophy } from "lucide-react";
 import { ItpfLogo } from "@/components/common/itpf-logo";
-import { formatCompetitionDate, formatPegSize } from "@/components/common/formatting";
+import {
+  championshipDisplayName,
+  formatCompetitionDate,
+  formatPegSize,
+} from "@/components/common/formatting";
 import { eventLabel } from "@/components/common/labels";
 import { Badge, Callout, EmptyState } from "@/components/ui/surfaces";
 import { buildStandingsData } from "@/components/results/standings-data";
@@ -31,11 +35,13 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
+  const { locale } = await getTranslator();
   const championship = await getChampionshipBySlug(slug);
   if (!championship) return { title: "Official results" };
+  const name = championshipDisplayName(championship.name, championship.nameAr, locale);
   return {
-    title: `${championship.name} results`,
-    description: `Official results of ${championship.name}, ${championship.location}.`,
+    title: `${name} results`,
+    description: `Official results of ${name}, ${championship.location}.`,
     robots: { index: true, follow: true },
   };
 }
@@ -86,7 +92,7 @@ export default async function PublicChampionshipResultsPage({
         <ItpfLogo width={56} priority />
         <div className="min-w-0 flex-1 space-y-1">
           <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
-            {championship.name}
+            {championshipDisplayName(championship.name, championship.nameAr, locale)}
           </h1>
           {/*
             Location and organizer are untranslated proper nouns. In Arabic,

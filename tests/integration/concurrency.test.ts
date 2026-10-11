@@ -218,6 +218,7 @@ suite("concurrency and data integrity", () => {
         createChampionshipFromTemplate(tx, actor, {
           templateId,
           name: "Short squad",
+          nameAr: null,
           startDate: "2026-09-18",
           location: "Amman",
           organizer: null,
@@ -242,6 +243,7 @@ suite("concurrency and data integrity", () => {
         createChampionshipFromTemplate(tx, actor, {
           templateId,
           name: "Lonely championship",
+          nameAr: null,
           startDate: "2026-09-18",
           location: "Amman",
           organizer: null,
@@ -256,6 +258,7 @@ suite("concurrency and data integrity", () => {
         createChampionshipFromTemplate(tx, actor, {
           templateId,
           name: "Borrowed rider",
+          nameAr: null,
           startDate: "2026-09-18",
           location: "Amman",
           organizer: null,

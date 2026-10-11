@@ -16,6 +16,7 @@ import type { Locale } from "@/lib/i18n/config";
 export interface ChampionshipSummary {
   readonly id: string;
   readonly name: string;
+  readonly nameAr: string | null;
   readonly slug: string;
   readonly startDate: string;
   readonly location: string;
@@ -65,6 +66,7 @@ export async function listChampionships(options: {
     .select({
       id: championships.id,
       name: championships.name,
+      nameAr: championships.nameAr,
       slug: championships.slug,
       startDate: championships.startDate,
       location: championships.location,
@@ -118,6 +120,7 @@ export async function getChampionshipDetail(
     .select({
       id: championships.id,
       name: championships.name,
+      nameAr: championships.nameAr,
       slug: championships.slug,
       startDate: championships.startDate,
       location: championships.location,
@@ -385,6 +388,7 @@ export async function getChampionshipBySlug(slug: string): Promise<ChampionshipS
     .select({
       id: championships.id,
       name: championships.name,
+      nameAr: championships.nameAr,
       slug: championships.slug,
       startDate: championships.startDate,
       location: championships.location,

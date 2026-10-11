@@ -115,6 +115,7 @@ export function ChampionshipWizard({
   const [step, setStep] = React.useState(0);
   const [templateId, setTemplateId] = React.useState<string | null>(null);
   const [name, setName] = React.useState("");
+  const [nameAr, setNameAr] = React.useState("");
   const [startDate, setStartDate] = React.useState("");
   const [location, setLocation] = React.useState("");
   const [organizer, setOrganizer] = React.useState("");
@@ -155,6 +156,7 @@ export function ChampionshipWizard({
   const template = templates.find((entry) => entry.id === templateId) ?? null;
 
   const trimmedName = name.trim();
+  const trimmedNameAr = nameAr.trim();
   const trimmedLocation = location.trim();
   const trimmedOrganizer = organizer.trim();
 
@@ -163,6 +165,7 @@ export function ChampionshipWizard({
   const detailsValid =
     trimmedName.length >= MIN_NAME_LENGTH &&
     trimmedName.length <= MAX_NAME_LENGTH &&
+    trimmedNameAr.length <= MAX_TEXT_LENGTH &&
     trimmedLocation.length >= MIN_LOCATION_LENGTH &&
     trimmedLocation.length <= MAX_TEXT_LENGTH &&
     trimmedOrganizer.length <= MAX_TEXT_LENGTH &&
@@ -234,6 +237,7 @@ export function ChampionshipWizard({
       const result = await createChampionshipAction({
         templateId: template.id,
         name: trimmedName,
+        nameAr: trimmedNameAr || null,
         startDate,
         location: trimmedLocation,
         organizer: trimmedOrganizer || null,
@@ -383,6 +387,20 @@ export function ChampionshipWizard({
                   onChange={(event) => setName(event.target.value)}
                   minLength={MIN_NAME_LENGTH}
                   maxLength={MAX_NAME_LENGTH}
+                  autoComplete="off"
+                />
+              </Field>
+              <Field
+                label={t("championships.championshipNameAr")}
+                htmlFor="wizard-name-ar"
+                hint={t("common.optional")}
+              >
+                <Input
+                  id="wizard-name-ar"
+                  dir="rtl"
+                  value={nameAr}
+                  onChange={(event) => setNameAr(event.target.value)}
+                  maxLength={MAX_TEXT_LENGTH}
                   autoComplete="off"
                 />
               </Field>
@@ -570,6 +588,14 @@ export function ChampionshipWizard({
                     {t("championships.championshipName")}
                   </dt>
                   <dd className="text-sm">{trimmedName}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-semibold uppercase tracking-wide text-muted">
+                    {t("championships.championshipNameAr")}
+                  </dt>
+                  <dd className="text-sm" dir="rtl">
+                    {trimmedNameAr || "-"}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-xs font-semibold uppercase tracking-wide text-muted">

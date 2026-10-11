@@ -36,6 +36,7 @@ const squadSchema = z.object({
 const createSchema = z.object({
   templateId: z.uuid(),
   name: z.string().trim().min(3).max(160),
+  nameAr: z.string().trim().max(160).nullable(),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "A start date is required."),
   location: z.string().trim().min(2).max(160),
   organizer: z.string().trim().max(160).nullable(),
@@ -71,6 +72,7 @@ export async function createChampionshipAction(
 const updateSchema = z.object({
   championshipId: z.uuid(),
   name: z.string().trim().min(3).max(160),
+  nameAr: z.string().trim().max(160).nullable(),
   location: z.string().trim().min(2).max(160),
   organizer: z.string().trim().max(160).nullable(),
   status: z.enum(["DRAFT", "ACTIVE", "COMPLETED"]),
@@ -94,6 +96,7 @@ export async function updateChampionshipAction(
         .select({
           id: championships.id,
           name: championships.name,
+          nameAr: championships.nameAr,
           location: championships.location,
           organizer: championships.organizer,
           status: championships.status,
@@ -107,6 +110,7 @@ export async function updateChampionshipAction(
         .update(championships)
         .set({
           name: parsed.data.name,
+          nameAr: parsed.data.nameAr,
           location: parsed.data.location,
           organizer: parsed.data.organizer,
           status: parsed.data.status,
@@ -122,6 +126,7 @@ export async function updateChampionshipAction(
         before: existing,
         after: {
           name: parsed.data.name,
+          nameAr: parsed.data.nameAr,
           location: parsed.data.location,
           organizer: parsed.data.organizer,
           status: parsed.data.status,
