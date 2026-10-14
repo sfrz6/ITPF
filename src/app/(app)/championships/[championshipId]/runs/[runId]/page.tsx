@@ -61,6 +61,7 @@ export default async function RunPage({
         championshipId={championshipId}
         run={{
           runId: run.runId,
+          eventId: run.eventId,
           runNumber: run.runNumber,
           eventType: run.eventType,
           pegSizeCm: run.pegSizeCm,

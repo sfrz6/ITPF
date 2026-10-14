@@ -51,6 +51,7 @@ import {
 
 export interface RunSummary {
   readonly runId: string;
+  readonly eventId: string;
   readonly runNumber: number;
   readonly eventType: EventTypeKey;
   readonly pegSizeCm: string;
@@ -231,7 +232,7 @@ export function RunWorkspace({
             {permissions.print && (readyToStart || !isEntryOrderStage) ? (
               <Button variant="secondary" size="sm" asChild>
                 <Link
-                  href={`/print/runs/${run.runId}`}
+                  href={`/print/events/${run.eventId}`}
                   target="_blank"
                 >
                   <Printer aria-hidden />
@@ -274,7 +275,8 @@ export function RunWorkspace({
           countries={entryOrder.countries}
           confirmedCount={entryOrder.confirmedCount}
           totalCount={entryOrder.totalCount}
-          canManage={permissions.manageEntryOrders}
+          canManage={permissions.manageEntryOrders && run.runNumber === 1}
+          locked={run.runNumber > 1}
         />
       ) : null}
 

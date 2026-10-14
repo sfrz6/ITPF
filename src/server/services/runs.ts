@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, lt, or, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, lt, or, sql } from "drizzle-orm";
 import { getDb, type Executor } from "@/db";
 import {
   championshipCountries,
@@ -6,6 +6,7 @@ import {
   championshipEvents,
   championshipRiders,
   championshipRuns,
+  championships,
   countries,
   riders,
   runEntryOrderItems,
@@ -261,6 +262,90 @@ export async function getRunEntryOrderState(
   };
 }
 
+export interface EventPrintRun {
+  readonly runId: string;
+  readonly runNumber: number;
+  readonly pegSizeCm: string;
+  readonly timeLimitSeconds: string;
+}
+
+export interface EventPrintState {
+  readonly eventId: string;
+  readonly eventType: EventTypeKey;
+  readonly dayNumber: number;
+  readonly competitionDate: string;
+  readonly championshipId: string;
+  readonly championshipName: string;
+  readonly championshipLocation: string;
+  readonly championshipOrganizer: string | null;
+  readonly runs: readonly EventPrintRun[];
+  readonly countries: readonly RunCountryEntryOrder[];
+}
+
+/**
+ * Everything the referee's printed round sheet needs for one whole event
+ * (Individual Lance, Pair Lance, Team Lance, ...), consolidating every run
+ * in it onto one sheet.
+ *
+ * The entry order shown is read from the event's first run only: later runs
+ * in the same event no longer carry their own independent order (it is
+ * locked once per event, inherited automatically — see
+ * `propagateEntryOrderWithinEvent`), so there is exactly one roster to print
+ * per country, with a scoring block per run alongside it.
+ */
+export async function getEventPrintState(
+  eventId: string,
+  locale: Locale,
+): Promise<EventPrintState | null> {
+  const db = getDb();
+
+  const [eventRow] = await db
+    .select({
+      eventId: championshipEvents.id,
+      eventType: championshipEvents.eventType,
+      dayNumber: championshipDays.dayNumber,
+      competitionDate: championshipDays.competitionDate,
+      championshipId: championships.id,
+      championshipName: championships.name,
+      championshipLocation: championships.location,
+      championshipOrganizer: championships.organizer,
+    })
+    .from(championshipEvents)
+    .innerJoin(championshipDays, eq(championshipDays.id, championshipEvents.championshipDayId))
+    .innerJoin(championships, eq(championships.id, championshipDays.championshipId))
+    .where(eq(championshipEvents.id, eventId))
+    .limit(1);
+  if (!eventRow) return null;
+
+  const runs = await db
+    .select({
+      runId: championshipRuns.id,
+      runNumber: championshipRuns.runNumber,
+      pegSizeCm: championshipRuns.pegSizeCm,
+      timeLimitSeconds: championshipRuns.timeLimitSeconds,
+    })
+    .from(championshipRuns)
+    .where(eq(championshipRuns.championshipEventId, eventId))
+    .orderBy(asc(championshipRuns.runNumber));
+  if (runs.length === 0) return null;
+
+  const firstRunState = await getRunEntryOrderState(runs[0]!.runId, locale);
+  if (!firstRunState) return null;
+
+  return {
+    eventId: eventRow.eventId,
+    eventType: eventRow.eventType as EventTypeKey,
+    dayNumber: eventRow.dayNumber,
+    competitionDate: eventRow.competitionDate,
+    championshipId: eventRow.championshipId,
+    championshipName: eventRow.championshipName,
+    championshipLocation: eventRow.championshipLocation,
+    championshipOrganizer: eventRow.championshipOrganizer,
+    runs,
+    countries: firstRunState.countries,
+  };
+}
+
 /**
  * Records a country's entry order decision for one run and lays out the run's
  * scoring units for that country.
@@ -278,12 +363,19 @@ export async function confirmCountryEntryOrder(
     decision: "NO_CHANGE" | "CHANGED";
     order?: readonly string[];
   },
+  options?: { readonly internal?: boolean },
 ): Promise<void> {
   const run = await getRunContext(input.runId);
   if (!run) throw new DomainError("Run not found.", "NOT_FOUND");
   if (!ENTRY_ORDER_EDITABLE.includes(run.status)) {
     throw new DomainError(
       "This run has already started, so its entry order can no longer be changed.",
+      "CONFLICT",
+    );
+  }
+  if (!options?.internal && run.runNumber > 1) {
+    throw new DomainError(
+      "The entry order can only be set once per event, before its first run. Later runs in the same event carry it over automatically.",
       "CONFLICT",
     );
   }
@@ -362,6 +454,62 @@ export async function confirmCountryEntryOrder(
   });
 
   await refreshRunReadiness(tx, run);
+  await propagateEntryOrderWithinEvent(tx, actor, run);
+}
+
+/**
+ * Once every country has confirmed the entry order for an event's first run,
+ * the same order is copied into that event's later runs (Run 2, Run 3): a
+ * country's lineup can only change once per event, not before every run
+ * inside it. A later run that has already started is left alone — its own
+ * order was locked in when its scoring began, same as any other run.
+ *
+ * Re-saving the first run's order (while it is still editable) re-runs this
+ * and overwrites the later runs' carried-over order with the new one, the
+ * same way a single run's own re-confirmation replaces its prior order.
+ */
+async function propagateEntryOrderWithinEvent(
+  tx: Executor,
+  actor: Principal,
+  firstRun: RunContext,
+): Promise<void> {
+  if (firstRun.runNumber !== 1) return;
+
+  const complete = await allCountriesHaveConfirmed(tx, firstRun.championshipId, firstRun.runId);
+  if (!complete) return;
+
+  const laterRuns = await tx
+    .select({
+      id: championshipRuns.id,
+      status: championshipRuns.status,
+    })
+    .from(championshipRuns)
+    .where(
+      and(
+        eq(championshipRuns.championshipEventId, firstRun.eventId),
+        gt(championshipRuns.runNumber, 1),
+      ),
+    )
+    .orderBy(asc(championshipRuns.runNumber));
+
+  if (laterRuns.length === 0) return;
+
+  const participatingCountries = await tx
+    .select({ id: championshipCountries.id })
+    .from(championshipCountries)
+    .where(eq(championshipCountries.championshipId, firstRun.championshipId));
+
+  for (const laterRun of laterRuns) {
+    if (!ENTRY_ORDER_EDITABLE.includes(laterRun.status)) continue;
+    for (const country of participatingCountries) {
+      await confirmCountryEntryOrder(
+        tx,
+        actor,
+        { runId: laterRun.id, championshipCountryId: country.id, decision: "NO_CHANGE" },
+        { internal: true },
+      );
+    }
+  }
 }
 
 /**

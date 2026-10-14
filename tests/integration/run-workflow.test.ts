@@ -117,7 +117,7 @@ suite("run workflow against a real database", () => {
     expect(championshipId).toBeTruthy();
   });
 
-  it("uses the nominated order for the first run and carries it forward on no change", async () => {
+  it("uses the nominated order for the first run and carries it into later runs of the same event automatically", async () => {
     const { runIds } = await setUp("INDIVIDUAL_LANCE");
     const { getRunEntryOrderState, confirmCountryEntryOrder } = await import(
       "@/server/services/runs"
@@ -144,28 +144,50 @@ suite("run workflow against a real database", () => {
 
     const firstState = await getRunEntryOrderState(first, "en");
     expect(firstState!.countries[0]!.confirmedOrder).toEqual(nominated);
+    expect(firstState!.run.status).toBe("READY");
 
-    // Change the order for the second run.
+    // The second run of the same event is carried over automatically, with
+    // no separate confirmation step, as soon as the first run is complete.
+    const secondState = await getRunEntryOrderState(second, "en");
+    const secondCountry = secondState!.countries.find(
+      (entry) => entry.championshipCountryId === country.championshipCountryId,
+    )!;
+    expect(secondCountry.confirmedOrder).toEqual(nominated);
+    expect(secondCountry.decision).toBe("NO_CHANGE");
+    expect(secondState!.allConfirmed).toBe(true);
+    expect(secondState!.run.status).toBe("READY");
+
+    // The lineup can only change once per event: a direct attempt to change
+    // the second run's order on its own is rejected.
+    await expect(
+      db.transaction((tx) =>
+        confirmCountryEntryOrder(tx, actor, {
+          runId: second,
+          championshipCountryId: country.championshipCountryId,
+          decision: "CHANGED",
+          order: [nominated[3]!, nominated[2]!, nominated[1]!, nominated[0]!],
+        }),
+      ),
+    ).rejects.toThrow(/once per event/i);
+
+    // Re-confirming the first run with a genuinely different order (still
+    // editable, since neither run has started scoring) replaces the order
+    // carried into the second run too.
     const changed = [nominated[3]!, nominated[2]!, nominated[1]!, nominated[0]!];
     await db.transaction((tx) =>
       confirmCountryEntryOrder(tx, actor, {
-        runId: second,
+        runId: first,
         championshipCountryId: country.championshipCountryId,
         decision: "CHANGED",
         order: changed,
       }),
     );
 
-    const secondState = await getRunEntryOrderState(second, "en");
-    const secondCountry = secondState!.countries.find(
+    const secondAfterChange = await getRunEntryOrderState(second, "en");
+    const secondCountryAfterChange = secondAfterChange!.countries.find(
       (entry) => entry.championshipCountryId === country.championshipCountryId,
     )!;
-    expect(secondCountry.confirmedOrder).toEqual(changed);
-    expect(secondCountry.decision).toBe("CHANGED");
-
-    // The first run's stored order must be unchanged.
-    const firstAgain = await getRunEntryOrderState(first, "en");
-    expect(firstAgain!.countries[0]!.confirmedOrder).toEqual(nominated);
+    expect(secondCountryAfterChange.confirmedOrder).toEqual(changed);
   });
 
   it("allows the reserve to be substituted through a change of order", async () => {

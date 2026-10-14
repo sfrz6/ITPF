@@ -6,7 +6,8 @@ import {
   type StandingsScope,
   type StandingsSubject,
 } from "@/domain/results";
-import { formatPoints } from "@/domain/scoring/decimal";
+import type { Standing } from "@/domain/scoring/standings";
+import { formatPoints, type Decimal } from "@/domain/scoring/decimal";
 import type { Translator } from "@/lib/i18n";
 import type {
   ChampionshipParticipantDirectory,
@@ -14,6 +15,7 @@ import type {
   StoredTieBreakRound,
   TieBreakKey,
 } from "@/server/services/results";
+import type { ChampionshipDayDetail } from "@/server/services/championships";
 
 /**
  * Shapes the results engine output into plain, serialisable rows for the
@@ -26,6 +28,22 @@ import type {
 
 const ALL_SCOPES: readonly StandingsScope[] = ["DAY_1", "DAY_2", "DAY_3", "OVERALL"];
 const ALL_SUBJECTS: readonly StandingsSubject[] = ["INDIVIDUAL", "COUNTRY"];
+
+/**
+ * Shortens a rider's full name to first + last for the standings table,
+ * where every extra word competes with a narrow, fixed-width column. Riders
+ * are stored as one free-text name with no separate first/last fields, so
+ * this is a word-split heuristic rather than a guaranteed-correct rule; a
+ * name of two words or fewer already fits and passes through unchanged.
+ * Round sheets, the entry order panel and the participants page all read
+ * the rider's full name directly from their own data, not through here, so
+ * only the standings table is affected.
+ */
+function shortenRiderName(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length <= 2) return fullName;
+  return `${parts[0]} ${parts[parts.length - 1]}`;
+}
 
 export function dayOfScope(scope: StandingsScope): DayNumber | null {
   switch (scope) {
@@ -93,7 +111,7 @@ function dayValuesOf(
 function buildSet(
   totals: ChampionshipTotals,
   directory: ChampionshipParticipantDirectory,
-  tieBreaks: ReadonlyMap<TieBreakKey, StoredTieBreakRound>,
+  tieBreak: StoredTieBreakRound | undefined,
   days: readonly DayNumber[],
   scope: StandingsScope,
   subject: StandingsSubject,
@@ -105,7 +123,7 @@ function buildSet(
   const standings = buildStandings(totals, {
     scope,
     subject,
-    tieBreak: tieBreaks.get(tieBreakKeyOf(scope, subject)),
+    tieBreak,
     includeKeys,
   });
 
@@ -121,7 +139,7 @@ function buildSet(
         rank: standing.rank,
         baseRank: standing.baseRank,
         isTiedAfterTieBreak: standing.isTiedAfterTieBreak,
-        name: rider?.riderName ?? unknown,
+        name: rider ? shortenRiderName(rider.riderName) : unknown,
         countryName: rider?.countryName ?? unknown,
         iso2: rider?.iso2 ?? "",
         dayValues: dayValuesOf(days, (value) =>
@@ -167,6 +185,71 @@ function buildSet(
   };
 }
 
+/** A tied group's identity within one scope: the shared total and the exact competitors in it. */
+interface TiedGroup {
+  readonly total: Decimal;
+  readonly keys: ReadonlySet<string>;
+}
+
+function tiedGroupsOf(standings: readonly Standing[]): readonly TiedGroup[] {
+  const byBaseRank = new Map<number, { total: Decimal; keys: Set<string> }>();
+  for (const standing of standings) {
+    if (!standing.isTiedOnTotal) continue;
+    let group = byBaseRank.get(standing.baseRank);
+    if (!group) {
+      group = { total: standing.total, keys: new Set() };
+      byBaseRank.set(standing.baseRank, group);
+    }
+    group.keys.add(standing.key);
+  }
+  return [...byBaseRank.values()];
+}
+
+function keysEqual(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+  if (a.size !== b.size) return false;
+  for (const key of a) {
+    if (!b.has(key)) return false;
+  }
+  return true;
+}
+
+/**
+ * Finds the stored tie-break round that resolves a scope's unresolved tie.
+ *
+ * A round recorded for this exact scope always wins first. Otherwise, a
+ * round recorded for a *different* scope is reused only when that round's
+ * own tie — the exact competitors, at the exact total they were tied at —
+ * matches this one precisely. This is what lets a Day 1 tie-break also
+ * settle Overall while Day 1 is the only day played (the two totals are
+ * identical), without ever misapplying an old decision to a later, merely
+ * similar-looking tie once more days change the Overall total.
+ */
+function findApplicableTieBreak(
+  scope: StandingsScope,
+  subject: StandingsSubject,
+  group: TiedGroup,
+  tieBreaks: ReadonlyMap<TieBreakKey, StoredTieBreakRound>,
+  rawByScope: ReadonlyMap<StandingsScope, readonly Standing[]>,
+): StoredTieBreakRound | undefined {
+  const direct = tieBreaks.get(tieBreakKeyOf(scope, subject));
+  if (direct && keysEqual(new Set(direct.entries.map((entry) => entry.key)), group.keys)) {
+    return direct;
+  }
+
+  for (const round of tieBreaks.values()) {
+    if (round.subject !== subject || round.scope === scope) continue;
+    const roundKeys = new Set(round.entries.map((entry) => entry.key));
+    const sourceGroup = tiedGroupsOf(rawByScope.get(round.scope) ?? []).find((candidate) =>
+      keysEqual(candidate.keys, roundKeys),
+    );
+    if (sourceGroup && sourceGroup.total.equals(group.total) && keysEqual(sourceGroup.keys, group.keys)) {
+      return round;
+    }
+  }
+
+  return undefined;
+}
+
 /** Builds every scope and subject combination from one load of the results. */
 export function buildStandingsData(results: ChampionshipResults, t: Translator): StandingsData {
   const { totals, directory, tieBreaks } = results;
@@ -174,8 +257,22 @@ export function buildStandingsData(results: ChampionshipResults, t: Translator):
 
   const sets: StandingsSet[] = [];
   for (const subject of ALL_SUBJECTS) {
+    const includeKeys =
+      subject === "INDIVIDUAL" ? [...directory.riders.keys()] : [...directory.countries.keys()];
+
+    // Raw (no tie-break applied) standings per scope, needed to know what
+    // total and which competitors each stored round was originally recorded
+    // for, and what the current scope being built needs resolved.
+    const rawByScope = new Map<StandingsScope, readonly Standing[]>(
+      ALL_SCOPES.map((scope) => [scope, buildStandings(totals, { scope, subject, includeKeys })]),
+    );
+
     for (const scope of ALL_SCOPES) {
-      sets.push(buildSet(totals, directory, tieBreaks, days, scope, subject, t));
+      const unresolvedGroup = tiedGroupsOf(rawByScope.get(scope) ?? [])[0];
+      const tieBreak = unresolvedGroup
+        ? findApplicableTieBreak(scope, subject, unresolvedGroup, tieBreaks, rawByScope)
+        : undefined;
+      sets.push(buildSet(totals, directory, tieBreak, days, scope, subject, t));
     }
   }
 
@@ -239,4 +336,41 @@ export function storedTieBreakEntries(
     }));
   }
   return result;
+}
+
+export interface PdfAvailability {
+  /** Whether a PDF can be produced for each day, keyed by day number. */
+  readonly byDay: ReadonlyMap<DayNumber, boolean>;
+  /**
+   * Whether a PDF can be produced for the Overall standings: every day that
+   * has been touched at all is *fully* confirmed. A day nobody has started
+   * yet never blocks it — the PDF simply covers the days played so far — but
+   * a day that is only partway through blocks it, since "Overall so far"
+   * would misrepresent a competition still mid-run.
+   */
+  readonly overall: boolean;
+}
+
+/**
+ * Decides which standings PDFs can be produced right now, from the
+ * championship's day/run structure alone (not the aggregated totals), so it
+ * reflects schedule state even for a day with no confirmed runs at all.
+ */
+export function pdfAvailability(days: readonly ChampionshipDayDetail[]): PdfAvailability {
+  const byDay = new Map<DayNumber, boolean>();
+  let overall = false;
+  let blocked = false;
+
+  for (const day of days) {
+    const runs = day.events.flatMap((event) => event.runs);
+    const allConfirmed = runs.length > 0 && runs.every((run) => run.status === "CONFIRMED");
+    const anyTouched = runs.some((run) => run.status !== "ENTRY_ORDER_PENDING");
+
+    byDay.set(day.dayNumber as DayNumber, allConfirmed);
+
+    if (allConfirmed) overall = true;
+    else if (anyTouched) blocked = true;
+  }
+
+  return { byDay, overall: overall && !blocked };
 }

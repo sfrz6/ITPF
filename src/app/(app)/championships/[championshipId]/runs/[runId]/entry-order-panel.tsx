@@ -259,6 +259,7 @@ export function EntryOrderPanel({
   confirmedCount,
   totalCount,
   canManage,
+  locked,
 }: {
   championshipId: string;
   runId: string;
@@ -266,6 +267,13 @@ export function EntryOrderPanel({
   confirmedCount: number;
   totalCount: number;
   canManage: boolean;
+  /**
+   * True for every run after the first in its event: the lineup can only be
+   * set once per event, so these runs carry over the first run's order
+   * automatically once every country has confirmed it there, rather than
+   * asking for a fresh confirmation before each run.
+   */
+  locked: boolean;
 }) {
   const { t } = useI18n();
   const router = useRouter();
@@ -274,7 +282,9 @@ export function EntryOrderPanel({
     <section className="space-y-4">
       <div className="space-y-2">
         <h3 className="text-sm font-semibold">{t("runs.entryOrdersTitle")}</h3>
-        <Callout tone="info">{t("runs.entryOrdersHint")}</Callout>
+        <Callout tone="info">
+          {locked ? t("runs.entryOrdersLockedHint") : t("runs.entryOrdersHint")}
+        </Callout>
         <p className="text-xs text-muted">
           {t("runs.countriesConfirmed", { confirmed: confirmedCount, total: totalCount })}
         </p>

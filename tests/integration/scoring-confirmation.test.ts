@@ -159,20 +159,11 @@ suite("scoring, confirmation and correction", () => {
 
   it("rejects a score row that belongs to another run", async () => {
     const first = await openRun("INDIVIDUAL_LANCE");
-    const { getRunEntryOrderState, confirmCountryEntryOrder, getRunScoringState, saveRunScores } =
-      await import("@/server/services/runs");
+    const { getRunScoringState, saveRunScores } = await import("@/server/services/runs");
 
+    // The second run is the same event's Run 2: its entry order was already
+    // carried over automatically once Run 1 (opened above) was confirmed.
     const otherRunId = first.runIds[1]!;
-    const otherState = await getRunEntryOrderState(otherRunId, "en");
-    for (const country of otherState!.countries) {
-      await db.transaction((tx) =>
-        confirmCountryEntryOrder(tx, actor, {
-          runId: otherRunId,
-          championshipCountryId: country.championshipCountryId,
-          decision: "NO_CHANGE",
-        }),
-      );
-    }
     const otherScoring = await getRunScoringState(otherRunId, "en");
     const foreignScoreId = otherScoring!.countries[0]!.units[0]!.riders[0]!.runScoreId;
 

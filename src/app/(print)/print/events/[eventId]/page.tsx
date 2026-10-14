@@ -1,10 +1,10 @@
+import * as React from "react";
 import { notFound } from "next/navigation";
 import { requirePagePermission } from "@/lib/auth/page-guards";
 import { getTranslator } from "@/lib/i18n/server";
 import { getEventTypeDefinition } from "@/domain/scoring/event-types";
 import { buildScoringUnits } from "@/domain/entry-order";
-import { getRunEntryOrderState } from "@/server/services/runs";
-import { getChampionshipDetail } from "@/server/services/championships";
+import { getEventPrintState } from "@/server/services/runs";
 import { formatCompetitionDate, formatPegSize, formatTime } from "@/components/common/formatting";
 import { eventLabel } from "@/components/common/labels";
 import { targetLabels } from "@/components/common/target-labels";
@@ -14,24 +14,22 @@ import { PrintTrigger } from "./print-trigger";
 
 export const metadata = { title: "Round sheet" };
 
-export default async function RoundSheetPage({
+export default async function EventRoundSheetPage({
   params,
 }: {
-  params: Promise<{ runId: string }>;
+  params: Promise<{ eventId: string }>;
 }) {
   await requirePagePermission("PRINT_ROUND_SHEETS");
-  const { runId } = await params;
+  const { eventId } = await params;
   const { locale, t } = await getTranslator();
 
-  const state = await getRunEntryOrderState(runId, locale);
+  const state = await getEventPrintState(eventId, locale);
   if (!state) notFound();
 
-  const championship = await getChampionshipDetail(state.run.championshipId);
-  if (!championship) notFound();
-
-  const definition = getEventTypeDefinition(state.run.eventType);
-  const headings = targetLabels(state.run.eventType, definition.targetsPerRider, t);
+  const definition = getEventTypeDefinition(state.eventType);
+  const headings = targetLabels(state.eventType, definition.targetsPerRider, t);
   const sharedTime = definition.ridersPerScoringUnit > 1;
+  const columnsPerRun = headings.length + 3;
 
   const printedOn = new Intl.DateTimeFormat(locale === "ar" ? "ar" : "en-GB", {
     dateStyle: "medium",
@@ -39,7 +37,7 @@ export default async function RoundSheetPage({
   }).format(new Date());
 
   return (
-    <main className="mx-auto max-w-[210mm] px-6 py-6 print:px-0 print:py-0">
+    <main className="mx-auto max-w-[297mm] px-6 py-6 print:px-0 print:py-0">
       <PrintTrigger />
 
       <header className="mb-4 flex items-start justify-between gap-6 border-b-2 border-black pb-3">
@@ -49,39 +47,47 @@ export default async function RoundSheetPage({
             <p className="text-[10pt] font-semibold uppercase tracking-wide">
               {t("common.federation")}
             </p>
-            <h1 className="mt-0.5 text-[14pt] font-bold leading-tight">{championship.name}</h1>
+            <h1 className="mt-0.5 text-[14pt] font-bold leading-tight">
+              {state.championshipName}
+            </h1>
             <p className="text-[9pt]">
-              {championship.location}
-              {championship.organizer ? ` · ${championship.organizer}` : ""}
+              {state.championshipLocation}
+              {state.championshipOrganizer ? ` · ${state.championshipOrganizer}` : ""}
             </p>
           </div>
         </div>
         <div className="text-end text-[9pt]">
           <p className="text-[11pt] font-bold">{t("print.roundSheet")}</p>
-          <p>{t("championships.daysOf", { day: state.run.dayNumber })}</p>
-          <p className="numeric">{formatCompetitionDate(state.run.competitionDate, locale)}</p>
+          <p>{t("championships.daysOf", { day: state.dayNumber })}</p>
+          <p className="numeric">{formatCompetitionDate(state.competitionDate, locale)}</p>
         </div>
       </header>
 
-      <section className="mb-4 grid grid-cols-4 gap-3 border border-black text-[9pt]">
+      <section className="mb-4 grid grid-cols-3 gap-3 border border-black text-[9pt]">
         <div className="border-e border-black px-2 py-1.5">
           <p className="text-[8pt] uppercase tracking-wide">{t("common.event")}</p>
-          <p className="font-semibold">{eventLabel(state.run.eventType, t)}</p>
-        </div>
-        <div className="border-e border-black px-2 py-1.5">
-          <p className="text-[8pt] uppercase tracking-wide">{t("common.run")}</p>
-          <p className="numeric font-semibold">{state.run.runNumber}</p>
+          <p className="font-semibold">{eventLabel(state.eventType, t)}</p>
         </div>
         <div className="border-e border-black px-2 py-1.5">
           <p className="text-[8pt] uppercase tracking-wide">{t("runs.pegSize")}</p>
           <p className="numeric font-semibold">
-            {formatPegSize(state.run.pegSizeCm)} {t("common.centimetres")}
+            {state.runs
+              .map(
+                (run) =>
+                  `${t("templates.runNumber", { number: run.runNumber })}: ${formatPegSize(run.pegSizeCm)} ${t("common.centimetres")}`,
+              )
+              .join(" · ")}
           </p>
         </div>
         <div className="px-2 py-1.5">
           <p className="text-[8pt] uppercase tracking-wide">{t("runs.timeLimit")}</p>
           <p className="numeric font-semibold">
-            {formatTime(state.run.timeLimitSeconds)} {t("common.seconds")}
+            {state.runs
+              .map(
+                (run) =>
+                  `${t("templates.runNumber", { number: run.runNumber })}: ${formatTime(run.timeLimitSeconds)} ${t("common.seconds")}`,
+              )
+              .join(" · ")}
           </p>
         </div>
       </section>
@@ -119,25 +125,48 @@ export default async function RoundSheetPage({
                 <table className="w-full border-collapse text-[9pt]">
                   <thead>
                     <tr className="border-b border-black">
-                      <th className="w-8 border-e border-black px-1 py-1 text-center">#</th>
-                      <th className="border-e border-black px-2 py-1 text-start">
+                      <th rowSpan={2} className="w-8 border-e border-black px-1 py-1 text-center">
+                        #
+                      </th>
+                      <th
+                        rowSpan={2}
+                        className="border-e border-black px-2 py-1 text-start"
+                      >
                         {t("common.rider")}
                       </th>
-                      {headings.map((heading, index) => (
+                      {state.runs.map((run) => (
                         <th
-                          key={index}
-                          className="w-14 border-e border-black px-1 py-1 text-center"
+                          key={run.runId}
+                          colSpan={columnsPerRun}
+                          className="border-e border-black px-1 py-1 text-center"
                         >
-                          {heading}
+                          {t("templates.runNumber", { number: run.runNumber })} ·{" "}
+                          {formatPegSize(run.pegSizeCm)} {t("common.centimetres")}
                         </th>
                       ))}
-                      <th className="w-16 border-e border-black px-1 py-1 text-center">
-                        {t("common.time")}
-                      </th>
-                      <th className="w-14 border-e border-black px-1 py-1 text-center">
-                        {t("runs.penalty")}
-                      </th>
-                      <th className="w-14 px-1 py-1 text-center">{t("runs.netPoints")}</th>
+                    </tr>
+                    <tr className="border-b border-black">
+                      {state.runs.map((run) => (
+                        <React.Fragment key={run.runId}>
+                          {headings.map((heading, index) => (
+                            <th
+                              key={index}
+                              className="w-12 border-e border-black px-1 py-1 text-center"
+                            >
+                              {heading}
+                            </th>
+                          ))}
+                          <th className="w-14 border-e border-black px-1 py-1 text-center">
+                            {t("common.time")}
+                          </th>
+                          <th className="w-12 border-e border-black px-1 py-1 text-center">
+                            {t("runs.penalty")}
+                          </th>
+                          <th className="w-12 border-e border-black px-1 py-1 text-center">
+                            {t("runs.netPoints")}
+                          </th>
+                        </React.Fragment>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
@@ -161,23 +190,28 @@ export default async function RoundSheetPage({
                                 </span>
                               ) : null}
                             </td>
-                            {headings.map((_, index) => (
-                              <td key={index} className="border-e border-black px-1 py-2" />
+                            {state.runs.map((run) => (
+                              <React.Fragment key={run.runId}>
+                                {headings.map((_, index) => (
+                                  <td key={index} className="border-e border-black px-1 py-2" />
+                                ))}
+                                {/* Time, fault and net belong to the scoring
+                                    unit, so for a pair, team or relay they
+                                    span the whole block instead of repeating
+                                    per rider. */}
+                                {!sharedTime || riderIndex === 0
+                                  ? ["border-e border-black", "border-e border-black", "border-e border-black"].map(
+                                      (border, cellIndex) => (
+                                        <td
+                                          key={cellIndex}
+                                          className={`${border} px-1 py-2`}
+                                          rowSpan={sharedTime ? unit.riders.length : undefined}
+                                        />
+                                      ),
+                                    )
+                                  : null}
+                              </React.Fragment>
                             ))}
-                            {/* Time, fault and net belong to the scoring unit,
-                                so for a pair, team or relay they span the
-                                whole block instead of repeating per rider. */}
-                            {!sharedTime || riderIndex === 0
-                              ? ["border-e border-black", "border-e border-black", ""].map(
-                                  (border, cellIndex) => (
-                                    <td
-                                      key={cellIndex}
-                                      className={`${border} px-1 py-2`}
-                                      rowSpan={sharedTime ? unit.riders.length : undefined}
-                                    />
-                                  ),
-                                )
-                              : null}
                           </tr>
                         );
                       }),

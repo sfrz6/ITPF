@@ -130,7 +130,7 @@ export function StandingsTable({
             <ThNum className={cn(STICKY_START, "w-14 bg-surface-sunken text-center")}>
               {t("common.rank")}
             </ThNum>
-            <Th className={cn(STICKY_NAME, "min-w-40 bg-surface-sunken border-e border-border")}>
+            <Th className={cn(STICKY_NAME, "w-40 bg-surface-sunken border-e border-border")}>
               {isCountry ? t("common.country") : t("common.rider")}
             </Th>
             {isCountry ? (
@@ -166,19 +166,26 @@ export function StandingsTable({
                 >
                   {row.rank}
                 </TdNum>
-                <Td className={cn(STICKY_NAME, "min-w-40 bg-surface-raised border-e border-border")}>
+                <Td className={cn(STICKY_NAME, "w-40 bg-surface-raised border-e border-border")}>
                   <span className="flex items-center gap-2">
-                    <CountryFlag iso2={row.iso2} />
-                    <span className="min-w-0">
+                    <CountryFlag iso2={row.iso2} className="shrink-0" />
+                    <span className="min-w-0 flex-1">
                       <span className="block truncate">{row.name}</span>
                       {isCountry ? null : (
-                        <span className="block truncate text-xs text-muted">
-                          {row.countryName}
+                        <span className="flex items-center gap-1">
+                          <span className="min-w-0 truncate text-xs text-muted">
+                            {row.countryName}
+                          </span>
+                          {row.isTiedAfterTieBreak && isPodium ? (
+                            <Badge tone="warning" className="shrink-0 px-1 py-0 text-[0.625rem]">
+                              {t("results.tied")}
+                            </Badge>
+                          ) : null}
                         </span>
                       )}
                     </span>
-                    {row.isTiedAfterTieBreak && isPodium ? (
-                      <Badge tone="warning" className="shrink-0">
+                    {isCountry && row.isTiedAfterTieBreak && isPodium ? (
+                      <Badge tone="warning" className="shrink-0 px-1 py-0 text-[0.625rem]">
                         {t("results.tied")}
                       </Badge>
                     ) : null}
