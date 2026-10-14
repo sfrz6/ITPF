@@ -1,17 +1,20 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
+import { Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/surfaces";
 import { useI18n } from "@/lib/i18n/client";
 import type { DayNumber, StandingsScope, StandingsSubject } from "@/domain/results";
 import {
   availableScopes,
+  scopeLabelKey,
   type StandingsSet,
 } from "@/components/results/standings-data";
 import {
   StandingsTable,
   StandingsToggle,
-  scopeLabelKey,
   type ToggleOption,
 } from "@/components/results/standings-table";
 
@@ -24,9 +27,14 @@ import {
 export function PublicStandings({
   days,
   sets,
+  slug,
+  pdfAvailable,
 }: {
   days: readonly DayNumber[];
   sets: readonly StandingsSet[];
+  slug: string;
+  /** Whether a PDF can be produced for each scope, see `pdfAvailability`. */
+  pdfAvailable: Partial<Record<StandingsScope, boolean>>;
 }) {
   const { t } = useI18n();
   const [subject, setSubject] = React.useState<StandingsSubject>("INDIVIDUAL");
@@ -67,6 +75,14 @@ export function PublicStandings({
             options={scopeOptions}
             onChange={(value) => setScope(value)}
           />
+          {pdfAvailable[activeScope] ? (
+            <Button variant="ghost" size="sm" asChild>
+              <Link href={`/results/${slug}/pdf/${activeScope}`} target="_blank">
+                <Download aria-hidden />
+                {t("publicResults.downloadPdf")}
+              </Link>
+            </Button>
+          ) : null}
         </div>
       </CardHeader>
       <CardContent>

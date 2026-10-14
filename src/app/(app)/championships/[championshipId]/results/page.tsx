@@ -9,8 +9,10 @@ import { EmptyState } from "@/components/ui/surfaces";
 import {
   activeRidersByCountry,
   buildStandingsData,
+  pdfAvailability,
   storedTieBreakEntries,
 } from "@/components/results/standings-data";
+import { scopeForDay, type StandingsScope } from "@/domain/results";
 import { ResultsView } from "./results-view";
 
 export const metadata = { title: "Results" };
@@ -43,6 +45,10 @@ export default async function ChampionshipResultsPage({
 
   const { days, sets } = buildStandingsData(results, t);
 
+  const availability = pdfAvailability(championship.days);
+  const pdfAvailable: Partial<Record<StandingsScope, boolean>> = { OVERALL: availability.overall };
+  for (const [day, ok] of availability.byDay) pdfAvailable[scopeForDay(day)] = ok;
+
   return (
     <ResultsView
       championshipId={championship.id}
@@ -51,6 +57,7 @@ export default async function ChampionshipResultsPage({
       canManageTieBreaks={hasPermission(principal, "MANAGE_TIE_BREAKS")}
       activeRiders={activeRidersByCountry(results.directory)}
       storedRounds={storedTieBreakEntries(results.tieBreaks)}
+      pdfAvailable={pdfAvailable}
     />
   );
 }

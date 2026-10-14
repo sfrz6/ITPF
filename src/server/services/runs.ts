@@ -513,6 +513,27 @@ async function propagateEntryOrderWithinEvent(
 }
 
 /**
+ * Every run id in the same event as `runId`, including `runId` itself.
+ *
+ * Confirming a run's entry order can silently change a sibling run's status
+ * too (see `propagateEntryOrderWithinEvent`), so a caller revalidating pages
+ * after a confirmation needs every sibling's own page, not just the run that
+ * was directly confirmed.
+ */
+export async function listEventRunIds(runId: string): Promise<readonly string[]> {
+  const db = getDb();
+  const run = await getRunContext(runId);
+  if (!run) return [runId];
+
+  const rows = await db
+    .select({ id: championshipRuns.id })
+    .from(championshipRuns)
+    .where(eq(championshipRuns.championshipEventId, run.eventId));
+
+  return rows.map((row) => row.id);
+}
+
+/**
  * Creates the empty score rows for one country in one run, from its confirmed
  * entry order. Any previous rows for that country in that run are removed, so
  * re-confirming the order before the run starts leaves no stale scores behind.

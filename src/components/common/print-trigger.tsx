@@ -5,8 +5,10 @@ import { Printer } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
 
 /**
- * On screen controls for the round sheet. Hidden when the document is printed,
- * so the paper copy carries nothing but the official content.
+ * On screen controls for a printable document. Hidden when the document is
+ * printed, so the paper (or PDF) copy carries nothing but the official
+ * content. Shared by the officials' round sheet and the public standings
+ * PDF, which both print the same way.
  */
 export function PrintTrigger() {
   const { t } = useI18n();

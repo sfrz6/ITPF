@@ -200,3 +200,109 @@ describe("pdfAvailability", () => {
     expect(result.overall).toBe(false);
   });
 });
+
+describe("buildStandingsData — a direct tie-break round always applies", () => {
+  it("resolves two separate ties in the same scope from one combined round", () => {
+    // Country standings: {a,b} tied at 100, {d,e} tied at 80, c alone at 50.
+    // The tie-break dialog groups every tied row in a scope into one round,
+    // so this round's entries cover both pairs at once.
+    const totals: ChampionshipTotals = {
+      riders: new Map(),
+      countries: new Map([
+        ["a", { ...countryTotals(100, false), championshipCountryId: "a" }],
+        ["b", { ...countryTotals(100, false), championshipCountryId: "b" }],
+        ["c", { ...countryTotals(50, false), championshipCountryId: "c" }],
+        ["d", { ...countryTotals(80, false), championshipCountryId: "d" }],
+        ["e", { ...countryTotals(80, false), championshipCountryId: "e" }],
+      ]),
+      runResults: new Map(),
+      daysWithResults: [1],
+    };
+
+    const tieBreaks = new Map<TieBreakKey, StoredTieBreakRound>([
+      [
+        "DAY_1:COUNTRY",
+        {
+          id: "round-1",
+          scope: "DAY_1",
+          subject: "COUNTRY",
+          pegSizeCm: "4",
+          timeLimitSeconds: 10,
+          maxPoints: 6,
+          entries: [
+            { key: "a", points: 6, timeSeconds: 8 },
+            { key: "b", points: 4, timeSeconds: 8 },
+            { key: "d", points: 6, timeSeconds: 8 },
+            { key: "e", points: 4, timeSeconds: 8 },
+          ],
+        },
+      ],
+    ]);
+
+    const results: ChampionshipResults = {
+      totals,
+      directory: directoryOf(["a", "b", "c", "d", "e"]),
+      tieBreaks,
+      confirmedRunCount: 1,
+    };
+
+    const { sets } = buildStandingsData(results, t);
+    const day1Countries = sets.find((set) => set.scope === "DAY_1" && set.subject === "COUNTRY")!;
+
+    expect(day1Countries.hasUnresolvedTie).toBe(false);
+    const rankOf = (key: string) => day1Countries.rows.find((row) => row.key === key)!.rank;
+    expect(rankOf("a")).toBeLessThan(rankOf("b"));
+    expect(rankOf("d")).toBeLessThan(rankOf("e"));
+  });
+
+  it("still resolves the countries a round does cover when one tied country is missing from it", () => {
+    // Three-way tie {a,b,g} at 100; g withdrew from the draw, so the saved
+    // round (matching the tie-break dialog's own behaviour) only has
+    // entries for a and b.
+    const totals: ChampionshipTotals = {
+      riders: new Map(),
+      countries: new Map([
+        ["a", { ...countryTotals(100, false), championshipCountryId: "a" }],
+        ["b", { ...countryTotals(100, false), championshipCountryId: "b" }],
+        ["g", { ...countryTotals(100, false), championshipCountryId: "g" }],
+      ]),
+      runResults: new Map(),
+      daysWithResults: [1],
+    };
+
+    const tieBreaks = new Map<TieBreakKey, StoredTieBreakRound>([
+      [
+        "DAY_1:COUNTRY",
+        {
+          id: "round-1",
+          scope: "DAY_1",
+          subject: "COUNTRY",
+          pegSizeCm: "4",
+          timeLimitSeconds: 10,
+          maxPoints: 6,
+          entries: [
+            { key: "a", points: 6, timeSeconds: 8 },
+            { key: "b", points: 4, timeSeconds: 8 },
+          ],
+        },
+      ],
+    ]);
+
+    const results: ChampionshipResults = {
+      totals,
+      directory: directoryOf(["a", "b", "g"]),
+      tieBreaks,
+      confirmedRunCount: 1,
+    };
+
+    const { sets } = buildStandingsData(results, t);
+    const day1Countries = sets.find((set) => set.scope === "DAY_1" && set.subject === "COUNTRY")!;
+
+    const rankOf = (key: string) => day1Countries.rows.find((row) => row.key === key)!.rank;
+    // a and b are resolved relative to each other by the round...
+    expect(rankOf("a")).toBeLessThan(rankOf("b"));
+    // ...while g, absent from the round, keeps the shared base rank rather
+    // than being silently promoted or demoted.
+    expect(rankOf("g")).toBe(1);
+  });
+});

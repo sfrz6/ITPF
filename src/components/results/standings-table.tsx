@@ -273,14 +273,3 @@ export function StandingsToggle<T extends string>({
   );
 }
 
-const SCOPE_LABEL_KEYS = {
-  DAY_1: "results.day1",
-  DAY_2: "results.day2",
-  DAY_3: "results.day3",
-  OVERALL: "results.overall",
-} as const;
-
-/** Dictionary key for a scope, used by both standings views. */
-export function scopeLabelKey(scope: StandingsScope): (typeof SCOPE_LABEL_KEYS)[StandingsScope] {
-  return SCOPE_LABEL_KEYS[scope];
-}

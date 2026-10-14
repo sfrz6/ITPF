@@ -9,6 +9,7 @@ import {
   confirmCountryEntryOrder,
   confirmRun,
   correctConfirmedRun,
+  listEventRunIds,
   saveRunScores,
   startRun,
   type RunScorePayload,
@@ -59,7 +60,11 @@ export async function confirmEntryOrderAction(
       }),
     );
 
-    await revalidateRun(parsed.data.runId);
+    // Confirming this run's order can silently carry it into every later run
+    // of the same event too (see `propagateEntryOrderWithinEvent`), so every
+    // sibling run's own page needs revalidating, not just this one.
+    const siblingRunIds = await listEventRunIds(parsed.data.runId);
+    await Promise.all(siblingRunIds.map((runId) => revalidateRun(runId)));
     return ok();
   });
 }

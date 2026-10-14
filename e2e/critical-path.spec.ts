@@ -234,15 +234,20 @@ test("the standings reflect the confirmed run", async ({ page }) => {
 
   // Seven riders scored a clean 6, and one lost half a point to the clock.
   await expect(page.getByText("5.5").first()).toBeVisible();
-  await expect(page.getByText("JO Rider 1")).toBeVisible();
+  // The standings table shortens a rider's name to first + last.
+  await expect(page.getByText("JO 1")).toBeVisible();
 });
 
 test("an unconfirmed run stays out of the standings", async ({ page }) => {
   await signIn(page);
   await openChampionship(page);
 
-  // Run 2 of the individual event, and the whole team event, were never
-  // prepared, so they are still awaiting their entry orders.
+  // The lineup can only change once per event: confirming Run 1 of the
+  // individual event already carried its entry order into Run 2
+  // automatically, so Run 2 is ready rather than still pending. The team
+  // event was never touched at all, so it is still awaiting its own entry
+  // order.
+  await expect(page.getByText("Ready to start").first()).toBeVisible();
   await expect(page.getByText("Entry orders pending").first()).toBeVisible();
 
   await championshipTab(page, "Results").click();
@@ -252,8 +257,9 @@ test("an unconfirmed run stays out of the standings", async ({ page }) => {
     .click();
 
   // Exactly the 6 points awarded in the one confirmed run. Had the unscored
-  // runs leaked in, this rider would be on 12 or more.
-  const row = page.getByRole("row").filter({ hasText: "OM Rider 2" });
+  // runs leaked in, this rider would be on 12 or more. The standings table
+  // shortens a rider's name to first + last.
+  const row = page.getByRole("row").filter({ hasText: "OM 2" });
   await expect(row).toContainText("6");
   await expect(row).not.toContainText("12");
 });
@@ -334,7 +340,8 @@ test("publishing exposes the confirmed results publicly", async ({ page, context
   await expect(visitor.getByText("Last confirmed")).toBeVisible();
   await expect(visitor.getByText("Next run")).toBeVisible();
   await expect(visitor.getByText("Individual Lance").first()).toBeVisible();
-  await expect(visitor.getByText("JO Rider 2")).toBeVisible();
+  // The standings table shortens a rider's name to first + last.
+  await expect(visitor.getByText("JO 2")).toBeVisible();
   await expect(visitor.getByText(/results update as each run is confirmed/i)).toBeVisible();
 
   await anonymous.close();

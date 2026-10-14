@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft, Trophy } from "lucide-react";
+import { scopeForDay, type StandingsScope } from "@/domain/results";
 import { ItpfLogo } from "@/components/common/itpf-logo";
 import {
   championshipDisplayName,
@@ -10,9 +11,9 @@ import {
 } from "@/components/common/formatting";
 import { eventLabel } from "@/components/common/labels";
 import { Badge, Callout, EmptyState } from "@/components/ui/surfaces";
-import { buildStandingsData } from "@/components/results/standings-data";
+import { buildStandingsData, pdfAvailability } from "@/components/results/standings-data";
 import { getTranslator } from "@/lib/i18n/server";
-import { getChampionshipBySlug } from "@/server/services/championships";
+import { getChampionshipBySlug, getChampionshipDetail } from "@/server/services/championships";
 import {
   getLastConfirmedRun,
   getNextRun,
@@ -63,13 +64,20 @@ export default async function PublicChampionshipResultsPage({
   // runs only, so a run still being scored never appears here. `getNextRun`
   // only exposes the schedule (event, run number, peg size) of the run that
   // has not started yet, never any score, so it is safe to show publicly.
-  const [results, lastRun, nextRun] = await Promise.all([
+  const [results, lastRun, nextRun, detail] = await Promise.all([
     loadChampionshipResults(championship.id, locale),
     getLastConfirmedRun(championship.id),
     getNextRun(championship.id),
+    getChampionshipDetail(championship.id),
   ]);
 
   const { days, sets } = buildStandingsData(results, t);
+
+  // Plain, serialisable shape for the client component: a Map doesn't cross
+  // the server/client boundary as cleanly as a record keyed by scope.
+  const availability = pdfAvailability(detail?.days ?? []);
+  const pdfAvailable: Partial<Record<StandingsScope, boolean>> = { OVERALL: availability.overall };
+  for (const [day, ok] of availability.byDay) pdfAvailable[scopeForDay(day)] = ok;
 
   const currentDay = lastRun?.dayNumber ?? nextRun?.dayNumber ?? null;
 
@@ -159,7 +167,7 @@ export default async function PublicChampionshipResultsPage({
       {results.confirmedRunCount === 0 ? (
         <EmptyState icon={<Trophy />} title={t("results.noConfirmedRuns")} />
       ) : (
-        <PublicStandings days={days} sets={sets} />
+        <PublicStandings days={days} sets={sets} slug={championship.slug} pdfAvailable={pdfAvailable} />
       )}
     </div>
   );

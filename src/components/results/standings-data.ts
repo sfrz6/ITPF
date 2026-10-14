@@ -29,6 +29,28 @@ import type { ChampionshipDayDetail } from "@/server/services/championships";
 const ALL_SCOPES: readonly StandingsScope[] = ["DAY_1", "DAY_2", "DAY_3", "OVERALL"];
 const ALL_SUBJECTS: readonly StandingsSubject[] = ["INDIVIDUAL", "COUNTRY"];
 
+/** Parses a scope from a URL segment, rejecting anything that isn't exactly one of the four. */
+export function parseStandingsScope(value: string): StandingsScope | null {
+  return (ALL_SCOPES as readonly string[]).includes(value) ? (value as StandingsScope) : null;
+}
+
+const SCOPE_LABEL_KEYS = {
+  DAY_1: "results.day1",
+  DAY_2: "results.day2",
+  DAY_3: "results.day3",
+  OVERALL: "results.overall",
+} as const;
+
+/**
+ * Dictionary key for a scope, used by every standings view (on screen and
+ * PDF, internal and public). Lives here rather than in `standings-table.tsx`
+ * because that file is a client component: a server-rendered PDF page needs
+ * to call this directly, which only works from a plain module.
+ */
+export function scopeLabelKey(scope: StandingsScope): (typeof SCOPE_LABEL_KEYS)[StandingsScope] {
+  return SCOPE_LABEL_KEYS[scope];
+}
+
 /**
  * Shortens a rider's full name to first + last for the standings table,
  * where every extra word competes with a narrow, fixed-width column. Riders
@@ -214,27 +236,34 @@ function keysEqual(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
 }
 
 /**
- * Finds the stored tie-break round that resolves a scope's unresolved tie.
+ * Finds the stored tie-break round that resolves a scope's unresolved ties.
  *
- * A round recorded for this exact scope always wins first. Otherwise, a
- * round recorded for a *different* scope is reused only when that round's
- * own tie — the exact competitors, at the exact total they were tied at —
- * matches this one precisely. This is what lets a Day 1 tie-break also
- * settle Overall while Day 1 is the only day played (the two totals are
- * identical), without ever misapplying an old decision to a later, merely
- * similar-looking tie once more days change the Overall total.
+ * A round recorded for this exact scope always wins, unconditionally — same
+ * as before cross-scope reuse existed. `calculateStandings` already matches
+ * a round's entries to tied groups tolerantly (a round covering several
+ * separate ties at once, or missing an entry because a rider withdrew from
+ * the draw, both resolve whatever members it does cover and leave the rest
+ * at their base rank), so this must not gate the direct case on an exact
+ * key match — doing so previously rejected those two ordinary cases
+ * entirely.
+ *
+ * Only when there is no round recorded for this scope at all does a round
+ * from a *different* scope get reused, and only when that round's own tie —
+ * the exact competitors, at the exact total they were tied at — matches one
+ * of this scope's tied groups precisely. This is what lets a Day 1
+ * tie-break also settle Overall while Day 1 is the only day played (the two
+ * totals are identical), without ever misapplying an old decision to a
+ * later, merely similar-looking tie once more days change the total.
  */
 function findApplicableTieBreak(
   scope: StandingsScope,
   subject: StandingsSubject,
-  group: TiedGroup,
+  groups: readonly TiedGroup[],
   tieBreaks: ReadonlyMap<TieBreakKey, StoredTieBreakRound>,
   rawByScope: ReadonlyMap<StandingsScope, readonly Standing[]>,
 ): StoredTieBreakRound | undefined {
   const direct = tieBreaks.get(tieBreakKeyOf(scope, subject));
-  if (direct && keysEqual(new Set(direct.entries.map((entry) => entry.key)), group.keys)) {
-    return direct;
-  }
+  if (direct) return direct;
 
   for (const round of tieBreaks.values()) {
     if (round.subject !== subject || round.scope === scope) continue;
@@ -242,7 +271,8 @@ function findApplicableTieBreak(
     const sourceGroup = tiedGroupsOf(rawByScope.get(round.scope) ?? []).find((candidate) =>
       keysEqual(candidate.keys, roundKeys),
     );
-    if (sourceGroup && sourceGroup.total.equals(group.total) && keysEqual(sourceGroup.keys, group.keys)) {
+    if (!sourceGroup) continue;
+    if (groups.some((group) => sourceGroup.total.equals(group.total) && keysEqual(sourceGroup.keys, group.keys))) {
       return round;
     }
   }
@@ -268,10 +298,11 @@ export function buildStandingsData(results: ChampionshipResults, t: Translator):
     );
 
     for (const scope of ALL_SCOPES) {
-      const unresolvedGroup = tiedGroupsOf(rawByScope.get(scope) ?? [])[0];
-      const tieBreak = unresolvedGroup
-        ? findApplicableTieBreak(scope, subject, unresolvedGroup, tieBreaks, rawByScope)
-        : undefined;
+      const unresolvedGroups = tiedGroupsOf(rawByScope.get(scope) ?? []);
+      const tieBreak =
+        unresolvedGroups.length > 0
+          ? findApplicableTieBreak(scope, subject, unresolvedGroups, tieBreaks, rawByScope)
+          : undefined;
       sets.push(buildSet(totals, directory, tieBreak, days, scope, subject, t));
     }
   }

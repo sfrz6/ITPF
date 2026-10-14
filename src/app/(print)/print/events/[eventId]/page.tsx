@@ -10,7 +10,7 @@ import { eventLabel } from "@/components/common/labels";
 import { targetLabels } from "@/components/common/target-labels";
 import { CountryFlag } from "@/components/common/country-flag";
 import { ItpfLogoPrint } from "@/components/common/itpf-logo";
-import { PrintTrigger } from "./print-trigger";
+import { PrintTrigger } from "@/components/common/print-trigger";
 
 export const metadata = { title: "Round sheet" };
 

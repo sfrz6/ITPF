@@ -389,6 +389,8 @@ export const en = {
     championshipComplete: "All runs confirmed",
     participatingCountries: "Participating countries",
     noParticipantsYet: "No countries have been added yet.",
+    standingsPdfTitle: "Standings",
+    downloadPdf: "Download PDF",
   },
   print: {
     roundSheet: "Round sheet",

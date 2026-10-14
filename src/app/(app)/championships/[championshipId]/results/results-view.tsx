@@ -1,13 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { Scale } from "lucide-react";
+import Link from "next/link";
+import { Download, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/surfaces";
 import { useI18n } from "@/lib/i18n/client";
 import type { DayNumber, StandingsScope, StandingsSubject } from "@/domain/results";
 import {
   availableScopes,
+  scopeLabelKey,
   tieBreakKeyOf,
   type StandingsSet,
   type StoredTieBreakEntry,
@@ -16,7 +18,6 @@ import {
 import {
   StandingsTable,
   StandingsToggle,
-  scopeLabelKey,
   type ToggleOption,
 } from "@/components/results/standings-table";
 import { TieBreakDialog } from "./tie-break-dialog";
@@ -34,6 +35,7 @@ export function ResultsView({
   canManageTieBreaks,
   activeRiders,
   storedRounds,
+  pdfAvailable,
 }: {
   championshipId: string;
   days: readonly DayNumber[];
@@ -41,6 +43,8 @@ export function ResultsView({
   canManageTieBreaks: boolean;
   activeRiders: Readonly<Record<string, readonly TieBreakRiderOption[]>>;
   storedRounds: Readonly<Record<string, readonly StoredTieBreakEntry[]>>;
+  /** Whether a PDF can be produced for each scope, see `pdfAvailability`. */
+  pdfAvailable: Partial<Record<StandingsScope, boolean>>;
 }) {
   const { t } = useI18n();
   const [subject, setSubject] = React.useState<StandingsSubject>("INDIVIDUAL");
@@ -78,6 +82,14 @@ export function ResultsView({
           options={scopeOptions}
           onChange={(value) => setScope(value)}
         />
+        {pdfAvailable[activeScope] ? (
+          <Button variant="ghost" size="sm" asChild>
+            <Link href={`/print/results/${championshipId}/${activeScope}`} target="_blank">
+              <Download aria-hidden />
+              {t("publicResults.downloadPdf")}
+            </Link>
+          </Button>
+        ) : null}
       </div>
 
       <Callout tone="info">{t("results.onlyConfirmed")}</Callout>

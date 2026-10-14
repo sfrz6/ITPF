@@ -390,6 +390,8 @@ export const ar: Dictionary = {
     championshipComplete: "تم اعتماد جميع الأشواط",
     participatingCountries: "الدول المشاركة",
     noParticipantsYet: "لم تتم إضافة أي دولة بعد.",
+    standingsPdfTitle: "الترتيب",
+    downloadPdf: "تحميل PDF",
   },
   print: {
     roundSheet: "كشف الشوط",
