@@ -363,7 +363,7 @@ export const en = {
     tieBreakSaved: "Tie-break round saved.",
     openTieBreak: "Open tie-break",
     riderPoints: "Points",
-    countryFaults: "Faults",
+    countryFaults: "Penalty",
     day1: "Day 1",
     day2: "Day 2",
     day3: "Day 3",

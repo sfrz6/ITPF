@@ -364,7 +364,7 @@ export const ar: Dictionary = {
     tieBreakSaved: "تم حفظ جولة التمايز.",
     openTieBreak: "فتح جولة التمايز",
     riderPoints: "النقاط",
-    countryFaults: "أخطاء",
+    countryFaults: "جزاء",
     day1: "اليوم الأول",
     day2: "اليوم الثاني",
     day3: "اليوم الثالث",

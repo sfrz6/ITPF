@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/cn";
 import { CountryFlag } from "@/components/common/country-flag";
 import { Badge, EmptyState } from "@/components/ui/surfaces";
@@ -90,6 +91,73 @@ function useHorizontalScrollEdges<T extends HTMLElement>(): {
   return { ref, canScrollStart, canScrollEnd };
 }
 
+/**
+ * The name column only has room for a line or two before it starts crowding
+ * the sticky rank/total columns, so long names (a long transliterated rider
+ * name, or a long country name on a narrow screen) still get cut off with an
+ * ellipsis. Clicking the text reveals the full name in a small floating
+ * popup instead of silently hiding part of it with no way to read the rest.
+ */
+function TruncatedName({ text }: { text: string }) {
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
+  const [popup, setPopup] = React.useState<{ top: number; left: number } | null>(null);
+
+  React.useEffect(() => {
+    if (!popup) return;
+    const close = () => setPopup(null);
+    const onPointerDown = (event: PointerEvent) => {
+      if (buttonRef.current?.contains(event.target as Node)) return;
+      close();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close();
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    window.addEventListener("resize", close);
+    window.addEventListener("scroll", close, true);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("resize", close);
+      window.removeEventListener("scroll", close, true);
+    };
+  }, [popup]);
+
+  const handleClick = () => {
+    const el = buttonRef.current;
+    if (!el || el.scrollWidth <= el.clientWidth) return;
+    const box = el.getBoundingClientRect();
+    const left = Math.min(Math.max(box.left, 8), window.innerWidth - 8 - 256);
+    setPopup({ top: box.bottom + 4, left });
+  };
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={handleClick}
+        className="block max-w-full truncate text-start"
+      >
+        {text}
+      </button>
+      {popup
+        ? createPortal(
+            <div
+              role="tooltip"
+              className="fixed z-50 max-w-64 rounded-md border border-border-strong bg-surface-raised px-2.5 py-1.5 text-sm shadow-lg"
+              style={{ top: popup.top, left: popup.left }}
+            >
+              {text}
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
+  );
+}
+
 export function StandingsTable({
   subject,
   scope,
@@ -130,7 +198,7 @@ export function StandingsTable({
             <ThNum className={cn(STICKY_START, "w-14 bg-surface-sunken text-center")}>
               {t("common.rank")}
             </ThNum>
-            <Th className={cn(STICKY_NAME, "w-40 bg-surface-sunken border-e border-border")}>
+            <Th className={cn(STICKY_NAME, "min-w-40 bg-surface-sunken border-e border-border")}>
               {isCountry ? t("common.country") : t("common.rider")}
             </Th>
             {isCountry ? (
@@ -166,11 +234,11 @@ export function StandingsTable({
                 >
                   {row.rank}
                 </TdNum>
-                <Td className={cn(STICKY_NAME, "w-40 bg-surface-raised border-e border-border")}>
+                <Td className={cn(STICKY_NAME, "min-w-40 bg-surface-raised border-e border-border")}>
                   <span className="flex items-center gap-2">
                     <CountryFlag iso2={row.iso2} className="shrink-0" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate">{row.name}</span>
+                    <span className="min-w-0 max-w-64 flex-1">
+                      <TruncatedName text={row.name} />
                       {isCountry ? null : (
                         <span className="flex items-center gap-1">
                           <span className="min-w-0 truncate text-xs text-muted">
