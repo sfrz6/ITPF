@@ -937,9 +937,6 @@ export interface RunScorePayload {
 }
 
 function assertValidPayload(payload: RunScorePayload, definition: EventTypeDefinition): void {
-  const allowedPoints = allowedTargetPoints(definition);
-  const allowedPointsSet = new Set<number>(allowedPoints);
-
   for (const unit of payload.units) {
     if (unit.timeSeconds === null) continue;
     const value = Number(unit.timeSeconds);
@@ -951,9 +948,10 @@ function assertValidPayload(payload: RunScorePayload, definition: EventTypeDefin
     if (score.targets.length !== definition.targetsPerRider) {
       throw new DomainError("A rider has the wrong number of scores for this event.", "VALIDATION");
     }
-    for (const target of score.targets) {
+    for (const [index, target] of score.targets.entries()) {
       if (target === null) continue;
-      if (!allowedPointsSet.has(target)) {
+      const allowedPoints = allowedTargetPoints(definition, index);
+      if (!(allowedPoints as readonly number[]).includes(target)) {
         const last = allowedPoints[allowedPoints.length - 1];
         const rest = allowedPoints.slice(0, -1).join(", ");
         throw new DomainError(`A score must be ${rest ? `${rest} or ` : ""}${last}.`, "VALIDATION");

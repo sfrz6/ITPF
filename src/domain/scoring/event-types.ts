@@ -181,17 +181,25 @@ export function isEventTypeKey(value: string): value is EventTypeKey {
 }
 
 /**
- * The point values a referee may award for a single target in this event.
+ * The point values a referee may award for one target in this event.
  *
- * Rings and peg, and lemons and peg, are hit-or-miss targets: a ring or a
- * lemon is either taken cleanly or not at all, with no partial credit the
- * way a peg lance or sword thrust can score 2 or 4. Every other event keeps
- * the full 0/2/4/6 scale.
+ * Rings and peg, and lemons and peg, mix two kinds of target in the same
+ * run: the ring (or lemon) itself is hit-or-miss, with no partial credit the
+ * way a peg lance or sword thrust can score 2 or 4 — and that same run still
+ * ends with an ordinary peg, which keeps the full scale. `targetIndex` is
+ * the 0-based position within that rider's targets, matching `targetLabels`:
+ * 0 and 1 are the two rings or lemons, 2 is the peg. Every other event's
+ * target, at any index, keeps the full 0/2/4/6 scale.
  */
 export function allowedTargetPoints(
   definition: EventTypeDefinition,
+  targetIndex: number,
 ): readonly (typeof ALLOWED_TARGET_POINTS)[number][] {
-  return definition.ruleType === "MULTI_TARGET" ? [0, 6] : ALLOWED_TARGET_POINTS;
+  const isRingOrLemon =
+    (definition.key === "RINGS_AND_PEG_LANCE" || definition.key === "LEMON_AND_PEG_SWORD") &&
+    definition.targetsPerRider === 3 &&
+    targetIndex < 2;
+  return isRingOrLemon ? [0, 6] : ALLOWED_TARGET_POINTS;
 }
 
 export const ALL_EVENT_TYPES: readonly EventTypeDefinition[] = EVENT_TYPE_KEYS.map(

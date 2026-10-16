@@ -197,12 +197,13 @@ suite("scoring, confirmation and correction", () => {
     ).rejects.toThrow(/0, 2, 4 or 6/);
   });
 
-  it("only allows 0 or 6 for a rings and peg target, where a peg lance would allow 2 and 4 too", async () => {
+  it("only allows 0 or 6 for the two rings, but keeps the full 0/2/4/6 scale for the peg in the same run", async () => {
     const { runId } = await openRun("RINGS_AND_PEG_LANCE");
     const { saveRunScores, getRunScoringState } = await import("@/server/services/runs");
     const state = await getRunScoringState(runId, "en");
     const scoreId = state!.countries[0]!.units[0]!.riders[0]!.runScoreId;
 
+    // A 4 on ring 2 (index 1) is rejected...
     await expect(
       db.transaction(async (tx) =>
         saveRunScores(tx, actor, {
@@ -213,12 +214,13 @@ suite("scoring, confirmation and correction", () => {
       ),
     ).rejects.toThrow(/0 or 6/);
 
+    // ...but the same 4 on the peg (index 2) is accepted.
     await expect(
       db.transaction(async (tx) =>
         saveRunScores(tx, actor, {
           runId,
           expectedVersion: await currentVersion(runId),
-          payload: { units: [], scores: [{ runScoreId: scoreId, targets: [6, 0, 6] }] },
+          payload: { units: [], scores: [{ runScoreId: scoreId, targets: [6, 0, 4] }] },
         }),
       ),
     ).resolves.toBeDefined();

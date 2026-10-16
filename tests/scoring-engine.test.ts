@@ -261,11 +261,20 @@ describe("rings and peg, lemons and peg", () => {
     expect(result.units[0]!.penalty.toString()).toBe("-18");
   });
 
-  it("only allows 0 or 6 for a single ring or lemon, unlike a peg lance or sword target", () => {
-    expect(allowedTargetPoints(getEventTypeDefinition("RINGS_AND_PEG_LANCE"))).toEqual([0, 6]);
-    expect(allowedTargetPoints(getEventTypeDefinition("LEMON_AND_PEG_SWORD"))).toEqual([0, 6]);
-    expect(allowedTargetPoints(getEventTypeDefinition("INDIVIDUAL_LANCE"))).toEqual([0, 2, 4, 6]);
-    expect(allowedTargetPoints(getEventTypeDefinition("TEAM_SWORD"))).toEqual([0, 2, 4, 6]);
+  it("only allows 0 or 6 for the two rings or lemons, but keeps the full scale for the peg in the same run", () => {
+    const rings = getEventTypeDefinition("RINGS_AND_PEG_LANCE");
+    const lemons = getEventTypeDefinition("LEMON_AND_PEG_SWORD");
+    expect(allowedTargetPoints(rings, 0)).toEqual([0, 6]); // ring 1
+    expect(allowedTargetPoints(rings, 1)).toEqual([0, 6]); // ring 2
+    expect(allowedTargetPoints(rings, 2)).toEqual([0, 2, 4, 6]); // peg
+    expect(allowedTargetPoints(lemons, 0)).toEqual([0, 6]); // lemon 1
+    expect(allowedTargetPoints(lemons, 1)).toEqual([0, 6]); // lemon 2
+    expect(allowedTargetPoints(lemons, 2)).toEqual([0, 2, 4, 6]); // peg
+
+    const individual = getEventTypeDefinition("INDIVIDUAL_LANCE");
+    const team = getEventTypeDefinition("TEAM_SWORD");
+    expect(allowedTargetPoints(individual, 0)).toEqual([0, 2, 4, 6]);
+    expect(allowedTargetPoints(team, 0)).toEqual([0, 2, 4, 6]);
   });
 
   it("matches the workbook inside the 36 to 43 second anomaly window", () => {

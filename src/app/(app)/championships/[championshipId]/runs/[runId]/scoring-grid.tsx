@@ -188,7 +188,6 @@ export function ScoringGrid({
   const definition = getEventTypeDefinition(eventType);
   const labels = targetLabels(eventType, definition.targetsPerRider, t);
   const isTeamUnit = definition.ridersPerScoringUnit > 1;
-  const pointOptions = allowedTargetPoints(definition);
 
   // The same pure engine that scores the run on the server computes the
   // preview, so what the operator sees while typing is exactly what will be
@@ -326,7 +325,7 @@ export function ScoringGrid({
                                     onChange={(value) => setPoint(rider.runScoreId, index, value)}
                                     disabled={readOnly}
                                     label={`${rider.riderName}: ${labels[index] ?? ""}`}
-                                    options={pointOptions}
+                                    options={allowedTargetPoints(definition, index)}
                                   />
                                 </span>
                               ))}
