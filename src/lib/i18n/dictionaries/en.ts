@@ -333,6 +333,7 @@ export const en = {
     rawPoints: "Raw",
     penalty: "Fault",
     netPoints: "Net",
+    dayTotal: "Day total",
     didNotScore: "No score",
     incompleteScores: "Enter every score and time before confirming the run.",
     entryOrdersIncomplete: "Every country must confirm its entry order before the run can start.",

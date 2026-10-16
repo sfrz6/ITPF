@@ -84,6 +84,7 @@ export function RunWorkspace({
   run,
   entryOrder,
   scoring,
+  confirmedDayTotalByCountry,
   revisions,
   permissions,
   navigation,
@@ -97,6 +98,8 @@ export function RunWorkspace({
     allConfirmed: boolean;
   };
   scoring: readonly ScoringCountry[];
+  /** Every other confirmed run's contribution today, per country, so the day total can be shown live. */
+  confirmedDayTotalByCountry: Readonly<Record<string, string>>;
   revisions: readonly RunRevisionSummary[];
   permissions: RunPermissions;
   navigation: { previousRunId: string | null; nextRunId: string | null };
@@ -376,6 +379,7 @@ export function RunWorkspace({
             draft={draft}
             onChange={setDraft}
             readOnly={isConfirmed ? !correcting : !permissions.enterScores}
+            confirmedDayTotalByCountry={confirmedDayTotalByCountry}
           />
         </section>
       ) : null}

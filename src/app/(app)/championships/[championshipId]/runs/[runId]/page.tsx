@@ -10,6 +10,9 @@ import {
   getRunScoringState,
   listRunRevisions,
 } from "@/server/services/runs";
+import { loadConfirmedRuns } from "@/server/services/results";
+import { aggregateChampionship, type DayNumber } from "@/domain/results";
+import { formatPoints } from "@/domain/scoring/decimal";
 import { formatCompetitionDate } from "@/components/common/formatting";
 import { eventLabel } from "@/components/common/labels";
 import { RunWorkspace } from "./run-workspace";
@@ -26,10 +29,11 @@ export default async function RunPage({
   const entryOrderState = await getRunEntryOrderState(runId, locale);
   if (!entryOrderState || entryOrderState.run.championshipId !== championshipId) notFound();
 
-  const [scoringState, revisions, runsInOrder] = await Promise.all([
+  const [scoringState, revisions, runsInOrder, confirmedRuns] = await Promise.all([
     getRunScoringState(runId, locale),
     listRunRevisions(runId),
     listRunsInOrder(championshipId),
+    loadConfirmedRuns(championshipId),
   ]);
 
   const index = runsInOrder.findIndex((entry) => entry.id === runId);
@@ -43,6 +47,21 @@ export default async function RunPage({
         unit.timeSeconds !== null || unit.riders.some((rider) => rider.targets.some((value) => value !== null)),
     ),
   );
+
+  // Every other confirmed run of the day, across every event, so the
+  // scoring screen can show each country's day total updating live as this
+  // run is scored — excluding this run itself even once it is confirmed, so
+  // adding its own live total next to it never double counts it.
+  const otherConfirmedRunsToday = confirmedRuns.filter(
+    (confirmed) => confirmed.runId !== runId && confirmed.dayNumber === run.dayNumber,
+  );
+  const confirmedDayTotals = aggregateChampionship(otherConfirmedRunsToday);
+  const confirmedDayTotalByCountry: Record<string, string> = {};
+  for (const [championshipCountryId, totals] of confirmedDayTotals.countries) {
+    confirmedDayTotalByCountry[championshipCountryId] = formatPoints(
+      totals.byDay.get(run.dayNumber as DayNumber) ?? 0,
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -96,6 +115,7 @@ export default async function RunPage({
           totalCount: entryOrderState.totalCount,
           allConfirmed: entryOrderState.allConfirmed,
         }}
+        confirmedDayTotalByCountry={confirmedDayTotalByCountry}
         scoring={
           scoringState
             ? scoringState.countries.map((country) => ({

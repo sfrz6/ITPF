@@ -334,6 +334,7 @@ export const ar: Dictionary = {
     rawPoints: "أولية",
     penalty: "خطأ",
     netPoints: "صافي",
+    dayTotal: "مجموع اليوم",
     didNotScore: "بلا نقاط",
     incompleteScores: "أدخل جميع النقاط والأزمنة قبل اعتماد الشوط.",
     entryOrdersIncomplete: "يجب أن تعتمد كل دولة ترتيب دخولها قبل بدء الشوط.",

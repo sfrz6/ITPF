@@ -12,7 +12,7 @@ import {
   type EventTypeKey,
 } from "@/domain/scoring/event-types";
 import { scoreRun, type RunScoringInput } from "@/domain/scoring/engine";
-import { formatPoints } from "@/domain/scoring/decimal";
+import { dec, formatPoints, ZERO } from "@/domain/scoring/decimal";
 import { targetLabels } from "@/components/common/target-labels";
 
 export interface ScoringRider {
@@ -176,6 +176,7 @@ export function ScoringGrid({
   draft,
   onChange,
   readOnly = false,
+  confirmedDayTotalByCountry,
 }: {
   eventType: EventTypeKey;
   timeLimitSeconds: string;
@@ -183,6 +184,8 @@ export function ScoringGrid({
   draft: ScoringDraft;
   onChange: (next: ScoringDraft) => void;
   readOnly?: boolean;
+  /** Every other confirmed run's contribution today, per country, so the day total can be shown live. */
+  confirmedDayTotalByCountry: Readonly<Record<string, string>>;
 }) {
   const { t } = useI18n();
   const definition = getEventTypeDefinition(eventType);
@@ -268,6 +271,16 @@ export function ScoringGrid({
                     <dt className="text-muted">{t("common.total")}</dt>
                     <dd className="numeric font-semibold">
                       {formatPoints(countryResult.total)}
+                    </dd>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <dt className="text-muted">{t("runs.dayTotal")}</dt>
+                    <dd className="numeric font-semibold text-primary">
+                      {formatPoints(
+                        dec(confirmedDayTotalByCountry[country.championshipCountryId] ?? ZERO).plus(
+                          countryResult.total,
+                        ),
+                      )}
                     </dd>
                   </div>
                 </dl>
