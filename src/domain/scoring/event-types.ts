@@ -180,6 +180,20 @@ export function isEventTypeKey(value: string): value is EventTypeKey {
   return Object.prototype.hasOwnProperty.call(DEFINITIONS, value);
 }
 
+/**
+ * The point values a referee may award for a single target in this event.
+ *
+ * Rings and peg, and lemons and peg, are hit-or-miss targets: a ring or a
+ * lemon is either taken cleanly or not at all, with no partial credit the
+ * way a peg lance or sword thrust can score 2 or 4. Every other event keeps
+ * the full 0/2/4/6 scale.
+ */
+export function allowedTargetPoints(
+  definition: EventTypeDefinition,
+): readonly (typeof ALLOWED_TARGET_POINTS)[number][] {
+  return definition.ruleType === "MULTI_TARGET" ? [0, 6] : ALLOWED_TARGET_POINTS;
+}
+
 export const ALL_EVENT_TYPES: readonly EventTypeDefinition[] = EVENT_TYPE_KEYS.map(
   (key) => DEFINITIONS[key],
 );

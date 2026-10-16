@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/surfac
 import { Input } from "@/components/ui/form-controls";
 import { useI18n } from "@/lib/i18n/client";
 import {
-  ALLOWED_TARGET_POINTS,
+  allowedTargetPoints,
   getEventTypeDefinition,
   type EventTypeKey,
 } from "@/domain/scoring/event-types";
@@ -116,11 +116,13 @@ function PointPicker({
   onChange,
   disabled,
   label,
+  options,
 }: {
   value: number | null;
   onChange: (value: number | null) => void;
   disabled: boolean;
   label: string;
+  options: readonly number[];
 }) {
   const { t } = useI18n();
   return (
@@ -145,7 +147,7 @@ function PointPicker({
       >
         -
       </button>
-      {ALLOWED_TARGET_POINTS.map((option) => (
+      {options.map((option) => (
         <button
           key={option}
           type="button"
@@ -186,6 +188,7 @@ export function ScoringGrid({
   const definition = getEventTypeDefinition(eventType);
   const labels = targetLabels(eventType, definition.targetsPerRider, t);
   const isTeamUnit = definition.ridersPerScoringUnit > 1;
+  const pointOptions = allowedTargetPoints(definition);
 
   // The same pure engine that scores the run on the server computes the
   // preview, so what the operator sees while typing is exactly what will be
@@ -323,6 +326,7 @@ export function ScoringGrid({
                                     onChange={(value) => setPoint(rider.runScoreId, index, value)}
                                     disabled={readOnly}
                                     label={`${rider.riderName}: ${labels[index] ?? ""}`}
+                                    options={pointOptions}
                                   />
                                 </span>
                               ))}

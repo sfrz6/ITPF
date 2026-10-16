@@ -23,9 +23,10 @@ import {
   type RosterMember,
 } from "@/domain/entry-order";
 import {
-  ALLOWED_TARGET_POINTS,
+  allowedTargetPoints,
   getEventTypeDefinition,
   RIDERS_PER_COUNTRY_PER_RUN,
+  type EventTypeDefinition,
   type EventTypeKey,
 } from "@/domain/scoring/event-types";
 import { scoreRun, type RunScoringInput, type ScoringUnitInput } from "@/domain/scoring/engine";
@@ -935,9 +936,10 @@ export interface RunScorePayload {
   readonly scores: ReadonlyArray<{ runScoreId: string; targets: ReadonlyArray<number | null> }>;
 }
 
-const ALLOWED_POINTS = new Set<number>(ALLOWED_TARGET_POINTS);
+function assertValidPayload(payload: RunScorePayload, definition: EventTypeDefinition): void {
+  const allowedPoints = allowedTargetPoints(definition);
+  const allowedPointsSet = new Set<number>(allowedPoints);
 
-function assertValidPayload(payload: RunScorePayload, targetsPerRider: number): void {
   for (const unit of payload.units) {
     if (unit.timeSeconds === null) continue;
     const value = Number(unit.timeSeconds);
@@ -946,13 +948,15 @@ function assertValidPayload(payload: RunScorePayload, targetsPerRider: number): 
     }
   }
   for (const score of payload.scores) {
-    if (score.targets.length !== targetsPerRider) {
+    if (score.targets.length !== definition.targetsPerRider) {
       throw new DomainError("A rider has the wrong number of scores for this event.", "VALIDATION");
     }
     for (const target of score.targets) {
       if (target === null) continue;
-      if (!ALLOWED_POINTS.has(target)) {
-        throw new DomainError("A score must be 0, 2, 4 or 6.", "VALIDATION");
+      if (!allowedPointsSet.has(target)) {
+        const last = allowedPoints[allowedPoints.length - 1];
+        const rest = allowedPoints.slice(0, -1).join(", ");
+        throw new DomainError(`A score must be ${rest ? `${rest} or ` : ""}${last}.`, "VALIDATION");
       }
     }
   }
@@ -1138,7 +1142,7 @@ export async function saveRunScores(
   }
 
   const definition = getEventTypeDefinition(run.eventType);
-  assertValidPayload(input.payload, definition.targetsPerRider);
+  assertValidPayload(input.payload, definition);
   await assertPayloadBelongsToRun(tx, input.runId, input.payload);
   await writePayload(tx, input.runId, input.payload);
 
@@ -1308,7 +1312,7 @@ export async function correctConfirmedRun(
   }
 
   const definition = getEventTypeDefinition(run.eventType);
-  assertValidPayload(input.payload, definition.targetsPerRider);
+  assertValidPayload(input.payload, definition);
   await assertPayloadBelongsToRun(tx, input.runId, input.payload);
 
   const before = await snapshotRun(tx, input.runId);

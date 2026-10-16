@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { scoreRun, aggregateRuns, type RunScoringInput } from "@/domain/scoring/engine";
-import { getEventTypeDefinition, maxUnitPoints } from "@/domain/scoring/event-types";
+import { allowedTargetPoints, getEventTypeDefinition, maxUnitPoints } from "@/domain/scoring/event-types";
 import { calculateTimePenalty } from "@/domain/scoring/penalty";
 
 const OMAN = "country-oman";
@@ -259,6 +259,13 @@ describe("rings and peg, lemons and peg", () => {
     const result = scoreRun(multiRun([6, 6, 6], 500));
     expect(result.riders[0]!.netPoints.toString()).toBe("0");
     expect(result.units[0]!.penalty.toString()).toBe("-18");
+  });
+
+  it("only allows 0 or 6 for a single ring or lemon, unlike a peg lance or sword target", () => {
+    expect(allowedTargetPoints(getEventTypeDefinition("RINGS_AND_PEG_LANCE"))).toEqual([0, 6]);
+    expect(allowedTargetPoints(getEventTypeDefinition("LEMON_AND_PEG_SWORD"))).toEqual([0, 6]);
+    expect(allowedTargetPoints(getEventTypeDefinition("INDIVIDUAL_LANCE"))).toEqual([0, 2, 4, 6]);
+    expect(allowedTargetPoints(getEventTypeDefinition("TEAM_SWORD"))).toEqual([0, 2, 4, 6]);
   });
 
   it("matches the workbook inside the 36 to 43 second anomaly window", () => {

@@ -30,7 +30,9 @@ suite("scoring, confirmation and correction", () => {
   });
 
   /** Creates a one event championship and brings its first run to IN_PROGRESS. */
-  async function openRun(eventType: "INDIVIDUAL_LANCE" | "TEAM_LANCE" | "PAIR_LANCE") {
+  async function openRun(
+    eventType: "INDIVIDUAL_LANCE" | "TEAM_LANCE" | "PAIR_LANCE" | "RINGS_AND_PEG_LANCE",
+  ) {
     const templateId = await createTemplate("Scoring template", [
       { dayNumber: 1, eventType, runs: 2 },
     ]);
@@ -193,6 +195,33 @@ suite("scoring, confirmation and correction", () => {
         }),
       ),
     ).rejects.toThrow(/0, 2, 4 or 6/);
+  });
+
+  it("only allows 0 or 6 for a rings and peg target, where a peg lance would allow 2 and 4 too", async () => {
+    const { runId } = await openRun("RINGS_AND_PEG_LANCE");
+    const { saveRunScores, getRunScoringState } = await import("@/server/services/runs");
+    const state = await getRunScoringState(runId, "en");
+    const scoreId = state!.countries[0]!.units[0]!.riders[0]!.runScoreId;
+
+    await expect(
+      db.transaction(async (tx) =>
+        saveRunScores(tx, actor, {
+          runId,
+          expectedVersion: await currentVersion(runId),
+          payload: { units: [], scores: [{ runScoreId: scoreId, targets: [6, 4, 6] }] },
+        }),
+      ),
+    ).rejects.toThrow(/0 or 6/);
+
+    await expect(
+      db.transaction(async (tx) =>
+        saveRunScores(tx, actor, {
+          runId,
+          expectedVersion: await currentVersion(runId),
+          payload: { units: [], scores: [{ runScoreId: scoreId, targets: [6, 0, 6] }] },
+        }),
+      ),
+    ).resolves.toBeDefined();
   });
 
   it("keeps an unconfirmed run out of the results", async () => {
