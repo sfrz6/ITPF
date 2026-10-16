@@ -37,6 +37,12 @@ export default async function RunPage({
   const nextRun = index >= 0 && index < runsInOrder.length - 1 ? runsInOrder[index + 1] : undefined;
 
   const run = entryOrderState.run;
+  const scoresSaved = (scoringState?.countries ?? []).some((country) =>
+    country.units.some(
+      (unit) =>
+        unit.timeSeconds !== null || unit.riders.some((rider) => rider.targets.some((value) => value !== null)),
+    ),
+  );
 
   return (
     <div className="space-y-5">
@@ -69,6 +75,7 @@ export default async function RunPage({
           status: run.status,
           version: run.version,
           dayNumber: run.dayNumber,
+          scoresSaved,
         }}
         entryOrder={{
           countries: entryOrderState.countries.map((country) => ({

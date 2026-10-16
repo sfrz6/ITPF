@@ -260,6 +260,7 @@ export function EntryOrderPanel({
   totalCount,
   canManage,
   locked,
+  editableWhileScoring,
 }: {
   championshipId: string;
   runId: string;
@@ -274,6 +275,8 @@ export function EntryOrderPanel({
    * asking for a fresh confirmation before each run.
    */
   locked: boolean;
+  /** True when this panel is showing again mid-scoring, before any score is saved. */
+  editableWhileScoring?: boolean;
 }) {
   const { t } = useI18n();
   const router = useRouter();
@@ -282,8 +285,12 @@ export function EntryOrderPanel({
     <section className="space-y-4">
       <div className="space-y-2">
         <h3 className="text-sm font-semibold">{t("runs.entryOrdersTitle")}</h3>
-        <Callout tone="info">
-          {locked ? t("runs.entryOrdersLockedHint") : t("runs.entryOrdersHint")}
+        <Callout tone={editableWhileScoring ? "warning" : "info"}>
+          {locked
+            ? t("runs.entryOrdersLockedHint")
+            : editableWhileScoring
+              ? t("runs.entryOrdersEditableWhileScoringHint")
+              : t("runs.entryOrdersHint")}
         </Callout>
         <p className="text-xs text-muted">
           {t("runs.countriesConfirmed", { confirmed: confirmedCount, total: totalCount })}

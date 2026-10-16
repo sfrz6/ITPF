@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, inArray, lt, or, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNotNull, lt, or, sql } from "drizzle-orm";
 import { getDb, type Executor } from "@/db";
 import {
   championshipCountries,
@@ -28,7 +28,8 @@ import {
   RIDERS_PER_COUNTRY_PER_RUN,
   type EventTypeKey,
 } from "@/domain/scoring/event-types";
-import type { ScoringUnitInput } from "@/domain/scoring/engine";
+import { scoreRun, type RunScoringInput, type ScoringUnitInput } from "@/domain/scoring/engine";
+import { formatPoints } from "@/domain/scoring/decimal";
 import type { Locale } from "@/lib/i18n/config";
 import type { Principal } from "@/lib/auth/session";
 import { ConcurrencyError, DomainError } from "@/server/actions/result";
@@ -42,8 +43,41 @@ export type RunStatus =
   | "REVIEW"
   | "CONFIRMED";
 
-/** Statuses in which the entry order of a run may still be recorded or changed. */
-const ENTRY_ORDER_EDITABLE: readonly RunStatus[] = ["ENTRY_ORDER_PENDING", "READY"];
+/** Statuses in which a run has not actually started yet. */
+const RUN_NOT_STARTED: readonly RunStatus[] = ["ENTRY_ORDER_PENDING", "READY"];
+
+/**
+ * Whether a run's entry order may still be recorded or changed.
+ *
+ * Not just before the run starts: a country can be late submitting its final
+ * lineup, so the order stays editable through scoring too, right up until the
+ * first score is actually saved. Once any time or target has been written,
+ * re-materialising the scoring units would discard real data, so the order
+ * locks there instead of at the stricter "not started yet" boundary.
+ */
+async function canEditEntryOrder(tx: Executor, run: { status: RunStatus; runId: string }): Promise<boolean> {
+  if (RUN_NOT_STARTED.includes(run.status)) return true;
+  if (run.status !== "IN_PROGRESS") return false;
+  return !(await hasSavedScores(tx, run.runId));
+}
+
+/** True once any time or target has actually been saved for this run. */
+async function hasSavedScores(tx: Executor, runId: string): Promise<boolean> {
+  const [timedUnit] = await tx
+    .select({ id: runScoringUnits.id })
+    .from(runScoringUnits)
+    .where(and(eq(runScoringUnits.runId, runId), isNotNull(runScoringUnits.timeSeconds)))
+    .limit(1);
+  if (timedUnit) return true;
+
+  const [scoredTarget] = await tx
+    .select({ id: runScoreTargets.id })
+    .from(runScoreTargets)
+    .innerJoin(runScores, eq(runScores.id, runScoreTargets.runScoreId))
+    .where(and(eq(runScores.runId, runId), isNotNull(runScoreTargets.points)))
+    .limit(1);
+  return scoredTarget !== undefined;
+}
 
 export interface RunRosterRider {
   readonly championshipRiderId: string;
@@ -346,6 +380,112 @@ export async function getEventPrintState(
   };
 }
 
+export interface EventPrintRiderValue {
+  /** Raw points per target, formatted, in the same order as the round sheet's headings. */
+  readonly targets: readonly (string | null)[];
+  readonly netPoints: string;
+}
+
+export interface EventPrintUnitValue {
+  readonly timeSeconds: string | null;
+  readonly penalty: string;
+  /** The unit's own net points — the figure shown for a pair, team or relay, where the penalty belongs to the unit rather than to one rider. */
+  readonly netPoints: string;
+}
+
+export interface EventPrintRunValues {
+  readonly runId: string;
+  readonly runNumber: number;
+  /** Keyed by championship rider id. */
+  readonly ridersById: ReadonlyMap<string, EventPrintRiderValue>;
+  /** Keyed by `${championshipCountryId}:${unitIndex}`, matching `scoreRun`'s own unit results. */
+  readonly unitsByKey: ReadonlyMap<string, EventPrintUnitValue>;
+}
+
+export interface EventResultsPrintState extends EventPrintState {
+  readonly runResults: readonly EventPrintRunValues[];
+}
+
+/**
+ * Same shell as {@link getEventPrintState}, with each run's actual recorded
+ * scores attached: the same round sheet layout, filled in rather than blank.
+ *
+ * Only meant for runs that are already confirmed (the results PDF only
+ * offers a day once every run in it is), so every target is expected to have
+ * a value; `scoreRun` is still the pure engine used for live scoring, so the
+ * fault and net figures shown here are guaranteed to match what was
+ * confirmed, not recomputed by a second implementation.
+ */
+export async function getEventResultsForPrint(
+  eventId: string,
+  locale: Locale,
+): Promise<EventResultsPrintState | null> {
+  const state = await getEventPrintState(eventId, locale);
+  if (!state) return null;
+
+  const runResults = await Promise.all(
+    state.runs.map(async (run): Promise<EventPrintRunValues> => {
+      const scoringState = await getRunScoringState(run.runId, locale);
+      const countries = scoringState?.countries ?? [];
+
+      const targetsByRiderId = new Map<string, readonly (string | null)[]>();
+      for (const country of countries) {
+        for (const unit of country.units) {
+          for (const rider of unit.riders) {
+            targetsByRiderId.set(rider.championshipRiderId, rider.targets);
+          }
+        }
+      }
+
+      const input: RunScoringInput = {
+        eventTypeKey: state.eventType,
+        timeLimitSeconds: run.timeLimitSeconds,
+        units: countries.flatMap((country) =>
+          country.units.map((unit) => ({
+            unitIndex: unit.unitIndex,
+            championshipCountryId: country.championshipCountryId,
+            timeSeconds: unit.timeSeconds,
+            riders: unit.riders.map((rider) => ({
+              championshipRiderId: rider.championshipRiderId,
+              positionInUnit: rider.positionInUnit,
+              targets: rider.targets,
+            })),
+          })),
+        ),
+      };
+      const result = scoreRun(input);
+
+      return {
+        runId: run.runId,
+        runNumber: run.runNumber,
+        ridersById: new Map(
+          result.riders.map((rider) => [
+            rider.championshipRiderId,
+            {
+              targets: (targetsByRiderId.get(rider.championshipRiderId) ?? []).map((value) =>
+                value === null ? null : formatPoints(value),
+              ),
+              netPoints: formatPoints(rider.netPoints),
+            },
+          ]),
+        ),
+        unitsByKey: new Map(
+          result.units.map((unit) => [
+            `${unit.championshipCountryId}:${unit.unitIndex}`,
+            {
+              timeSeconds: unit.timeSeconds === null ? null : unit.timeSeconds.toFixed(2),
+              penalty: formatPoints(unit.penalty),
+              netPoints: formatPoints(unit.netPoints),
+            },
+          ]),
+        ),
+      };
+    }),
+  );
+
+  return { ...state, runResults };
+}
+
 /**
  * Records a country's entry order decision for one run and lays out the run's
  * scoring units for that country.
@@ -367,9 +507,9 @@ export async function confirmCountryEntryOrder(
 ): Promise<void> {
   const run = await getRunContext(input.runId);
   if (!run) throw new DomainError("Run not found.", "NOT_FOUND");
-  if (!ENTRY_ORDER_EDITABLE.includes(run.status)) {
+  if (!(await canEditEntryOrder(tx, run))) {
     throw new DomainError(
-      "This run has already started, so its entry order can no longer be changed.",
+      "Scores have already been saved for this run, so its entry order can no longer be changed.",
       "CONFLICT",
     );
   }
@@ -500,7 +640,7 @@ async function propagateEntryOrderWithinEvent(
     .where(eq(championshipCountries.championshipId, firstRun.championshipId));
 
   for (const laterRun of laterRuns) {
-    if (!ENTRY_ORDER_EDITABLE.includes(laterRun.status)) continue;
+    if (!(await canEditEntryOrder(tx, { status: laterRun.status, runId: laterRun.id }))) continue;
     for (const country of participatingCountries) {
       await confirmCountryEntryOrder(
         tx,
@@ -629,7 +769,7 @@ async function allCountriesHaveConfirmed(
 
 /** Moves a run between pending and ready as countries are reviewed. */
 async function refreshRunReadiness(tx: Executor, run: RunContext): Promise<void> {
-  if (!ENTRY_ORDER_EDITABLE.includes(run.status)) return;
+  if (!RUN_NOT_STARTED.includes(run.status)) return;
 
   const complete = await allCountriesHaveConfirmed(tx, run.championshipId, run.runId);
   const nextStatus: RunStatus = complete ? "READY" : "ENTRY_ORDER_PENDING";
@@ -962,7 +1102,7 @@ export async function startRun(
   expectedVersion: number,
 ): Promise<void> {
   const run = await loadRunForUpdate(tx, runId, expectedVersion);
-  if (!ENTRY_ORDER_EDITABLE.includes(run.status)) {
+  if (!RUN_NOT_STARTED.includes(run.status)) {
     throw new DomainError("This run has already started.", "CONFLICT");
   }
   // Gated on a fresh count rather than on the stored status, so a run whose

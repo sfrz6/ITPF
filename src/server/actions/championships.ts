@@ -5,11 +5,12 @@ import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "@/db";
 import { championshipCountries, championshipRiders, championships } from "@/db/schema";
-import { requirePermission } from "@/lib/auth/authorize";
+import { requireAdmin, requirePermission } from "@/lib/auth/authorize";
 import { ACTIVE_RIDERS_PER_COUNTRY } from "@/domain/scoring/event-types";
 import { recordAudit } from "@/server/services/audit";
 import {
   createChampionshipFromTemplate,
+  deleteChampionship,
   reorderChampionshipCountries,
   replaceSquad,
   type SquadInput,
@@ -137,6 +138,43 @@ export async function updateChampionshipAction(
     revalidatePath(`/championships/${parsed.data.championshipId}`);
     revalidatePath("/championships");
     revalidatePath("/");
+    return ok();
+  });
+}
+
+const deleteChampionshipSchema = z.object({ championshipId: z.uuid() });
+
+/**
+ * Permanently deletes a championship and everything recorded under it.
+ *
+ * Restricted to administrators: unlike every other championship mutation,
+ * this destroys confirmed, possibly already published results and cannot be
+ * undone.
+ */
+export async function deleteChampionshipAction(
+  input: unknown,
+): Promise<ActionResult<undefined>> {
+  return run(async () => {
+    const actor = await requireAdmin();
+    const parsed = deleteChampionshipSchema.safeParse(input);
+    if (!parsed.success) throw new DomainError("Invalid request.", "VALIDATION");
+
+    const slug = await getDb().transaction(async (tx) => {
+      const [existing] = await tx
+        .select({ slug: championships.slug })
+        .from(championships)
+        .where(eq(championships.id, parsed.data.championshipId))
+        .limit(1);
+      if (!existing) throw new DomainError("Championship not found.", "NOT_FOUND");
+
+      await deleteChampionship(tx, actor, parsed.data.championshipId);
+      return existing.slug;
+    });
+
+    revalidatePath("/");
+    revalidatePath("/championships");
+    revalidatePath("/results");
+    revalidatePath(`/results/${slug}`);
     return ok();
   });
 }

@@ -351,7 +351,7 @@ suite("scoring, confirmation and correction", () => {
     ).rejects.toThrow(/correction workflow/i);
   });
 
-  it("locks the entry order once the run has started", async () => {
+  it("still allows the entry order to change after the run has started, as long as no score has been saved", async () => {
     const { runId } = await openRun("INDIVIDUAL_LANCE");
     const { confirmCountryEntryOrder, getRunEntryOrderState } = await import(
       "@/server/services/runs"
@@ -366,7 +366,34 @@ suite("scoring, confirmation and correction", () => {
           decision: "NO_CHANGE",
         }),
       ),
-    ).rejects.toThrow(/already started/i);
+    ).resolves.toBeUndefined();
+  });
+
+  it("locks the entry order once a score has been saved for the run", async () => {
+    const { runId } = await openRun("INDIVIDUAL_LANCE");
+    const { confirmCountryEntryOrder, getRunEntryOrderState, saveRunScores } = await import(
+      "@/server/services/runs"
+    );
+
+    await db.transaction(async (tx) =>
+      saveRunScores(tx, actor, {
+        runId,
+        expectedVersion: await currentVersion(runId),
+        payload: await buildPayload(runId, 6, "6.00"),
+      }),
+    );
+
+    const state = await getRunEntryOrderState(runId, "en");
+
+    await expect(
+      db.transaction((tx) =>
+        confirmCountryEntryOrder(tx, actor, {
+          runId,
+          championshipCountryId: state!.countries[0]!.championshipCountryId,
+          decision: "NO_CHANGE",
+        }),
+      ),
+    ).rejects.toThrow(/already been saved/i);
   });
 
   it("writes an audit entry for every official action", async () => {

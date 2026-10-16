@@ -5,6 +5,7 @@ import { ItpfLogoPrint } from "@/components/common/itpf-logo";
 import { PrintTrigger } from "@/components/common/print-trigger";
 import { getChampionshipBySlug, getChampionshipDetail } from "@/server/services/championships";
 import { loadChampionshipResults } from "@/server/services/results";
+import { getEventResultsForPrint } from "@/server/services/runs";
 import {
   buildStandingsData,
   dayOfScope,
@@ -13,6 +14,7 @@ import {
   scopeLabelKey,
 } from "@/components/results/standings-data";
 import { StandingsPdfTable } from "@/components/results/standings-pdf";
+import { EventResultsPdfTable } from "@/components/results/event-results-pdf";
 
 export const metadata = { title: "Standings" };
 
@@ -40,9 +42,17 @@ export default async function PublicStandingsPdfPage({
   if (!isAvailable) notFound();
 
   const results = await loadChampionshipResults(championship.id, locale);
-  const { sets } = buildStandingsData(results, t);
+  const { days, sets } = buildStandingsData(results, t);
   const individualSet = sets.find((set) => set.scope === scope && set.subject === "INDIVIDUAL")!;
   const countrySet = sets.find((set) => set.scope === scope && set.subject === "COUNTRY")!;
+
+  // The event score sheets only make sense for a single day's PDF: the
+  // Overall PDF stays standings-only, since a run sheet is inherently a
+  // single day's record, not something that aggregates across days.
+  const eventsForDay = day === null ? [] : (detail.days.find((d) => d.dayNumber === day)?.events ?? []);
+  const eventResults = (
+    await Promise.all(eventsForDay.map((event) => getEventResultsForPrint(event.id, locale)))
+  ).filter((state): state is NonNullable<typeof state> => state !== null);
 
   const printedOn = new Intl.DateTimeFormat(locale === "ar" ? "ar" : "en-GB", {
     dateStyle: "medium",
@@ -79,17 +89,21 @@ export default async function PublicStandingsPdfPage({
 
       <section className="mb-4 space-y-2">
         <h2 className="text-[10pt] font-bold uppercase tracking-wide">
-          {t("publicResults.individualStandings")}
+          {t("publicResults.countryStandings")}
         </h2>
-        <StandingsPdfTable set={individualSet} t={t} />
+        <StandingsPdfTable set={countrySet} days={days} t={t} />
       </section>
 
       <section className="mb-4 space-y-2 print-avoid-break">
         <h2 className="text-[10pt] font-bold uppercase tracking-wide">
-          {t("publicResults.countryStandings")}
+          {t("publicResults.individualStandings")}
         </h2>
-        <StandingsPdfTable set={countrySet} t={t} />
+        <StandingsPdfTable set={individualSet} days={days} t={t} />
       </section>
+
+      {eventResults.map((state) => (
+        <EventResultsPdfTable key={state.eventId} state={state} t={t} />
+      ))}
 
       <footer className="mt-6 flex items-end justify-between gap-8 border-t border-black pt-2 text-[9pt]">
         <p>{t("publicResults.subtitle")}</p>

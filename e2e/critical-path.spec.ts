@@ -201,21 +201,25 @@ test("enter scores and confirm the run", async ({ page }) => {
 
   // Award 6 points to every rider and record a time inside the 6.40 s limit for
   // all but one, who is one started second over and so loses half a point.
-  const groups = page.getByRole("radiogroup");
+  // Scoped to the Scoring section: the entry order panel can still be showing
+  // at this point too (nothing has been saved for the run yet), and its own
+  // "no change / change order" control is a radiogroup as well.
+  const scoringSection = page.locator("section").filter({ has: page.getByRole("heading", { name: "Scoring" }) });
+  const groups = scoringSection.getByRole("radiogroup");
   const groupCount = await groups.count();
   expect(groupCount).toBe(8);
   for (let index = 0; index < groupCount; index += 1) {
     await groups.nth(index).getByRole("radio", { name: "6" }).click();
   }
 
-  const times = page.getByRole("textbox", { name: /Time$/ });
+  const times = scoringSection.getByRole("textbox", { name: /Time$/ });
   const timeCount = await times.count();
   expect(timeCount).toBe(8);
   for (let index = 0; index < timeCount; index += 1) {
     await times.nth(index).fill(index === 0 ? "7.40" : "6.00");
   }
 
-  await page.getByRole("button", { name: "Save" }).click();
+  await scoringSection.getByRole("button", { name: "Save" }).click();
   await expect(page.getByText(/Scores saved/i)).toBeVisible();
   await expect(page.getByText("Awaiting review")).toBeVisible();
 

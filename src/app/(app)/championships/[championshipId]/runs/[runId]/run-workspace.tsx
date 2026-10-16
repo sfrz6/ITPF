@@ -59,6 +59,8 @@ export interface RunSummary {
   readonly status: RunStatus;
   readonly version: number;
   readonly dayNumber: number;
+  /** True once any time or target has actually been saved for this run. */
+  readonly scoresSaved: boolean;
 }
 
 export interface RunRevisionSummary {
@@ -128,6 +130,11 @@ export function RunWorkspace({
   const isConfirmed = run.status === "CONFIRMED";
   const isScoring = run.status === "IN_PROGRESS" || run.status === "REVIEW";
   const isEntryOrderStage = run.status === "ENTRY_ORDER_PENDING" || run.status === "READY";
+  // A country can be late submitting its final lineup, so the order stays
+  // editable into scoring too, right up until the first score is saved.
+  const entryOrderStillEditable =
+    run.runNumber === 1 && run.status === "IN_PROGRESS" && !run.scoresSaved;
+  const showEntryOrderPanel = isEntryOrderStage || entryOrderStillEditable;
   // Readiness is taken from the live count of confirmed countries rather than
   // from the stored status, which can lag when two countries are confirmed at
   // the same moment. The server applies the same rule.
@@ -268,7 +275,7 @@ export function RunWorkspace({
         </Callout>
       ) : null}
 
-      {isEntryOrderStage ? (
+      {showEntryOrderPanel ? (
         <EntryOrderPanel
           championshipId={championshipId}
           runId={run.runId}
@@ -277,6 +284,7 @@ export function RunWorkspace({
           totalCount={entryOrder.totalCount}
           canManage={permissions.manageEntryOrders && run.runNumber === 1}
           locked={run.runNumber > 1}
+          editableWhileScoring={entryOrderStillEditable}
         />
       ) : null}
 

@@ -451,6 +451,60 @@ export async function replaceSquad(
 }
 
 /**
+ * Permanently deletes a championship and every record that belongs to it:
+ * days, events, runs, scores, entry orders, tie-break rounds, countries and
+ * rosters.
+ *
+ * Runs are deleted first, scoped through the event/day join, which cascades
+ * away `run_scores` and `run_entry_order_items` before countries and riders
+ * are removed — those two tables are the only ones that `restrict` deleting
+ * a rider who has already ridden (see `removeChampionshipCountry`'s guard),
+ * so clearing them first means that guard never fires here. Everything else
+ * cascades from `championship_countries` or `championships` itself.
+ */
+export async function deleteChampionship(
+  tx: Executor,
+  actor: Principal,
+  championshipId: string,
+): Promise<void> {
+  const [existing] = await tx
+    .select({ id: championships.id, name: championships.name, slug: championships.slug })
+    .from(championships)
+    .where(eq(championships.id, championshipId))
+    .limit(1);
+  if (!existing) throw new DomainError("Championship not found.", "NOT_FOUND");
+
+  const events = await tx
+    .select({ id: championshipEvents.id })
+    .from(championshipEvents)
+    .innerJoin(championshipDays, eq(championshipDays.id, championshipEvents.championshipDayId))
+    .where(eq(championshipDays.championshipId, championshipId));
+
+  if (events.length > 0) {
+    await tx.delete(championshipRuns).where(
+      inArray(
+        championshipRuns.championshipEventId,
+        events.map((event) => event.id),
+      ),
+    );
+  }
+
+  await tx
+    .delete(championshipCountries)
+    .where(eq(championshipCountries.championshipId, championshipId));
+
+  await tx.delete(championships).where(eq(championships.id, championshipId));
+
+  await recordAudit(tx, actor, {
+    action: "CHAMPIONSHIP_DELETED",
+    entityType: "championship",
+    entityId: existing.id,
+    championshipId: existing.id,
+    before: { name: existing.name, slug: existing.slug },
+  });
+}
+
+/**
  * True once the championship's first run has actually started.
  *
  * The country start list is a property of the whole competition, so it stays

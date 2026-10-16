@@ -55,11 +55,11 @@ export default async function PublicParticipantsPage({
   return (
     <div className="space-y-5">
       <Link
-        href={`/results/${championship.slug}`}
+        href="/results"
         className="inline-flex items-center gap-1 text-xs text-muted hover:text-foreground"
       >
         <ChevronLeft className="size-3.5 rtl:rotate-180" aria-hidden />
-        {t("publicResults.backToResults")}
+        {t("publicResults.backToChampionships")}
       </Link>
 
       <header className="flex flex-wrap items-start gap-4">
@@ -80,8 +80,6 @@ export default async function PublicParticipantsPage({
             const squad = riders.filter(
               (rider) => rider.championshipCountryId === country.championshipCountryId,
             );
-            const active = squad.filter((rider) => rider.rosterSlot === "ACTIVE");
-            const reserve = squad.filter((rider) => rider.rosterSlot === "RESERVE");
 
             return (
               <li key={country.championshipCountryId}>
@@ -98,32 +96,11 @@ export default async function PublicParticipantsPage({
                         {t("championships.ridersNotSelectedYet")}
                       </p>
                     ) : (
-                      <>
-                        {active.length > 0 ? (
-                          <div>
-                            <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                              {t("championships.activeRiders")}
-                            </p>
-                            <ul className="mt-1 space-y-0.5 text-sm">
-                              {active.map((rider) => (
-                                <li key={rider.championshipRiderId}>{rider.fullName}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        ) : null}
-                        {reserve.length > 0 ? (
-                          <div>
-                            <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                              {t("championships.reserveRider")}
-                            </p>
-                            <ul className="mt-1 space-y-0.5 text-sm">
-                              {reserve.map((rider) => (
-                                <li key={rider.championshipRiderId}>{rider.fullName}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        ) : null}
-                      </>
+                      <ul className="space-y-0.5 text-sm">
+                        {squad.map((rider) => (
+                          <li key={rider.championshipRiderId}>{rider.fullName}</li>
+                        ))}
+                      </ul>
                     )}
                   </CardContent>
                 </Card>

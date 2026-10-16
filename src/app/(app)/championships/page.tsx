@@ -7,6 +7,7 @@ import { listChampionships } from "@/server/services/championships";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui/surfaces";
 import { Button } from "@/components/ui/button";
 import { formatCompetitionDate } from "@/components/common/formatting";
+import { ChampionshipDeleteButton } from "./championship-delete-button";
 
 export const metadata = { title: "Championships" };
 
@@ -43,10 +44,13 @@ export default async function ChampionshipsPage() {
         <Card className="overflow-hidden">
           <ul className="divide-hairline">
             {list.map((championship) => (
-              <li key={championship.id}>
+              <li
+                key={championship.id}
+                className="flex items-center gap-1 transition-colors hover:bg-surface-sunken"
+              >
                 <Link
                   href={`/championships/${championship.id}`}
-                  className="flex items-center gap-4 px-4 py-3.5 transition-colors hover:bg-surface-sunken"
+                  className="flex min-w-0 flex-1 items-center gap-4 px-4 py-3.5"
                 >
                   <span className="min-w-0 flex-1 space-y-1">
                     <span className="flex flex-wrap items-center gap-2">
@@ -80,6 +84,14 @@ export default async function ChampionshipsPage() {
                   </span>
                   <ChevronRight className="size-4 shrink-0 text-subtle rtl:rotate-180" aria-hidden />
                 </Link>
+                {principal.isAdmin ? (
+                  <span className="shrink-0 pe-3">
+                    <ChampionshipDeleteButton
+                      championshipId={championship.id}
+                      championshipName={championship.name}
+                    />
+                  </span>
+                ) : null}
               </li>
             ))}
           </ul>
