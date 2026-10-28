@@ -172,8 +172,9 @@ export function ChampionshipWizard({
     competitionDates !== null;
 
   // Riders are optional at this step: a country's squad is either the full
-  // four active riders plus one reserve, or left empty to decide later from
-  // the Participants page, any time before that country's first run.
+  // four active riders, with or without the optional reserve, or left empty
+  // to decide later from the Participants page, any time before that
+  // country's first run.
   const squadsSavable = selected.every((countryId) =>
     isSquadSavable(selections[countryId] ?? {}),
   );

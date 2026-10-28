@@ -86,16 +86,19 @@ export function addDays(isoDate: string, days: number): string {
 /**
  * Validates one country's squad.
  *
- * The competition model is four active riders plus one reserve. Active or
- * reserve belongs to the participation, not to the rider, so the same rider can
- * be active here and reserve in the next championship.
+ * The competition model is four active riders plus an optional reserve: a
+ * country without a substitute simply fields its four active riders and
+ * nothing else. Active or reserve belongs to the participation, not to the
+ * rider, so the same rider can be active here and reserve in the next
+ * championship.
  *
  * A squad may also be left completely empty, meaning the riders have not been
  * decided yet. The entry order screen already refuses to prepare a run for a
  * country with an incomplete roster, so an empty squad is safe to store and
  * can be filled in later from the Participants page, any time before that
- * country takes part in a run. A squad that is neither empty nor complete is
- * rejected, because a half picked roster has no sensible meaning.
+ * country takes part in a run. A squad with fewer than four active riders, or
+ * more than one reserve, is rejected, because a half picked roster has no
+ * sensible meaning.
  */
 export function validateSquad(squad: SquadInput): void {
   if (squad.riders.length === 0) return;
@@ -109,9 +112,9 @@ export function validateSquad(squad: SquadInput): void {
       "VALIDATION",
     );
   }
-  if (reserve.length !== RESERVE_RIDERS_PER_COUNTRY) {
+  if (reserve.length > RESERVE_RIDERS_PER_COUNTRY) {
     throw new DomainError(
-      `Each country needs exactly ${RESERVE_RIDERS_PER_COUNTRY} reserve rider.`,
+      `Each country may have at most ${RESERVE_RIDERS_PER_COUNTRY} reserve rider.`,
       "VALIDATION",
     );
   }

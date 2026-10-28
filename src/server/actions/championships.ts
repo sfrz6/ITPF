@@ -25,9 +25,9 @@ const squadRiderSchema = z.object({
 
 /**
  * A squad may be left empty, meaning the riders have not been picked yet, or
- * must be the full four active riders plus one reserve. `validateSquad` in the
- * service layer enforces that "all or nothing" rule; here only the shape and
- * the upper bound are checked.
+ * must be the full four active riders, with an optional reserve. `validateSquad`
+ * in the service layer enforces that rule; here only the shape and the upper
+ * bound are checked.
  */
 const squadSchema = z.object({
   countryId: z.uuid(),

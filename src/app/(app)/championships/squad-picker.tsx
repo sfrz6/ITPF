@@ -50,10 +50,11 @@ export function countReserve(value: SquadSelection): number {
   return entriesOf(value).filter(([, slot]) => slot === RESERVE_SLOT).length;
 }
 
+/** Four active riders, and no more than the one optional reserve. */
 export function isSquadComplete(value: SquadSelection): boolean {
   return (
     countActive(value) === ACTIVE_RIDERS_PER_COUNTRY &&
-    countReserve(value) === RESERVE_RIDERS_PER_COUNTRY
+    countReserve(value) <= RESERVE_RIDERS_PER_COUNTRY
   );
 }
 
@@ -63,9 +64,10 @@ export function isSquadEmpty(value: SquadSelection): boolean {
 }
 
 /**
- * Whether a squad may be saved as it stands: the full four active riders plus
- * one reserve, or nothing at all. A squad picked halfway cannot be saved,
- * because it has no sensible meaning for the entry order screen.
+ * Whether a squad may be saved as it stands: the full four active riders,
+ * with or without the optional reserve, or nothing at all. A squad picked
+ * halfway cannot be saved, because it has no sensible meaning for the entry
+ * order screen.
  */
 export function isSquadSavable(value: SquadSelection): boolean {
   return isSquadComplete(value) || isSquadEmpty(value);
@@ -76,7 +78,10 @@ export function isSquadSavable(value: SquadSelection): boolean {
  *
  * Empty once the squad is complete, and also empty while nothing has been
  * picked yet, because an empty squad is a deliberate choice to decide the
- * riders later, not a mistake to flag.
+ * riders later, not a mistake to flag. The reserve is optional, so its count
+ * is only ever flagged if it somehow exceeds one — the picker's own selection
+ * logic already prevents that, so this is a defensive check rather than
+ * something a user can normally trigger.
  */
 export function squadIssues(value: SquadSelection, t: Translator): readonly string[] {
   if (isSquadEmpty(value)) return [];
@@ -84,7 +89,7 @@ export function squadIssues(value: SquadSelection, t: Translator): readonly stri
   if (countActive(value) !== ACTIVE_RIDERS_PER_COUNTRY) {
     issues.push(t("championships.needFourActive"));
   }
-  if (countReserve(value) !== RESERVE_RIDERS_PER_COUNTRY) {
+  if (countReserve(value) > RESERVE_RIDERS_PER_COUNTRY) {
     issues.push(t("championships.needOneReserve"));
   }
   return issues;
@@ -221,7 +226,7 @@ export function SquadPicker({
         <Badge tone={countActive(value) === ACTIVE_RIDERS_PER_COUNTRY ? "success" : "outline"}>
           {t("championships.activeRiders")} {countActive(value)}/{ACTIVE_RIDERS_PER_COUNTRY}
         </Badge>
-        <Badge tone={countReserve(value) === RESERVE_RIDERS_PER_COUNTRY ? "success" : "outline"}>
+        <Badge tone={countReserve(value) <= RESERVE_RIDERS_PER_COUNTRY ? "success" : "outline"}>
           {t("championships.reserveRider")} {countReserve(value)}/{RESERVE_RIDERS_PER_COUNTRY}
         </Badge>
       </div>

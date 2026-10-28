@@ -124,6 +124,86 @@ suite("championship country order and optional squads", () => {
     ).toThrow(/exactly 4 active riders/i);
   });
 
+  it("allows a squad of just the four active riders, with no reserve", async () => {
+    const { validateSquad } = await import("@/server/services/championship-setup");
+
+    expect(() =>
+      validateSquad({
+        countryId: "x",
+        riders: [1, 2, 3, 4].map((position) => ({
+          riderId: `r${position}`,
+          rosterSlot: "ACTIVE" as const,
+          initialOrder: position,
+        })),
+      }),
+    ).not.toThrow();
+  });
+
+  it("rejects a squad with more than one reserve rider", async () => {
+    const { validateSquad } = await import("@/server/services/championship-setup");
+
+    expect(() =>
+      validateSquad({
+        countryId: "x",
+        riders: [
+          ...[1, 2, 3, 4].map((position) => ({
+            riderId: `r${position}`,
+            rosterSlot: "ACTIVE" as const,
+            initialOrder: position,
+          })),
+          { riderId: "r5", rosterSlot: "RESERVE" as const, initialOrder: null },
+          { riderId: "r6", rosterSlot: "RESERVE" as const, initialOrder: null },
+        ],
+      }),
+    ).toThrow(/at most 1 reserve rider/i);
+  });
+
+  it("creates a championship country with a squad of four active riders and no reserve", async () => {
+    const templateId = await createTemplate("No reserve template", [
+      { dayNumber: 1, eventType: "INDIVIDUAL_LANCE", runs: 1 },
+    ]);
+    const { createChampionshipFromTemplate } = await import(
+      "@/server/services/championship-setup"
+    );
+
+    const jordanId = await countryIdByIso("JO");
+    const riderIds = await createSquadRiders(jordanId, "JO");
+    const fourOnly: SquadInput = {
+      countryId: jordanId,
+      riders: riderIds.slice(0, 4).map((riderId, index) => ({
+        riderId,
+        rosterSlot: "ACTIVE" as const,
+        initialOrder: index + 1,
+      })),
+    };
+    const oman = await fullSquad(await countryIdByIso("OM"), "OM");
+
+    const created = await db.transaction((tx) =>
+      createChampionshipFromTemplate(tx, actor, {
+        templateId,
+        name: "No reserve test",
+        nameAr: null,
+        startDate: "2026-09-18",
+        location: "Amman",
+        organizer: null,
+        squads: [fourOnly, oman],
+      }),
+    );
+
+    const { listChampionshipCountries, listChampionshipRiders } = await import(
+      "@/server/services/championships"
+    );
+    const countries = await listChampionshipCountries(created.id, "en");
+    const riders = await listChampionshipRiders(created.id, "en");
+    const jordanParticipant = countries.find((row) => row.iso2 === "JO")!;
+    const squad = riders.filter(
+      (r) => r.championshipCountryId === jordanParticipant.championshipCountryId,
+    );
+
+    expect(squad).toHaveLength(4);
+    expect(squad.every((r) => r.rosterSlot === "ACTIVE")).toBe(true);
+  });
+
   it("refuses the run's entry order while a country's squad is still empty", async () => {
     const templateId = await createTemplate("Empty squad run template", [
       { dayNumber: 1, eventType: "INDIVIDUAL_LANCE", runs: 1 },
