@@ -10,6 +10,7 @@ import { Badge, Card, CardContent, CardHeader, CardTitle, EmptyState } from "@/c
 import { formatCompetitionDate, formatPegSize, formatTime } from "@/components/common/formatting";
 import { eventLabel, runStatusLabel, runStatusTone } from "@/components/common/labels";
 import { ChampionshipSettings } from "./championship-settings";
+import { ResetEventButton } from "./reset-event-button";
 
 export default async function ChampionshipSchedulePage({
   params,
@@ -68,20 +69,27 @@ export default async function ChampionshipSchedulePage({
                 ) : (
                   day.events.map((event) => {
                     const definition = getEventTypeDefinition(event.eventType);
+                    const label = eventLabel(event.eventType, t);
+                    const hasSomethingToReset = event.runs.some(
+                      (runItem) => runItem.status !== "ENTRY_ORDER_PENDING",
+                    );
                     return (
                       <div
                         key={event.id}
                         className="rounded-md border border-border bg-surface-sunken"
                       >
                         <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
-                          <h3 className="text-sm font-medium">
-                            {eventLabel(event.eventType, t)}
-                          </h3>
-                          <span className="text-xs text-muted">
-                            {t("championships.runsCount", { count: event.runs.length })} ·{" "}
-                            {definition.ridersPerScoringUnit > 1
-                              ? `${definition.ridersPerScoringUnit} ${t("common.rider")}`
-                              : t("common.rider")}
+                          <h3 className="text-sm font-medium">{label}</h3>
+                          <span className="flex items-center gap-2">
+                            <span className="text-xs text-muted">
+                              {t("championships.runsCount", { count: event.runs.length })} ·{" "}
+                              {definition.ridersPerScoringUnit > 1
+                                ? `${definition.ridersPerScoringUnit} ${t("common.rider")}`
+                                : t("common.rider")}
+                            </span>
+                            {principal.isAdmin && hasSomethingToReset ? (
+                              <ResetEventButton eventId={event.id} eventLabel={label} />
+                            ) : null}
                           </span>
                         </div>
                         <ul className="divide-hairline border-t border-border">

@@ -3,13 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/db";
-import { requirePermission } from "@/lib/auth/authorize";
+import { requireAdmin, requirePermission } from "@/lib/auth/authorize";
 import { getRunContext } from "@/server/services/championships";
 import {
   confirmCountryEntryOrder,
   confirmRun,
   correctConfirmedRun,
   listEventRunIds,
+  resetEvent,
   saveRunScores,
   startRun,
   type RunScorePayload,
@@ -205,6 +206,31 @@ export async function correctRunAction(input: unknown): Promise<ActionResult<und
     );
 
     await revalidateRun(parsed.data.runId);
+    return ok();
+  });
+}
+
+const resetEventSchema = z.object({ eventId: z.uuid() });
+
+/**
+ * Resets an entire event back to its starting state, discarding every run's
+ * entry order, scores and confirmation.
+ *
+ * Restricted to administrators: unlike correcting a run, this throws the
+ * data away rather than keeping a revision of it, and can undo confirmed,
+ * possibly already published results.
+ */
+export async function resetEventAction(input: unknown): Promise<ActionResult<undefined>> {
+  return guard(async () => {
+    const actor = await requireAdmin();
+    const parsed = resetEventSchema.safeParse(input);
+    if (!parsed.success) throw new DomainError("Invalid request.", "VALIDATION");
+
+    const { runIds } = await getDb().transaction((tx) =>
+      resetEvent(tx, actor, parsed.data.eventId),
+    );
+
+    await Promise.all(runIds.map((runId) => revalidateRun(runId)));
     return ok();
   });
 }

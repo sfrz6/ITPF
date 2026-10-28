@@ -352,6 +352,10 @@ export const en = {
     changedBy: "by {name}",
     conflictTitle: "Someone else changed this run",
     conflictBody: "Another user saved changes to this run after you opened it. Reload the run to see the current values, then apply your change again.",
+    resetEvent: "Reset event",
+    resetEventConfirmTitle: "Reset this event?",
+    resetEventConfirmBody: "Every run in this event goes back to its starting state: the entry order, every recorded score, and any confirmation are permanently discarded. This cannot be undone.",
+    resetEventSuccess: "Event reset. Set the entry order again to start over.",
     reload: "Reload",
   },
   results: {

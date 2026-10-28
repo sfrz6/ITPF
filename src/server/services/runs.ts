@@ -1352,6 +1352,94 @@ export async function correctConfirmedRun(
   });
 }
 
+/**
+ * Resets an entire event back to its starting state: every run in it loses
+ * its entry order, its scores and its confirmation, as if nothing had ever
+ * been recorded.
+ *
+ * The entry order locks once per event (see `propagateEntryOrderWithinEvent`),
+ * so a lineup mistake discovered on the first run has already been copied
+ * into every later run too — there is no way to fix just that one run and
+ * leave the rest alone. Rather than trying to patch scores that may no
+ * longer belong to the right rider, this clears every run in the event and
+ * lets the operator redo the lineup and re-score from scratch. A run that
+ * was never touched (still pending, with no entry order and no scores) is
+ * left alone — there is nothing to reset and nothing worth an audit entry.
+ *
+ * Every run's full state — entry order and scores alike — is captured for
+ * the audit log before anything is deleted, so what happened stays
+ * traceable even though the data itself is gone. Unlike a correction, this
+ * does not keep a revision: there is no sensible "after" to show, since the
+ * run goes back to blank.
+ */
+export async function resetEvent(
+  tx: Executor,
+  actor: Principal,
+  eventId: string,
+): Promise<{ championshipId: string; runIds: readonly string[] }> {
+  const runRows = await tx
+    .select({
+      id: championshipRuns.id,
+      championshipId: championshipDays.championshipId,
+    })
+    .from(championshipRuns)
+    .innerJoin(
+      championshipEvents,
+      eq(championshipEvents.id, championshipRuns.championshipEventId),
+    )
+    .innerJoin(championshipDays, eq(championshipDays.id, championshipEvents.championshipDayId))
+    .where(eq(championshipRuns.championshipEventId, eventId))
+    .orderBy(asc(championshipRuns.runNumber));
+
+  if (runRows.length === 0) throw new DomainError("Event not found.", "NOT_FOUND");
+  const championshipId = runRows[0]!.championshipId;
+
+  for (const run of runRows) {
+    const entryOrder = await tx
+      .select({
+        championshipCountryId: runEntryOrders.championshipCountryId,
+        decision: runEntryOrders.decision,
+        position: runEntryOrderItems.position,
+        championshipRiderId: runEntryOrderItems.championshipRiderId,
+      })
+      .from(runEntryOrders)
+      .leftJoin(runEntryOrderItems, eq(runEntryOrderItems.runEntryOrderId, runEntryOrders.id))
+      .where(eq(runEntryOrders.runId, run.id))
+      .orderBy(asc(runEntryOrderItems.position));
+
+    const scoring = await snapshotRun(tx, run.id);
+
+    if (entryOrder.length === 0 && scoring.units.length === 0) continue;
+
+    await tx.delete(runRevisions).where(eq(runRevisions.runId, run.id));
+    // Cascades run_scores -> run_score_targets.
+    await tx.delete(runScoringUnits).where(eq(runScoringUnits.runId, run.id));
+    // Cascades run_entry_order_items.
+    await tx.delete(runEntryOrders).where(eq(runEntryOrders.runId, run.id));
+
+    await tx
+      .update(championshipRuns)
+      .set({
+        status: "ENTRY_ORDER_PENDING",
+        confirmedAt: null,
+        confirmedByUserId: null,
+        version: sql`${championshipRuns.version} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(championshipRuns.id, run.id));
+
+    await recordAudit(tx, actor, {
+      action: "RUN_RESET",
+      entityType: "championship_run",
+      entityId: run.id,
+      championshipId,
+      before: { entryOrder, scoring },
+    });
+  }
+
+  return { championshipId, runIds: runRows.map((run) => run.id) };
+}
+
 export interface RunRevisionRecord {
   readonly id: string;
   readonly revisionNumber: number;

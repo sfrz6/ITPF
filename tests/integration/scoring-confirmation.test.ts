@@ -510,4 +510,113 @@ suite("scoring, confirmation and correction", () => {
       .where(eq(auditLogs.action, "RUN_CONFIRMED"));
     expect(audits).toHaveLength(0);
   });
+
+  it("resets a confirmed run and the later runs its lineup propagated into", async () => {
+    const { runId, runIds } = await openRun("TEAM_LANCE");
+    const runId2 = runIds[1]!;
+    const {
+      saveRunScores,
+      confirmRun,
+      resetEvent,
+      getRunEntryOrderState,
+      getRunScoringState,
+    } = await import("@/server/services/runs");
+    const { getRunContext } = await import("@/server/services/championships");
+
+    // Confirm run 1.
+    await db.transaction(async (tx) =>
+      saveRunScores(tx, actor, {
+        runId,
+        expectedVersion: await currentVersion(runId),
+        payload: await buildPayload(runId, 6, "6.00"),
+      }),
+    );
+    await db.transaction(async (tx) =>
+      confirmRun(tx, actor, { runId, expectedVersion: await currentVersion(runId) }),
+    );
+
+    // Run 2 inherited run 1's lineup automatically, but was never started.
+    const run2Before = await getRunEntryOrderState(runId2, "en");
+    expect(run2Before!.allConfirmed).toBe(true);
+
+    const eventId = (await getRunContext(runId))!.eventId;
+    const { championshipId, runIds: resetRunIds } = await db.transaction((tx) =>
+      resetEvent(tx, actor, eventId),
+    );
+
+    expect(championshipId).toBe((await getRunContext(runId))!.championshipId);
+    expect(new Set(resetRunIds)).toEqual(new Set(runIds));
+
+    for (const id of [runId, runId2]) {
+      const context = await getRunContext(id);
+      expect(context!.status).toBe("ENTRY_ORDER_PENDING");
+      expect(context!.confirmedAt).toBeNull();
+
+      const entryOrder = await getRunEntryOrderState(id, "en");
+      expect(entryOrder!.confirmedCount).toBe(0);
+
+      const scoring = await getRunScoringState(id, "en");
+      expect(scoring!.countries).toHaveLength(0);
+    }
+
+    const { auditLogs } = await import("@/db/schema");
+    const { eq, and } = await import("drizzle-orm");
+    const resetAudits = await db
+      .select({ entityId: auditLogs.entityId })
+      .from(auditLogs)
+      .where(and(eq(auditLogs.action, "RUN_RESET"), eq(auditLogs.championshipId, championshipId)));
+    expect(resetAudits.map((row) => row.entityId).sort()).toEqual([...runIds].sort());
+
+    const { loadChampionshipResults } = await import("@/server/services/results");
+    const results = await loadChampionshipResults(championshipId, "en");
+    expect(results.confirmedRunCount).toBe(0);
+  });
+
+  it("leaves a run with no entry order and no scores alone when resetting", async () => {
+    const templateId = await createTemplate("Reset skip template", [
+      { dayNumber: 1, eventType: "TEAM_LANCE", runs: 2 },
+    ]);
+    const fixture = await createChampionshipFixture({ actor, templateId });
+    const runIds = await listRunIds(fixture.championshipId);
+    const [runId, runId2] = runIds as [string, string];
+
+    const { getRunEntryOrderState, confirmCountryEntryOrder, resetEvent } = await import(
+      "@/server/services/runs"
+    );
+    const { getRunContext } = await import("@/server/services/championships");
+
+    // Only one of the two countries confirms, so run 1 stays
+    // ENTRY_ORDER_PENDING and its order never propagates into run 2 — run 2
+    // stays completely untouched.
+    const state = await getRunEntryOrderState(runId, "en");
+    await db.transaction((tx) =>
+      confirmCountryEntryOrder(tx, actor, {
+        runId,
+        championshipCountryId: state!.countries[0]!.championshipCountryId,
+        decision: "NO_CHANGE",
+      }),
+    );
+
+    const before1 = (await getRunContext(runId))!.version;
+    const before2 = (await getRunContext(runId2))!.version;
+
+    const eventId = (await getRunContext(runId))!.eventId;
+    await db.transaction((tx) => resetEvent(tx, actor, eventId));
+
+    // Run 1 had something (one country's confirmed order) and was reset.
+    expect((await getRunContext(runId))!.version).toBeGreaterThan(before1);
+    const run1Order = await getRunEntryOrderState(runId, "en");
+    expect(run1Order!.confirmedCount).toBe(0);
+
+    // Run 2 had nothing at all, so resetting it was a no-op.
+    expect((await getRunContext(runId2))!.version).toBe(before2);
+
+    const { auditLogs } = await import("@/db/schema");
+    const { eq } = await import("drizzle-orm");
+    const resetAudits = await db
+      .select({ entityId: auditLogs.entityId })
+      .from(auditLogs)
+      .where(eq(auditLogs.action, "RUN_RESET"));
+    expect(resetAudits.map((row) => row.entityId)).toEqual([runId]);
+  });
 });
