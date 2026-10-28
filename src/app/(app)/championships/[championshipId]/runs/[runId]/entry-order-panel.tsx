@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowUp, Check, CircleDashed, UserPlus } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, CircleDashed, Pencil, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/button";
@@ -49,12 +49,20 @@ function CountryEntryOrder({
   runId,
   country,
   canManage,
+  requireEditClick,
   onSaved,
 }: {
   championshipId: string;
   runId: string;
   country: EntryOrderCountry;
   canManage: boolean;
+  /**
+   * True on a later run in the event: the lineup already carries over
+   * automatically, so the form stays collapsed into a compact, read-only
+   * summary until "Edit entries" is clicked — for an injury between runs,
+   * say — rather than always showing the full editable form.
+   */
+  requireEditClick: boolean;
   onSaved: () => void;
 }) {
   const { t } = useI18n();
@@ -76,8 +84,10 @@ function CountryEntryOrder({
     country.decision ?? "NO_CHANGE",
   );
   const [order, setOrder] = React.useState<string[]>(baseline);
+  const [editing, setEditing] = React.useState(false);
   const [pending, startTransition] = React.useTransition();
 
+  const showForm = canManage && (!requireEditClick || editing);
   const reserves = country.roster.filter(
     (member) => !order.includes(member.championshipRiderId),
   );
@@ -99,6 +109,18 @@ function CountryEntryOrder({
     setOrder(next);
   }
 
+  function startEditing() {
+    setMode(country.decision ?? "NO_CHANGE");
+    setOrder(baseline);
+    setEditing(true);
+  }
+
+  function cancelEditing() {
+    setMode(country.decision ?? "NO_CHANGE");
+    setOrder(baseline);
+    setEditing(false);
+  }
+
   function save() {
     startTransition(async () => {
       const result = await confirmEntryOrderAction({
@@ -112,6 +134,7 @@ function CountryEntryOrder({
         return;
       }
       toast.success(t("runs.entryOrderSaved"));
+      setEditing(false);
       onSaved();
     });
   }
@@ -144,7 +167,7 @@ function CountryEntryOrder({
       </CardHeader>
 
       <CardContent className="space-y-3">
-        {canManage ? (
+        {showForm ? (
           <RadioGroup
             value={mode}
             onValueChange={(value) => {
@@ -179,7 +202,7 @@ function CountryEntryOrder({
               <span className="min-w-0 flex-1 truncate text-sm">
                 {names.get(riderId) ?? t("common.unknown")}
               </span>
-              {canManage && mode === "CHANGED" ? (
+              {showForm && mode === "CHANGED" ? (
                 <>
                   {reserves.length > 0 ? (
                     <select
@@ -240,11 +263,24 @@ function CountryEntryOrder({
         ) : null}
 
         {canManage ? (
-          <div className="flex justify-end">
-            <Button size="sm" loading={pending} disabled={invalid !== null} onClick={save}>
-              <Check aria-hidden />
-              {confirmed ? t("common.save") : t("runs.confirmCountry")}
-            </Button>
+          <div className="flex justify-end gap-2">
+            {requireEditClick && !editing ? (
+              <Button size="sm" variant="secondary" onClick={startEditing}>
+                <Pencil aria-hidden />
+                {t("runs.editEntries")}
+              </Button>
+            ) : null}
+            {requireEditClick && editing ? (
+              <Button size="sm" variant="ghost" onClick={cancelEditing} disabled={pending}>
+                {t("common.cancel")}
+              </Button>
+            ) : null}
+            {showForm ? (
+              <Button size="sm" loading={pending} disabled={invalid !== null} onClick={save}>
+                <Check aria-hidden />
+                {confirmed ? t("common.save") : t("runs.confirmCountry")}
+              </Button>
+            ) : null}
           </div>
         ) : null}
       </CardContent>
@@ -269,10 +305,11 @@ export function EntryOrderPanel({
   totalCount: number;
   canManage: boolean;
   /**
-   * True for every run after the first in its event: the lineup can only be
-   * set once per event, so these runs carry over the first run's order
-   * automatically once every country has confirmed it there, rather than
-   * asking for a fresh confirmation before each run.
+   * True for every run after the first in its event: the lineup carries
+   * over from earlier in the event automatically, with no action needed, so
+   * each country's card stays a compact read-only summary until "Edit
+   * entries" is clicked — for an injury between runs, say — rather than
+   * always showing the full editable form the way the first run does.
    */
   locked: boolean;
   /** True when this panel is showing again mid-scoring, before any score is saved. */
@@ -305,6 +342,7 @@ export function EntryOrderPanel({
             runId={runId}
             country={country}
             canManage={canManage}
+            requireEditClick={locked}
             onSaved={() => router.refresh()}
           />
         ))}

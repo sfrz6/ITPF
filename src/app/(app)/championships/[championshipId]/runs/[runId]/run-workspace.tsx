@@ -134,9 +134,10 @@ export function RunWorkspace({
   const isScoring = run.status === "IN_PROGRESS" || run.status === "REVIEW";
   const isEntryOrderStage = run.status === "ENTRY_ORDER_PENDING" || run.status === "READY";
   // A country can be late submitting its final lineup, so the order stays
-  // editable into scoring too, right up until the first score is saved.
-  const entryOrderStillEditable =
-    run.runNumber === 1 && run.status === "IN_PROGRESS" && !run.scoresSaved;
+  // editable into scoring too, right up until the first score is saved —
+  // on any run, not just the event's first one, since an injury can happen
+  // just as scoring on a later run is getting under way.
+  const entryOrderStillEditable = run.status === "IN_PROGRESS" && !run.scoresSaved;
   const showEntryOrderPanel = isEntryOrderStage || entryOrderStillEditable;
   // Readiness is taken from the live count of confirmed countries rather than
   // from the stored status, which can lag when two countries are confirmed at
@@ -285,7 +286,7 @@ export function RunWorkspace({
           countries={entryOrder.countries}
           confirmedCount={entryOrder.confirmedCount}
           totalCount={entryOrder.totalCount}
-          canManage={permissions.manageEntryOrders && run.runNumber === 1}
+          canManage={permissions.manageEntryOrders}
           locked={run.runNumber > 1}
           editableWhileScoring={entryOrderStillEditable}
         />

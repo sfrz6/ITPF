@@ -157,18 +157,25 @@ suite("run workflow against a real database", () => {
     expect(secondState!.allConfirmed).toBe(true);
     expect(secondState!.run.status).toBe("READY");
 
-    // The lineup can only change once per event: a direct attempt to change
-    // the second run's order on its own is rejected.
-    await expect(
-      db.transaction((tx) =>
-        confirmCountryEntryOrder(tx, actor, {
-          runId: second,
-          championshipCountryId: country.championshipCountryId,
-          decision: "CHANGED",
-          order: [nominated[3]!, nominated[2]!, nominated[1]!, nominated[0]!],
-        }),
-      ),
-    ).rejects.toThrow(/once per event/i);
+    // A country can still be edited directly on the second run — for an
+    // injury between runs, say — without touching the first run at all.
+    const substituted = [nominated[3]!, nominated[2]!, nominated[1]!, nominated[0]!];
+    await db.transaction((tx) =>
+      confirmCountryEntryOrder(tx, actor, {
+        runId: second,
+        championshipCountryId: country.championshipCountryId,
+        decision: "CHANGED",
+        order: substituted,
+      }),
+    );
+    const secondAfterDirectEdit = await getRunEntryOrderState(second, "en");
+    expect(
+      secondAfterDirectEdit!.countries.find(
+        (entry) => entry.championshipCountryId === country.championshipCountryId,
+      )!.confirmedOrder,
+    ).toEqual(substituted);
+    const firstUnaffected = await getRunEntryOrderState(first, "en");
+    expect(firstUnaffected!.countries[0]!.confirmedOrder).toEqual(nominated);
 
     // Re-confirming the first run with a genuinely different order (still
     // editable, since neither run has started scoring) replaces the order
@@ -188,6 +195,61 @@ suite("run workflow against a real database", () => {
       (entry) => entry.championshipCountryId === country.championshipCountryId,
     )!;
     expect(secondCountryAfterChange.confirmedOrder).toEqual(changed);
+  });
+
+  it("carries a later run's lineup change forward into runs after it, but never back into earlier ones", async () => {
+    const templateId = await createTemplate("Three run template", [
+      { dayNumber: 1, eventType: "INDIVIDUAL_LANCE", runs: 3 },
+    ]);
+    const fixture = await createChampionshipFixture({ actor, templateId });
+    const runIds = await listRunIds(fixture.championshipId);
+    const [first, second, third] = runIds as [string, string, string];
+
+    const { getRunEntryOrderState, confirmCountryEntryOrder } = await import(
+      "@/server/services/runs"
+    );
+
+    const state = await getRunEntryOrderState(first, "en");
+    const country = state!.countries[0]!;
+    const active = country.roster.filter((member) => member.rosterSlot === "ACTIVE");
+    const reserve = country.roster.find((member) => member.rosterSlot === "RESERVE")!;
+    const nominated = active
+      .slice()
+      .sort((a, b) => (a.initialOrder ?? 0) - (b.initialOrder ?? 0))
+      .map((member) => member.championshipRiderId);
+
+    for (const participant of state!.countries) {
+      await db.transaction((tx) =>
+        confirmCountryEntryOrder(tx, actor, {
+          runId: first,
+          championshipCountryId: participant.championshipCountryId,
+          decision: "NO_CHANGE",
+        }),
+      );
+    }
+
+    // Run 2's lineup (an injury substitution) replaces the reserve in for
+    // the last active rider.
+    const substituted = [nominated[0]!, nominated[1]!, nominated[2]!, reserve.championshipRiderId];
+    await db.transaction((tx) =>
+      confirmCountryEntryOrder(tx, actor, {
+        runId: second,
+        championshipCountryId: country.championshipCountryId,
+        decision: "CHANGED",
+        order: substituted,
+      }),
+    );
+
+    const firstAfter = await getRunEntryOrderState(first, "en");
+    expect(firstAfter!.countries[0]!.confirmedOrder).toEqual(nominated);
+
+    // Run 3 hadn't happened yet, so it carries the substitution forward too.
+    const thirdAfter = await getRunEntryOrderState(third, "en");
+    const thirdCountry = thirdAfter!.countries.find(
+      (entry) => entry.championshipCountryId === country.championshipCountryId,
+    )!;
+    expect(thirdCountry.confirmedOrder).toEqual(substituted);
+    expect(thirdCountry.decision).toBe("NO_CHANGE");
   });
 
   it("allows the reserve to be substituted through a change of order", async () => {

@@ -322,11 +322,14 @@ export interface EventPrintState {
  * (Individual Lance, Pair Lance, Team Lance, ...), consolidating every run
  * in it onto one sheet.
  *
- * The entry order shown is read from the event's first run only: later runs
- * in the same event no longer carry their own independent order (it is
- * locked once per event, inherited automatically — see
- * `propagateEntryOrderWithinEvent`), so there is exactly one roster to print
- * per country, with a scoring block per run alongside it.
+ * The entry order shown is read from the event's first run only, on the
+ * assumption that one roster covers every run in it — true by default, since
+ * a country's lineup simply carries forward from run to run (see
+ * `propagateEntryOrderWithinEvent`). An operator can still edit a later
+ * run's order directly (an injury between runs, say); when that happens this
+ * sheet's roster is stale for whichever run was changed and the ones after
+ * it, so it should be reprinted — from the run that changed, not the event's
+ * first one — once the substitution is confirmed.
  */
 export async function getEventPrintState(
   eventId: string,
@@ -504,19 +507,12 @@ export async function confirmCountryEntryOrder(
     decision: "NO_CHANGE" | "CHANGED";
     order?: readonly string[];
   },
-  options?: { readonly internal?: boolean },
 ): Promise<void> {
   const run = await getRunContext(input.runId);
   if (!run) throw new DomainError("Run not found.", "NOT_FOUND");
   if (!(await canEditEntryOrder(tx, run))) {
     throw new DomainError(
       "Scores have already been saved for this run, so its entry order can no longer be changed.",
-      "CONFLICT",
-    );
-  }
-  if (!options?.internal && run.runNumber > 1) {
-    throw new DomainError(
-      "The entry order can only be set once per event, before its first run. Later runs in the same event carry it over automatically.",
       "CONFLICT",
     );
   }
@@ -599,24 +595,30 @@ export async function confirmCountryEntryOrder(
 }
 
 /**
- * Once every country has confirmed the entry order for an event's first run,
- * the same order is copied into that event's later runs (Run 2, Run 3): a
- * country's lineup can only change once per event, not before every run
- * inside it. A later run that has already started is left alone — its own
- * order was locked in when its scoring began, same as any other run.
+ * Once every country has confirmed the entry order for a run, the same
+ * order is copied forward into every later, still-editable run of the same
+ * event: by default a country's lineup is set once per event and simply
+ * carries through every run inside it, rather than asking for a fresh
+ * confirmation before each one.
  *
- * Re-saving the first run's order (while it is still editable) re-runs this
- * and overwrites the later runs' carried-over order with the new one, the
- * same way a single run's own re-confirmation replaces its prior order.
+ * This runs after *any* run's confirmation, not only the event's first run —
+ * an operator can still edit a later run directly (an injury between runs,
+ * say), and that change carries forward into whatever runs after it haven't
+ * happened yet, the same way the first run's own order normally does. It
+ * never reaches backward: an edit to run 2 cannot and does not touch run 1.
+ * A later run that has already started scoring is left alone — its own
+ * order was locked in when its scoring began, same as any other run.
  */
 async function propagateEntryOrderWithinEvent(
   tx: Executor,
   actor: Principal,
-  firstRun: RunContext,
+  triggeringRun: RunContext,
 ): Promise<void> {
-  if (firstRun.runNumber !== 1) return;
-
-  const complete = await allCountriesHaveConfirmed(tx, firstRun.championshipId, firstRun.runId);
+  const complete = await allCountriesHaveConfirmed(
+    tx,
+    triggeringRun.championshipId,
+    triggeringRun.runId,
+  );
   if (!complete) return;
 
   const laterRuns = await tx
@@ -627,8 +629,8 @@ async function propagateEntryOrderWithinEvent(
     .from(championshipRuns)
     .where(
       and(
-        eq(championshipRuns.championshipEventId, firstRun.eventId),
-        gt(championshipRuns.runNumber, 1),
+        eq(championshipRuns.championshipEventId, triggeringRun.eventId),
+        gt(championshipRuns.runNumber, triggeringRun.runNumber),
       ),
     )
     .orderBy(asc(championshipRuns.runNumber));
@@ -638,17 +640,16 @@ async function propagateEntryOrderWithinEvent(
   const participatingCountries = await tx
     .select({ id: championshipCountries.id })
     .from(championshipCountries)
-    .where(eq(championshipCountries.championshipId, firstRun.championshipId));
+    .where(eq(championshipCountries.championshipId, triggeringRun.championshipId));
 
   for (const laterRun of laterRuns) {
     if (!(await canEditEntryOrder(tx, { status: laterRun.status, runId: laterRun.id }))) continue;
     for (const country of participatingCountries) {
-      await confirmCountryEntryOrder(
-        tx,
-        actor,
-        { runId: laterRun.id, championshipCountryId: country.id, decision: "NO_CHANGE" },
-        { internal: true },
-      );
+      await confirmCountryEntryOrder(tx, actor, {
+        runId: laterRun.id,
+        championshipCountryId: country.id,
+        decision: "NO_CHANGE",
+      });
     }
   }
 }
@@ -1357,14 +1358,19 @@ export async function correctConfirmedRun(
  * its entry order, its scores and its confirmation, as if nothing had ever
  * been recorded.
  *
- * The entry order locks once per event (see `propagateEntryOrderWithinEvent`),
- * so a lineup mistake discovered on the first run has already been copied
- * into every later run too — there is no way to fix just that one run and
- * leave the rest alone. Rather than trying to patch scores that may no
+ * This is for when the mistake is already locked in — the first run itself
+ * was confirmed with the wrong lineup, or scores have already been saved
+ * against it, so `confirmCountryEntryOrder` can no longer touch it directly
+ * (see `canEditEntryOrder`). Rather than trying to patch scores that may no
  * longer belong to the right rider, this clears every run in the event and
- * lets the operator redo the lineup and re-score from scratch. A run that
- * was never touched (still pending, with no entry order and no scores) is
- * left alone — there is nothing to reset and nothing worth an audit entry.
+ * lets the operator redo the lineup and re-score from scratch. A country
+ * substitution discovered in time — before any score is saved, on any run,
+ * including a later one mid-event (an injury, say) — should go through
+ * `confirmCountryEntryOrder` directly instead: it only ever touches the run
+ * it's called on and carries the change forward, so it never throws away a
+ * confirmed earlier run the way this does. A run that was never touched
+ * (still pending, with no entry order and no scores) is left alone — there
+ * is nothing to reset and nothing worth an audit entry.
  *
  * Every run's full state — entry order and scores alike — is captured for
  * the audit log before anything is deleted, so what happened stays
