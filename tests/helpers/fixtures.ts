@@ -151,10 +151,15 @@ export async function createChampionshipFixture(options: {
   const db = getDb();
   const isoCodes = options.isoCodes ?? ["JO", "OM"];
 
+  // Suffixed so two fixtures for the same country (e.g. the same country
+  // entered in two different test championships) never collide on the
+  // unique (country, folded name) index.
+  const namingSuffix = Math.random().toString(36).slice(2, 7);
+
   const squads: SquadInput[] = [];
   for (const iso of isoCodes) {
     const countryId = await countryIdByIso(iso);
-    const riderIds = await createSquadRiders(countryId, iso);
+    const riderIds = await createSquadRiders(countryId, `${iso}-${namingSuffix}`);
     squads.push({
       countryId,
       riders: riderIds.map((riderId, index) => ({

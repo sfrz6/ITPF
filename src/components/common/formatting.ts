@@ -23,6 +23,27 @@ export function formatCompetitionDate(isoDate: string, locale: Locale): string {
  * an Arabic-locale page when one was actually set, falling back to the
  * English name otherwise.
  */
+/**
+ * English ordinal suffix ("1st", "2nd", "3rd", "4th"). Arabic ordinals take a
+ * gendered grammatical form rather than a fixed suffix, so a non-English
+ * locale falls back to the plain number rather than guessing one.
+ */
+export function formatOrdinal(value: number, locale: Locale): string {
+  if (locale !== "en") return String(value);
+  const mod100 = value % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${value}th`;
+  switch (value % 10) {
+    case 1:
+      return `${value}st`;
+    case 2:
+      return `${value}nd`;
+    case 3:
+      return `${value}rd`;
+    default:
+      return `${value}th`;
+  }
+}
+
 export function championshipDisplayName(
   name: string,
   nameAr: string | null,

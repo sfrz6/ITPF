@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
+  Award,
   ClipboardList,
   Flag,
   LayoutDashboard,
@@ -23,7 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const { t } = await getTranslator();
 
   const items: NavItem[] = [
-    { href: "/", labelKey: "nav.dashboard", icon: <LayoutDashboard /> },
+    { href: "/dashboard", labelKey: "nav.dashboard", icon: <LayoutDashboard /> },
     { href: "/championships", labelKey: "nav.championships", icon: <Trophy /> },
   ];
 
@@ -34,13 +35,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     items.push({ href: "/countries", labelKey: "nav.countries", icon: <Flag /> });
   }
   if (principal.isAdmin) {
+    items.push({ href: "/series", labelKey: "nav.qualificationSeries", icon: <Award /> });
     items.push({ href: "/users", labelKey: "nav.users", icon: <Users /> });
     items.push({ href: "/audit", labelKey: "nav.auditLog", icon: <ScrollText /> });
   }
   items.push({ href: "/results", labelKey: "nav.publicResults", icon: <Trophy /> });
 
   const header = (
-    <Link href="/" className="flex items-center gap-2.5 rounded-md p-1">
+    <Link href="/dashboard" className="flex items-center gap-2.5 rounded-md p-1">
       <ItpfLogo width={40} priority />
       <span className="min-w-0">
         <span className="block truncate text-sm font-semibold text-shell-foreground">

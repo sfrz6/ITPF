@@ -18,7 +18,7 @@ export default async function NoAccessPage() {
       description={t("common.forbiddenBody")}
       action={
         <Button asChild variant="secondary">
-          <Link href="/">{t("common.backToDashboard")}</Link>
+          <Link href="/dashboard">{t("common.backToDashboard")}</Link>
         </Button>
       }
       className="mt-10"

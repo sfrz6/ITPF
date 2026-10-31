@@ -33,6 +33,8 @@ const TRUNCATED = [
   "tie_break_entry_scores",
   "tie_break_entries",
   "tie_break_rounds",
+  "qualification_series_championships",
+  "qualification_series",
   "championship_riders",
   "championship_countries",
   "championship_runs",

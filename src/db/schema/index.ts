@@ -4,3 +4,4 @@ export * from "./registry";
 export * from "./templates";
 export * from "./championships";
 export * from "./scoring";
+export * from "./series";

@@ -12,7 +12,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "ITPF",
     description:
       "Official competition management and scoring for International Tent Pegging Federation championships.",
-    start_url: "/",
+    start_url: "/dashboard",
     display: "standalone",
     background_color: "#0c3d4e",
     theme_color: "#00718f",

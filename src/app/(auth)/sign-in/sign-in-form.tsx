@@ -30,7 +30,7 @@ export function SignInForm() {
   );
 
   React.useEffect(() => {
-    if (state?.ok) router.replace("/");
+    if (state?.ok) router.replace("/dashboard");
   }, [state, router]);
 
   return (
