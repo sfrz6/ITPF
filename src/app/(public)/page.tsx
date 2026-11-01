@@ -30,7 +30,7 @@ export default async function PublicLandingPage() {
     <div className="space-y-14">
       {/* Minimal hero: the federation mark behind, two actions in front. Kept
           this spare deliberately — everything else lives one scroll away. */}
-      <section className="relative overflow-hidden rounded-xl border border-border bg-surface-raised px-6 py-16 text-center sm:py-24">
+      <section className="relative overflow-hidden rounded-xl border border-border bg-surface-raised px-6 pt-24 pb-8 text-center sm:pt-32 sm:pb-16">
         <Image
           src="/brand/itpf-horse-light.png"
           alt=""
@@ -50,7 +50,7 @@ export default async function PublicLandingPage() {
           className="pointer-events-none absolute left-1/2 top-1/2 hidden h-[200px] w-auto -translate-x-1/2 -translate-y-1/2 opacity-10 select-none sm:h-[260px] dark:block"
         />
         <div className="relative space-y-7">
-          <h1 className="text-balance text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+          <h1 className="text-balance text-lg font-bold tracking-tight text-foreground sm:text-xl">
             {t("landing.title")}
           </h1>
           <div className="flex flex-wrap items-center justify-center gap-3">
