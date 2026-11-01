@@ -27,15 +27,20 @@ function paginate<T>(rows: readonly T[], pageSize: number): readonly (readonly T
 
 function RankedList({ rows }: { rows: readonly StandingRow[] }) {
   return (
-    <ol className="flex-1 space-y-2">
+    <ol className="relative z-10 flex-1 space-y-3">
       {rows.map((row) => (
-        <li key={row.key} className="flex items-center gap-4 rounded-lg bg-white/5 px-4 py-2.5">
-          <span className="w-12 shrink-0 text-end text-2xl font-bold text-white/60">
+        <li
+          key={row.key}
+          className="flex items-center gap-5 rounded-lg border border-black/10 bg-white/80 px-5 py-3.5 shadow-sm"
+        >
+          <span className="w-16 shrink-0 text-end text-4xl font-bold text-neutral-400">
             {row.rank}
           </span>
-          <CountryFlag iso2={row.iso2} className="h-8 w-12 shrink-0 rounded-sm" />
-          <span className="min-w-0 flex-1 truncate text-2xl font-semibold">{row.name}</span>
-          <span className="shrink-0 numeric text-2xl font-bold">{row.total}</span>
+          <CountryFlag iso2={row.iso2} className="h-12 w-16 shrink-0 rounded-sm" />
+          <span className="min-w-0 flex-1 truncate text-4xl font-semibold text-neutral-900">
+            {row.name}
+          </span>
+          <span className="numeric shrink-0 text-4xl font-bold text-neutral-900">{row.total}</span>
         </li>
       ))}
     </ol>
@@ -123,70 +128,73 @@ export function DisplayBoard({
   const currentRiders = riderPages[safeRiderPage] ?? [];
   const currentCountries = countryPages[safeCountryPage] ?? [];
 
+  // The championship's own logo reads better as the big centered watermark
+  // than the federation mark, when one was uploaded; otherwise the ITPF mark
+  // fills that role so the board is never blank in the middle.
+  const watermarkSrc = hasChampionshipLogo
+    ? `/api/championships/${championshipId}/logo/championship`
+    : "/brand/itpf-logo-light.webp";
+
   return (
-    <div className="flex min-h-dvh flex-col bg-black text-white">
+    <div className="relative flex min-h-dvh flex-col bg-white text-neutral-900">
       {!started ? (
         <button
           type="button"
           onClick={start}
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-black text-white"
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-white text-neutral-900"
         >
           <Maximize className="size-10" aria-hidden />
           <span className="text-xl font-semibold">{t("display.start")}</span>
         </button>
       ) : null}
 
-      <header className="flex flex-wrap items-center justify-between gap-6 border-b border-white/15 px-10 py-6">
-        <div className="flex items-center gap-4">
-          <ItpfLogo width={64} />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={watermarkSrc}
+        alt=""
+        aria-hidden
+        className="pointer-events-none fixed inset-0 z-0 m-auto h-[70vh] w-[70vh] select-none object-contain opacity-[0.07]"
+      />
+
+      <header className="relative z-10 flex flex-wrap items-center justify-between gap-6 border-b border-black/10 bg-white/90 px-10 py-6">
+        <div className="flex items-center gap-5">
+          <ItpfLogo width={80} />
           <div>
-            <p className="text-2xl font-bold leading-tight">{championshipName}</p>
-            <p className="text-base text-white/70">
+            <p className="text-4xl font-bold leading-tight">{championshipName}</p>
+            <p className="text-xl text-neutral-600">
               {t("championships.daysOf", { day: dayNumber })}
               {organizer ? ` · ${organizer}` : ""}
             </p>
           </div>
         </div>
-        {hasChampionshipLogo || hasOrganizerLogo ? (
-          <div className="flex items-center gap-4">
-            {hasChampionshipLogo ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={`/api/championships/${championshipId}/logo/championship`}
-                alt=""
-                className="h-auto w-20 object-contain"
-              />
-            ) : null}
-            {hasOrganizerLogo ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={`/api/championships/${championshipId}/logo/organizer`}
-                alt=""
-                className="h-auto w-20 object-contain"
-              />
-            ) : null}
-          </div>
+        {hasOrganizerLogo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={`/api/championships/${championshipId}/logo/organizer`}
+            alt=""
+            className="h-auto w-24 object-contain"
+          />
         ) : null}
       </header>
 
-      <div className="grid flex-1 grid-cols-2 divide-x divide-white/15">
+      <div className="relative z-10 grid flex-1 grid-cols-2 divide-x divide-black/10">
         <section className="flex min-h-0 flex-col px-8 py-6">
-          <h2 className="mb-4 text-2xl font-bold uppercase tracking-wide text-amber-400">
+          <h2 className="mb-4 text-3xl font-bold uppercase tracking-wide text-amber-600">
             {t("display.individualRanking")}
           </h2>
           {currentRiders.length === 0 ? (
-            <p className="text-lg text-white/60">{t("display.waitingForResults")}</p>
+            <p className="text-xl text-neutral-500">{t("display.waitingForResults")}</p>
           ) : (
             <RankedList rows={currentRiders} />
           )}
         </section>
 
         <section className="flex min-h-0 flex-col px-8 py-6">
-          <h2 className="mb-4 text-2xl font-bold uppercase tracking-wide text-amber-400">
+          <h2 className="mb-4 text-3xl font-bold uppercase tracking-wide text-amber-600">
             {t("display.countryRanking")}
           </h2>
           {currentCountries.length === 0 ? (
-            <p className="text-lg text-white/60">{t("display.waitingForResults")}</p>
+            <p className="text-xl text-neutral-500">{t("display.waitingForResults")}</p>
           ) : (
             <RankedList rows={currentCountries} />
           )}
