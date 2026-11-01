@@ -7,15 +7,34 @@ import { getDb } from "@/db";
 import { championshipCountries, championshipRiders, championships } from "@/db/schema";
 import { requireAdmin, requirePermission } from "@/lib/auth/authorize";
 import { ACTIVE_RIDERS_PER_COUNTRY } from "@/domain/scoring/event-types";
+import { ALLOWED_LOGO_CONTENT_TYPES } from "@/lib/logo";
 import { recordAudit } from "@/server/services/audit";
 import {
   createChampionshipFromTemplate,
   deleteChampionship,
   reorderChampionshipCountries,
   replaceSquad,
+  type LogoInput,
   type SquadInput,
 } from "@/server/services/championship-setup";
 import { DomainError, ok, run, type ActionResult } from "./result";
+
+/** A logo arrives from the browser as base64, with roughly a third more
+ * characters than the underlying bytes, so the string limit here is kept
+ * generous — `validateLogo` in the service layer is the real size check,
+ * applied once the data is back to raw bytes. */
+const logoSchema = z
+  .object({
+    data: z.string().max(3_000_000),
+    contentType: z.enum(ALLOWED_LOGO_CONTENT_TYPES),
+  })
+  .nullable()
+  .optional();
+
+function decodeLogo(logo: { data: string; contentType: string } | null | undefined): LogoInput | null {
+  if (!logo) return null;
+  return { data: Buffer.from(logo.data, "base64"), contentType: logo.contentType };
+}
 
 const squadRiderSchema = z.object({
   riderId: z.uuid(),
@@ -42,6 +61,8 @@ const createSchema = z.object({
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "A start date is required."),
   location: z.string().trim().min(2).max(160),
   organizer: z.string().trim().max(160).nullable(),
+  organizerLogo: logoSchema,
+  championshipLogo: logoSchema,
   squads: z.array(squadSchema).min(2).max(40),
 });
 
@@ -61,6 +82,8 @@ export async function createChampionshipAction(
     const created = await getDb().transaction((tx) =>
       createChampionshipFromTemplate(tx, actor, {
         ...parsed.data,
+        organizerLogo: decodeLogo(parsed.data.organizerLogo),
+        championshipLogo: decodeLogo(parsed.data.championshipLogo),
         squads: parsed.data.squads as readonly SquadInput[],
       }),
     );

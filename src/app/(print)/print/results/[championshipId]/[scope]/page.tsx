@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { requirePagePermission } from "@/lib/auth/page-guards";
 import { getTranslator } from "@/lib/i18n/server";
 import { championshipDisplayName, formatCompetitionDate } from "@/components/common/formatting";
-import { ItpfLogoPrint } from "@/components/common/itpf-logo";
+import { PrintHeader } from "@/components/common/print-header";
 import { PrintTrigger } from "@/components/common/print-trigger";
 import { getChampionshipDetail } from "@/server/services/championships";
 import { loadChampionshipResults } from "@/server/services/results";
@@ -67,29 +67,27 @@ export default async function InternalStandingsPdfPage({
     <main className="mx-auto max-w-[210mm] px-6 py-6 print:px-0 print:py-0">
       <PrintTrigger />
 
-      <header className="mb-4 flex items-start justify-between gap-6 border-b-2 border-black pb-3">
-        <div className="flex items-start gap-4">
-          <ItpfLogoPrint width={96} />
-          <div>
-            <p className="text-[10pt] font-semibold uppercase tracking-wide">
-              {t("common.federation")}
+      <PrintHeader
+        federationLabel={t("common.federation")}
+        championshipName={championshipDisplayName(detail.name, detail.nameAr, locale)}
+        locationLine={
+          <>
+            {detail.location}
+            {detail.organizer ? ` · ${detail.organizer}` : ""}
+          </>
+        }
+        championshipId={detail.id}
+        hasOrganizerLogo={detail.hasOrganizerLogo}
+        hasChampionshipLogo={detail.hasChampionshipLogo}
+        right={
+          <>
+            <p className="text-[11pt] font-bold">
+              {t("publicResults.standingsPdfTitle")} — {t(scopeLabelKey(scope))}
             </p>
-            <h1 className="mt-0.5 text-[14pt] font-bold leading-tight">
-              {championshipDisplayName(detail.name, detail.nameAr, locale)}
-            </h1>
-            <p className="text-[9pt]">
-              {detail.location}
-              {detail.organizer ? ` · ${detail.organizer}` : ""}
-            </p>
-          </div>
-        </div>
-        <div className="text-end text-[9pt]">
-          <p className="text-[11pt] font-bold">
-            {t("publicResults.standingsPdfTitle")} — {t(scopeLabelKey(scope))}
-          </p>
-          <p className="numeric">{formatCompetitionDate(detail.startDate, locale)}</p>
-        </div>
-      </header>
+            <p className="numeric">{formatCompetitionDate(detail.startDate, locale)}</p>
+          </>
+        }
+      />
 
       <section className="mb-4 space-y-2">
         <h2 className="text-[10pt] font-bold uppercase tracking-wide">

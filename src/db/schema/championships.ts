@@ -12,6 +12,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { bytea } from "./custom-types";
 import {
   championshipStatusEnum,
   eventTypeEnum,
@@ -32,6 +33,16 @@ export const championships = pgTable(
     startDate: date("start_date").notNull(),
     location: text("location").notNull(),
     organizer: text("organizer"),
+    /**
+     * Optional logos, stored directly in the database rather than an external
+     * blob store: small images, read far less often than the rest of a
+     * championship's data, and kept with everything else so the whole
+     * application's data stays in one portable Postgres database.
+     */
+    organizerLogo: bytea("organizer_logo"),
+    organizerLogoContentType: text("organizer_logo_content_type"),
+    championshipLogo: bytea("championship_logo"),
+    championshipLogoContentType: text("championship_logo_content_type"),
     status: championshipStatusEnum("status").notNull().default("DRAFT"),
     /** Controls whether the public results page shows this championship. */
     isPublished: boolean("is_published").notNull().default(false),
@@ -55,6 +66,14 @@ export const championships = pgTable(
     uniqueIndex("championships_slug_idx").on(table.slug),
     index("championships_start_date_idx").on(table.startDate),
     index("championships_published_idx").on(table.isPublished, table.startDate),
+    check(
+      "championships_organizer_logo_check",
+      sql`(${table.organizerLogo} is null) = (${table.organizerLogoContentType} is null)`,
+    ),
+    check(
+      "championships_championship_logo_check",
+      sql`(${table.championshipLogo} is null) = (${table.championshipLogoContentType} is null)`,
+    ),
   ],
 );
 

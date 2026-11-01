@@ -36,6 +36,13 @@
       "when": 1793524459245,
       "tag": "0004_third_queen_noir",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793528951261,
+      "tag": "0005_legal_doctor_faustus",
+      "breakpoints": true
     }
   ]
 }

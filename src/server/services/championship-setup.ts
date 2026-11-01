@@ -19,11 +19,28 @@ import {
   type EventTypeKey,
 } from "@/domain/scoring/event-types";
 import type { Principal } from "@/lib/auth/session";
+import { ALLOWED_LOGO_CONTENT_TYPES, MAX_LOGO_BYTES } from "@/lib/logo";
 import { DomainError } from "@/server/actions/result";
 import { recordAudit } from "./audit";
 import { listRunsInOrder } from "./championships";
 
 export const CHAMPIONSHIP_DAYS = 3;
+
+export interface LogoInput {
+  readonly data: Buffer;
+  readonly contentType: string;
+}
+
+/** Shared size/type check for either logo, reapplied here even though the action already validates it. */
+export function validateLogo(logo: LogoInput | null | undefined, label: string): void {
+  if (!logo) return;
+  if (!(ALLOWED_LOGO_CONTENT_TYPES as readonly string[]).includes(logo.contentType)) {
+    throw new DomainError(`${label} must be a PNG, JPEG, WebP or SVG image.`, "VALIDATION");
+  }
+  if (logo.data.length > MAX_LOGO_BYTES) {
+    throw new DomainError(`${label} must be at most 2 MB.`, "VALIDATION");
+  }
+}
 
 export interface SquadInput {
   readonly countryId: string;
@@ -44,6 +61,8 @@ export interface CreateChampionshipInput {
   readonly startDate: string;
   readonly location: string;
   readonly organizer: string | null;
+  readonly organizerLogo?: LogoInput | null;
+  readonly championshipLogo?: LogoInput | null;
   readonly squads: readonly SquadInput[];
 }
 
@@ -296,6 +315,9 @@ export async function createChampionshipFromTemplate(
     await assertRidersBelongToCountry(tx, squad);
   }
 
+  validateLogo(input.organizerLogo, "The organizer logo");
+  validateLogo(input.championshipLogo, "The championship logo");
+
   const structure = await readTemplateStructure(tx, input.templateId);
   const slug = await uniqueSlug(tx, slugify(input.name, input.startDate));
 
@@ -307,6 +329,10 @@ export async function createChampionshipFromTemplate(
       startDate: input.startDate,
       location: input.location,
       organizer: input.organizer,
+      organizerLogo: input.organizerLogo?.data ?? null,
+      organizerLogoContentType: input.organizerLogo?.contentType ?? null,
+      championshipLogo: input.championshipLogo?.data ?? null,
+      championshipLogoContentType: input.championshipLogo?.contentType ?? null,
       slug,
       status: "DRAFT",
       isPublished: false,

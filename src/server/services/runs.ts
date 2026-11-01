@@ -315,6 +315,8 @@ export interface EventPrintState {
   readonly championshipName: string;
   readonly championshipLocation: string;
   readonly championshipOrganizer: string | null;
+  readonly hasOrganizerLogo: boolean;
+  readonly hasChampionshipLogo: boolean;
   readonly runs: readonly EventPrintRun[];
   readonly countries: readonly RunCountryEntryOrder[];
 }
@@ -349,6 +351,8 @@ export async function getEventPrintState(
       championshipName: championships.name,
       championshipLocation: championships.location,
       championshipOrganizer: championships.organizer,
+      hasOrganizerLogo: sql<boolean>`${championships.organizerLogo} is not null`,
+      hasChampionshipLogo: sql<boolean>`${championships.championshipLogo} is not null`,
     })
     .from(championshipEvents)
     .innerJoin(championshipDays, eq(championshipDays.id, championshipEvents.championshipDayId))
@@ -381,6 +385,8 @@ export async function getEventPrintState(
     championshipName: eventRow.championshipName,
     championshipLocation: eventRow.championshipLocation,
     championshipOrganizer: eventRow.championshipOrganizer,
+    hasOrganizerLogo: eventRow.hasOrganizerLogo,
+    hasChampionshipLogo: eventRow.hasChampionshipLogo,
     runs,
     countries: firstRunState.countries,
   };

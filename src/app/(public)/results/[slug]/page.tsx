@@ -120,6 +120,26 @@ export default async function PublicChampionshipResultsPage({
           </p>
           <p className="text-xs text-muted">{t("publicResults.subtitle")}</p>
         </div>
+        {championship.hasChampionshipLogo || championship.hasOrganizerLogo ? (
+          <div className="flex shrink-0 items-center gap-2">
+            {championship.hasChampionshipLogo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={`/api/championships/${championship.id}/logo/championship`}
+                alt=""
+                className="h-12 max-w-28 rounded-md border border-border bg-surface-raised object-contain p-1"
+              />
+            ) : null}
+            {championship.hasOrganizerLogo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={`/api/championships/${championship.id}/logo/organizer`}
+                alt=""
+                className="h-12 max-w-28 rounded-md border border-border bg-surface-raised object-contain p-1"
+              />
+            ) : null}
+          </div>
+        ) : null}
       </header>
 
       {currentDay !== null ? (

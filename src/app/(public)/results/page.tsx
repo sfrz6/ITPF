@@ -49,22 +49,32 @@ export default async function PublicResultsIndexPage() {
           {championships.map((championship) => (
             <li key={championship.id}>
               <Card className="flex h-full flex-col">
-                <CardHeader className="flex-col items-start gap-1">
-                  <CardTitle className="text-base">
-                    {championshipDisplayName(championship.name, championship.nameAr, locale)}
-                  </CardTitle>
-                  {/*
-                    Location is an untranslated proper noun. In Arabic, left
-                    as plain text it can be torn apart mid-phrase by the
-                    browser's bidi reordering when the line wraps; `bdi`
-                    isolates it as one atomic run so it wraps as a whole
-                    without disturbing the date's own (already correct)
-                    right-to-left flow.
-                  */}
-                  <p className="text-sm text-muted">
-                    {formatCompetitionDate(championship.startDate, locale)} ·{" "}
-                    <bdi>{championship.location}</bdi>
-                  </p>
+                <CardHeader className="items-start gap-3">
+                  {championship.hasChampionshipLogo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={`/api/championships/${championship.id}/logo/championship`}
+                      alt=""
+                      className="size-10 shrink-0 rounded-md border border-border bg-surface-raised object-contain p-1"
+                    />
+                  ) : null}
+                  <span className="flex min-w-0 flex-1 flex-col gap-1">
+                    <CardTitle className="text-base">
+                      {championshipDisplayName(championship.name, championship.nameAr, locale)}
+                    </CardTitle>
+                    {/*
+                      Location is an untranslated proper noun. In Arabic, left
+                      as plain text it can be torn apart mid-phrase by the
+                      browser's bidi reordering when the line wraps; `bdi`
+                      isolates it as one atomic run so it wraps as a whole
+                      without disturbing the date's own (already correct)
+                      right-to-left flow.
+                    */}
+                    <p className="text-sm text-muted">
+                      {formatCompetitionDate(championship.startDate, locale)} ·{" "}
+                      <bdi>{championship.location}</bdi>
+                    </p>
+                  </span>
                 </CardHeader>
                 <CardContent className="mt-auto space-y-3">
                   <p className="flex flex-wrap items-center gap-2 text-xs text-muted">

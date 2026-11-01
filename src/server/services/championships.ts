@@ -23,6 +23,8 @@ export interface ChampionshipSummary {
   readonly organizer: string | null;
   readonly status: "DRAFT" | "ACTIVE" | "COMPLETED";
   readonly isPublished: boolean;
+  readonly hasChampionshipLogo: boolean;
+  readonly hasOrganizerLogo: boolean;
   readonly countryCount: number;
   readonly confirmedRuns: number;
   readonly totalRuns: number;
@@ -73,6 +75,8 @@ export async function listChampionships(options: {
       organizer: championships.organizer,
       status: championships.status,
       isPublished: championships.isPublished,
+      hasChampionshipLogo: sql<boolean>`${championships.championshipLogo} is not null`,
+      hasOrganizerLogo: sql<boolean>`${championships.organizerLogo} is not null`,
       countryCount: countryCountExpression,
       confirmedRuns: confirmedRunCountExpression,
       totalRuns: runCountExpression,
@@ -127,6 +131,8 @@ export async function getChampionshipDetail(
       organizer: championships.organizer,
       status: championships.status,
       isPublished: championships.isPublished,
+      hasChampionshipLogo: sql<boolean>`${championships.championshipLogo} is not null`,
+      hasOrganizerLogo: sql<boolean>`${championships.organizerLogo} is not null`,
       sourceTemplateName: championships.sourceTemplateName,
       countryCount: countryCountExpression,
       confirmedRuns: confirmedRunCountExpression,
@@ -398,6 +404,8 @@ export async function getChampionshipBySlug(slug: string): Promise<ChampionshipS
       organizer: championships.organizer,
       status: championships.status,
       isPublished: championships.isPublished,
+      hasChampionshipLogo: sql<boolean>`${championships.championshipLogo} is not null`,
+      hasOrganizerLogo: sql<boolean>`${championships.organizerLogo} is not null`,
       countryCount: countryCountExpression,
       confirmedRuns: confirmedRunCountExpression,
       totalRuns: runCountExpression,

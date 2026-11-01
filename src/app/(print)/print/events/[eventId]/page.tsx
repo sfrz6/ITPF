@@ -14,7 +14,7 @@ import {
 import { eventLabel } from "@/components/common/labels";
 import { targetLabels } from "@/components/common/target-labels";
 import { CountryFlag } from "@/components/common/country-flag";
-import { ItpfLogoPrint } from "@/components/common/itpf-logo";
+import { PrintHeader } from "@/components/common/print-header";
 import { PrintTrigger } from "@/components/common/print-trigger";
 
 export const metadata = { title: "Round sheet" };
@@ -45,28 +45,26 @@ export default async function EventRoundSheetPage({
     <main className="mx-auto max-w-[297mm] px-6 py-6 print:px-0 print:py-0">
       <PrintTrigger />
 
-      <header className="mb-4 flex items-start justify-between gap-6 border-b-2 border-black pb-3">
-        <div className="flex items-start gap-4">
-          <ItpfLogoPrint width={96} />
-          <div>
-            <p className="text-[10pt] font-semibold uppercase tracking-wide">
-              {t("common.federation")}
-            </p>
-            <h1 className="mt-0.5 text-[14pt] font-bold leading-tight">
-              {state.championshipName}
-            </h1>
-            <p className="text-[9pt]">
-              {state.championshipLocation}
-              {state.championshipOrganizer ? ` · ${state.championshipOrganizer}` : ""}
-            </p>
-          </div>
-        </div>
-        <div className="text-end text-[9pt]">
-          <p className="text-[11pt] font-bold">{t("print.roundSheet")}</p>
-          <p>{t("championships.daysOf", { day: state.dayNumber })}</p>
-          <p className="numeric">{formatCompetitionDate(state.competitionDate, locale)}</p>
-        </div>
-      </header>
+      <PrintHeader
+        federationLabel={t("common.federation")}
+        championshipName={state.championshipName}
+        locationLine={
+          <>
+            {state.championshipLocation}
+            {state.championshipOrganizer ? ` · ${state.championshipOrganizer}` : ""}
+          </>
+        }
+        championshipId={state.championshipId}
+        hasOrganizerLogo={state.hasOrganizerLogo}
+        hasChampionshipLogo={state.hasChampionshipLogo}
+        right={
+          <>
+            <p className="text-[11pt] font-bold">{t("print.roundSheet")}</p>
+            <p>{t("championships.daysOf", { day: state.dayNumber })}</p>
+            <p className="numeric">{formatCompetitionDate(state.competitionDate, locale)}</p>
+          </>
+        }
+      />
 
       <section className="mb-4 grid grid-cols-3 gap-3 border border-black text-[9pt]">
         <div className="border-e border-black px-2 py-1.5">
