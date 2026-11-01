@@ -54,10 +54,12 @@ export default async function PublicLayout({ children }: { children: React.React
               {t("publicCountries.title")}
             </Link>
           </nav>
-          <div className="flex shrink-0 items-center gap-1 ms-auto md:ms-0">
-            <PublicMobileNav />
+          <div className="hidden shrink-0 items-center gap-1 md:flex">
             <LocaleSwitcher />
             <ThemeToggle />
+          </div>
+          <div className="ms-auto shrink-0 md:hidden">
+            <PublicMobileNav />
           </div>
         </div>
       </header>
