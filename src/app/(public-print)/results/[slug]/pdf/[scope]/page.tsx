@@ -61,7 +61,7 @@ export default async function PublicStandingsPdfPage({
   }).format(new Date());
 
   return (
-    <main className="mx-auto max-w-[210mm] px-6 py-6 print:px-0 print:py-0">
+    <main className="relative mx-auto max-w-[210mm] px-6 py-6 print:px-0 print:py-0">
       <PrintTrigger />
       <PrintWatermark />
 

@@ -1,10 +1,22 @@
 import Image from "next/image";
 
 /**
- * The federation mark, faint and centered on every printed page.
+ * The federation mark, faint and centered behind a printed document's whole
+ * content.
  *
- * `position: fixed` repeats the same element on each sheet when the browser
- * paginates for print (the engine every print route here is built against).
+ * Positioned `absolute` within its nearest positioned ancestor (the print
+ * page's own `<main>`, which must carry `relative`) rather than `fixed` to
+ * the viewport. `fixed` reliably repeats per physical page in desktop
+ * Chromium's print pipeline, but a phone's "Print" / "Save as PDF" share
+ * sheet (notably iOS Safari) does not paginate the document the same way and
+ * often drops fixed-position elements from the exported PDF entirely, which
+ * is what made this invisible on a phone download. `absolute inset-0
+ * m-auto` instead centers the mark within the full height of the document's
+ * content, which every engine renders the same way regardless of how (or
+ * whether) it paginates — at the cost of appearing once across the whole
+ * document rather than once per physical page on a multi-page desktop
+ * print.
+ *
  * A negative `z-index` would tuck it behind the page's own white background
  * box instead of the content sitting on top of it — most of a printed page
  * has no table cell background to paint over it — so this sits above
@@ -17,7 +29,7 @@ export function PrintWatermark() {
   return (
     <div
       aria-hidden
-      className="pointer-events-none fixed inset-0 hidden items-center justify-center print:flex"
+      className="pointer-events-none absolute inset-0 z-0 m-auto hidden items-center justify-center print:flex"
     >
       <Image
         src="/brand/itpf-logo-light.webp"

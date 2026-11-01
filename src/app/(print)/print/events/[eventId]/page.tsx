@@ -43,7 +43,7 @@ export default async function EventRoundSheetPage({
   }).format(new Date());
 
   return (
-    <main className="mx-auto max-w-[297mm] px-6 py-6 print:px-0 print:py-0">
+    <main className="relative mx-auto max-w-[297mm] px-6 py-6 print:px-0 print:py-0">
       <PrintTrigger />
       <PrintWatermark />
 
