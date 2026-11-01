@@ -203,7 +203,9 @@ function buildSet(
     scope,
     subject,
     rows,
-    hasUnresolvedTie: rows.some((row) => row.isTiedAfterTieBreak),
+    // A tie-break round only applies to the podium (ranks 1-3): a tie further
+    // down the standings never affects a medal, so it is left as-is.
+    hasUnresolvedTie: rows.some((row) => row.isTiedAfterTieBreak && row.rank <= 3),
   };
 }
 

@@ -65,7 +65,9 @@ export function ResultsView({
 
   const set = sets.find((item) => item.scope === activeScope && item.subject === subject);
   const rows = set?.rows ?? [];
-  const tiedRows = rows.filter((row) => row.isTiedAfterTieBreak);
+  // Only a podium tie (rank 1-3) warrants a tie-break round; a tie further
+  // down the standings never affects a medal.
+  const tiedRows = rows.filter((row) => row.isTiedAfterTieBreak && row.rank <= 3);
 
   return (
     <div className="space-y-4">
