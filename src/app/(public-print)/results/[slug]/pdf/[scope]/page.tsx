@@ -3,6 +3,7 @@ import { getTranslator } from "@/lib/i18n/server";
 import { championshipDisplayName, formatCompetitionDate } from "@/components/common/formatting";
 import { PrintHeader } from "@/components/common/print-header";
 import { PrintTrigger } from "@/components/common/print-trigger";
+import { PrintWatermark } from "@/components/common/print-watermark";
 import { getChampionshipBySlug, getChampionshipDetail } from "@/server/services/championships";
 import { loadChampionshipResults } from "@/server/services/results";
 import { getEventResultsForPrint } from "@/server/services/runs";
@@ -62,6 +63,7 @@ export default async function PublicStandingsPdfPage({
   return (
     <main className="mx-auto max-w-[210mm] px-6 py-6 print:px-0 print:py-0">
       <PrintTrigger />
+      <PrintWatermark />
 
       <PrintHeader
         federationLabel={t("common.federation")}

@@ -16,6 +16,7 @@ import { targetLabels } from "@/components/common/target-labels";
 import { CountryFlag } from "@/components/common/country-flag";
 import { PrintHeader } from "@/components/common/print-header";
 import { PrintTrigger } from "@/components/common/print-trigger";
+import { PrintWatermark } from "@/components/common/print-watermark";
 
 export const metadata = { title: "Round sheet" };
 
@@ -44,6 +45,7 @@ export default async function EventRoundSheetPage({
   return (
     <main className="mx-auto max-w-[297mm] px-6 py-6 print:px-0 print:py-0">
       <PrintTrigger />
+      <PrintWatermark />
 
       <PrintHeader
         federationLabel={t("common.federation")}
