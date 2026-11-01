@@ -395,7 +395,11 @@ export async function getEventPrintState(
   let countryPointsSoFar: ReadonlyMap<string, string> = new Map();
   if (eventRow.orderIndex > 1) {
     const day = eventRow.dayNumber as DayNumber;
-    const confirmedRuns = await loadChampionshipConfirmedRuns(eventRow.championshipId);
+    // Scoped to this day alone: a championship can run for several days, and
+    // this is recomputed on every round-sheet print from its second event
+    // on, so there's no reason to re-aggregate every other day's runs just
+    // to read one day's totals.
+    const confirmedRuns = await loadChampionshipConfirmedRuns(eventRow.championshipId, day);
     const totals = aggregateChampionship(confirmedRuns);
 
     const riderMap = new Map<string, string>();

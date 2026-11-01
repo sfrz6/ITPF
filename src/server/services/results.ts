@@ -36,6 +36,7 @@ import type { Locale } from "@/lib/i18n/config";
  */
 export async function loadConfirmedRuns(
   championshipId: string,
+  dayNumber?: DayNumber,
 ): Promise<readonly ConfirmedRun[]> {
   const db = getDb();
 
@@ -70,6 +71,7 @@ export async function loadConfirmedRuns(
       and(
         eq(championshipDays.championshipId, championshipId),
         eq(championshipRuns.status, "CONFIRMED"),
+        dayNumber === undefined ? undefined : eq(championshipDays.dayNumber, dayNumber),
       ),
     )
     .orderBy(
