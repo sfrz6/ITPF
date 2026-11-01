@@ -9,7 +9,7 @@ import { useI18n } from "@/lib/i18n/client";
 import type { DayNumber } from "@/domain/results";
 import type { StandingRow } from "@/components/results/standings-data";
 
-const RIDER_PAGE_SIZE = 15;
+const RIDER_PAGE_SIZE = 12;
 const COUNTRY_PAGE_SIZE = 12;
 /** How long each page of names stays on screen before rotating to the next. */
 const ROTATE_MS = 8_000;
@@ -27,20 +27,20 @@ function paginate<T>(rows: readonly T[], pageSize: number): readonly (readonly T
 
 function RankedList({ rows }: { rows: readonly StandingRow[] }) {
   return (
-    <ol className="relative z-10 flex-1 space-y-3">
+    <ol className="relative z-10 min-h-0 flex-1 space-y-2 overflow-hidden">
       {rows.map((row) => (
         <li
           key={row.key}
-          className="flex items-center gap-5 rounded-lg border border-black/10 bg-white/80 px-5 py-3.5 shadow-sm"
+          className="flex items-center gap-4 rounded-lg border border-black/10 bg-white/80 px-4 py-2 shadow-sm"
         >
-          <span className="w-16 shrink-0 text-end text-4xl font-bold text-neutral-400">
+          <span className="w-12 shrink-0 text-end text-2xl font-bold text-neutral-400">
             {row.rank}
           </span>
-          <CountryFlag iso2={row.iso2} className="h-12 w-16 shrink-0 rounded-sm" />
-          <span className="min-w-0 flex-1 truncate text-4xl font-semibold text-neutral-900">
+          <CountryFlag iso2={row.iso2} className="h-9 w-12 shrink-0 rounded-sm" />
+          <span className="min-w-0 flex-1 truncate text-2xl font-semibold text-neutral-900">
             {row.name}
           </span>
-          <span className="numeric shrink-0 text-4xl font-bold text-neutral-900">{row.total}</span>
+          <span className="numeric shrink-0 text-2xl font-bold text-neutral-900">{row.total}</span>
         </li>
       ))}
     </ol>
@@ -136,7 +136,7 @@ export function DisplayBoard({
     : "/brand/itpf-logo-light.webp";
 
   return (
-    <div className="relative flex min-h-dvh flex-col bg-white text-neutral-900">
+    <div className="relative flex h-dvh flex-col overflow-hidden bg-white text-neutral-900">
       {!started ? (
         <button
           type="button"
@@ -153,15 +153,15 @@ export function DisplayBoard({
         src={watermarkSrc}
         alt=""
         aria-hidden
-        className="pointer-events-none fixed inset-0 z-0 m-auto h-[75vh] w-[75vh] select-none object-contain opacity-20"
+        className="pointer-events-none fixed inset-0 z-0 m-auto h-[70vh] w-[70vh] select-none object-contain opacity-20"
       />
 
-      <header className="relative z-10 flex flex-wrap items-center justify-between gap-6 border-b border-black/10 bg-white/90 px-10 py-6">
-        <div className="flex items-center gap-5">
-          <ItpfLogo width={80} />
+      <header className="relative z-10 flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-black/10 bg-white/90 px-8 py-3">
+        <div className="flex items-center gap-4">
+          <ItpfLogo width={56} />
           <div>
-            <p className="text-4xl font-bold leading-tight">{championshipName}</p>
-            <p className="text-xl text-neutral-600">
+            <p className="text-2xl font-bold leading-tight">{championshipName}</p>
+            <p className="text-base text-neutral-600">
               {t("championships.daysOf", { day: dayNumber })}
               {organizer ? ` · ${organizer}` : ""}
             </p>
@@ -172,29 +172,29 @@ export function DisplayBoard({
           <img
             src={`/api/championships/${championshipId}/logo/organizer`}
             alt=""
-            className="h-auto w-24 object-contain"
+            className="h-auto w-16 object-contain"
           />
         ) : null}
       </header>
 
-      <div className="relative z-10 grid flex-1 grid-cols-2 divide-x divide-black/10">
-        <section className="flex min-h-0 flex-col px-8 py-6">
-          <h2 className="mb-4 text-3xl font-bold uppercase tracking-wide text-amber-600">
+      <div className="relative z-10 grid min-h-0 flex-1 grid-cols-2 divide-x divide-black/10">
+        <section className="flex min-h-0 flex-col overflow-hidden px-6 py-4">
+          <h2 className="mb-2 shrink-0 text-2xl font-bold uppercase tracking-wide text-amber-600">
             {t("display.individualRanking")}
           </h2>
           {currentRiders.length === 0 ? (
-            <p className="text-xl text-neutral-500">{t("display.waitingForResults")}</p>
+            <p className="text-lg text-neutral-500">{t("display.waitingForResults")}</p>
           ) : (
             <RankedList rows={currentRiders} />
           )}
         </section>
 
-        <section className="flex min-h-0 flex-col px-8 py-6">
-          <h2 className="mb-4 text-3xl font-bold uppercase tracking-wide text-amber-600">
+        <section className="flex min-h-0 flex-col overflow-hidden px-6 py-4">
+          <h2 className="mb-2 shrink-0 text-2xl font-bold uppercase tracking-wide text-amber-600">
             {t("display.countryRanking")}
           </h2>
           {currentCountries.length === 0 ? (
-            <p className="text-xl text-neutral-500">{t("display.waitingForResults")}</p>
+            <p className="text-lg text-neutral-500">{t("display.waitingForResults")}</p>
           ) : (
             <RankedList rows={currentCountries} />
           )}
