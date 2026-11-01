@@ -25,6 +25,26 @@ function paginate<T>(rows: readonly T[], pageSize: number): readonly (readonly T
   return pages;
 }
 
+const ROW_SIZE = {
+  // Up to 12 riders fit a page, so individual rows keep the tighter size.
+  normal: {
+    li: "gap-4 px-4 py-2.5",
+    rank: "w-14 text-3xl",
+    flag: "h-11 w-16",
+    name: "text-3xl",
+    total: "text-3xl",
+  },
+  // The country list rarely has more than ~10 entries on a page, so it has
+  // the room to read larger.
+  large: {
+    li: "gap-5 px-5 py-3",
+    rank: "w-16 text-4xl",
+    flag: "h-14 w-20",
+    name: "text-4xl",
+    total: "text-4xl",
+  },
+} as const;
+
 /**
  * A ranking column's rows, sized to its own content (`w-fit`) with every row
  * stretched to that resolved width (the flexbox algorithm sizes an
@@ -34,25 +54,32 @@ function paginate<T>(rows: readonly T[], pageSize: number): readonly (readonly T
  * caller's job (see the heading+list wrapper in `DisplayBoard`), so both the
  * heading and the rows move together.
  */
-function RankedList({ rows }: { rows: readonly StandingRow[] }) {
+function RankedList({
+  rows,
+  size = "normal",
+}: {
+  rows: readonly StandingRow[];
+  size?: "normal" | "large";
+}) {
+  const s = ROW_SIZE[size];
   return (
     <ol className="relative z-10 flex min-h-0 w-fit flex-1 flex-col gap-2 overflow-hidden">
       {rows.map((row) => (
         <li
           key={row.key}
-          className="flex items-center gap-4 rounded-lg border border-black/10 bg-white/80 px-4 py-2.5 shadow-sm"
+          className={`flex items-center rounded-lg border border-black/10 bg-white/80 shadow-sm ${s.li}`}
         >
-          <span className="w-14 shrink-0 text-end text-3xl font-bold text-neutral-400">
+          <span className={`shrink-0 text-end font-bold text-neutral-400 ${s.rank}`}>
             {row.rank}
           </span>
-          <CountryFlag iso2={row.iso2} className="h-11 w-16 shrink-0 rounded-sm" />
-          <span className="max-w-xs truncate text-3xl font-semibold text-neutral-900">
+          <CountryFlag iso2={row.iso2} className={`shrink-0 rounded-sm ${s.flag}`} />
+          <span className={`max-w-xs truncate font-semibold text-neutral-900 ${s.name}`}>
             {row.name}
           </span>
           {/* `ms-auto` pins every row's points to the box's end edge
               regardless of how long that row's name is, so the numbers line
               up in one column instead of trailing right after each name. */}
-          <span className="numeric ms-auto shrink-0 text-3xl font-bold text-neutral-900">
+          <span className={`numeric ms-auto shrink-0 font-bold text-neutral-900 ${s.total}`}>
             {row.total}
           </span>
         </li>
@@ -216,7 +243,7 @@ export function DisplayBoard({
             {currentCountries.length === 0 ? (
               <p className="text-lg text-neutral-500">{t("display.waitingForResults")}</p>
             ) : (
-              <RankedList rows={currentCountries} />
+              <RankedList rows={currentCountries} size="large" />
             )}
           </div>
         </section>
