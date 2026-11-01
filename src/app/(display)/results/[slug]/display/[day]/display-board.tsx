@@ -39,7 +39,7 @@ const ROW_SIZE = {
   large: {
     li: "gap-5 px-5 py-3",
     rank: "w-16 text-[2rem]",
-    flag: "h-14 w-20",
+    flag: "h-12 w-[4.5rem]",
     name: "text-[2rem]",
     total: "text-[2rem]",
   },
