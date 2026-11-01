@@ -66,16 +66,15 @@ export default async function PublicSeriesRankingsPage({
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2 pt-0">
             {rankings.championships.map((championship) => (
-              <Link
+              <span
                 key={championship.id}
-                href={`/results/${championship.slug}`}
-                className="rounded-md border border-border px-3 py-1.5 text-sm transition-colors hover:border-border-strong hover:text-primary"
+                className="rounded-md border border-border px-3 py-1.5 text-sm"
               >
                 {championshipDisplayName(championship.name, championship.nameAr, locale)}
                 <span className="ms-1.5 text-xs text-muted">
                   {formatCompetitionDate(championship.startDate, locale)}
                 </span>
-              </Link>
+              </span>
             ))}
           </CardContent>
         </Card>

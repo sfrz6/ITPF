@@ -12,6 +12,22 @@ export function riderDisplayName(fullName: string, shirtNumber: number | null): 
 }
 
 /**
+ * Shortens a person's full name to first + last for a narrow standings or
+ * rankings column, where every extra word competes for space with a fixed
+ * rank/total layout. Riders are stored as one free-text name with no
+ * separate first/last fields, so this is a word-split heuristic rather than
+ * a guaranteed-correct rule; a name of two words or fewer already fits and
+ * passes through unchanged. Round sheets, the entry order panel and the
+ * participants page all read the rider's full name directly, not through
+ * here, so only standings-style tables are affected.
+ */
+export function shortenPersonName(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length <= 2) return fullName;
+  return `${parts[0]} ${parts[parts.length - 1]}`;
+}
+
+/**
  * Dates are stored as calendar dates (no time of day) and must render as the
  * same day in every time zone, so they are formatted from their parts rather
  * than parsed into a `Date` that could shift across midnight.

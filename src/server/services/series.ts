@@ -4,6 +4,7 @@ import { championships, qualificationSeries, qualificationSeriesChampionships } 
 import { formatPoints, ZERO, type Decimal } from "@/domain/scoring/decimal";
 import { calculateStandings } from "@/domain/scoring/standings";
 import { DomainError } from "@/server/actions/result";
+import { shortenPersonName } from "@/components/common/formatting";
 import type { Locale } from "@/lib/i18n/config";
 import { listChampionshipCountries, listChampionshipRiders } from "./championships";
 import { loadChampionshipResults } from "./results";
@@ -306,7 +307,7 @@ export async function computeSeriesRankings(
         key: standing.key,
         rank: standing.rank,
         total: formatPoints(standing.total),
-        name: info.name,
+        name: shortenPersonName(info.name),
         iso2: info.iso2,
         countryName: info.countryName,
       };

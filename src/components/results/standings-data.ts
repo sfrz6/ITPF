@@ -16,6 +16,7 @@ import type {
   TieBreakKey,
 } from "@/server/services/results";
 import type { ChampionshipDayDetail } from "@/server/services/championships";
+import { shortenPersonName } from "@/components/common/formatting";
 
 /**
  * Shapes the results engine output into plain, serialisable rows for the
@@ -49,22 +50,6 @@ const SCOPE_LABEL_KEYS = {
  */
 export function scopeLabelKey(scope: StandingsScope): (typeof SCOPE_LABEL_KEYS)[StandingsScope] {
   return SCOPE_LABEL_KEYS[scope];
-}
-
-/**
- * Shortens a rider's full name to first + last for the standings table,
- * where every extra word competes with a narrow, fixed-width column. Riders
- * are stored as one free-text name with no separate first/last fields, so
- * this is a word-split heuristic rather than a guaranteed-correct rule; a
- * name of two words or fewer already fits and passes through unchanged.
- * Round sheets, the entry order panel and the participants page all read
- * the rider's full name directly from their own data, not through here, so
- * only the standings table is affected.
- */
-function shortenRiderName(fullName: string): string {
-  const parts = fullName.trim().split(/\s+/);
-  if (parts.length <= 2) return fullName;
-  return `${parts[0]} ${parts[parts.length - 1]}`;
 }
 
 export function dayOfScope(scope: StandingsScope): DayNumber | null {
@@ -161,7 +146,7 @@ function buildSet(
         rank: standing.rank,
         baseRank: standing.baseRank,
         isTiedAfterTieBreak: standing.isTiedAfterTieBreak,
-        name: rider ? shortenRiderName(rider.riderName) : unknown,
+        name: rider ? shortenPersonName(rider.riderName) : unknown,
         countryName: rider?.countryName ?? unknown,
         iso2: rider?.iso2 ?? "",
         dayValues: dayValuesOf(days, (value) =>
