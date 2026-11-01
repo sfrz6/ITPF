@@ -49,7 +49,7 @@ export default async function PublicLandingPage() {
           priority
           className="pointer-events-none absolute left-1/2 top-1/2 hidden h-[200px] w-auto -translate-x-1/2 -translate-y-1/2 opacity-10 select-none sm:h-[260px] dark:block"
         />
-        <div className="relative space-y-7">
+        <div className="relative space-y-4">
           <h1 className="text-balance text-lg font-bold tracking-tight text-foreground sm:text-xl">
             {t("landing.title")}
           </h1>
