@@ -153,7 +153,7 @@ export function DisplayBoard({
         src={watermarkSrc}
         alt=""
         aria-hidden
-        className="pointer-events-none fixed inset-0 z-0 m-auto h-[70vh] w-[70vh] select-none object-contain opacity-[0.07]"
+        className="pointer-events-none fixed inset-0 z-0 m-auto h-[75vh] w-[75vh] select-none object-contain opacity-20"
       />
 
       <header className="relative z-10 flex flex-wrap items-center justify-between gap-6 border-b border-black/10 bg-white/90 px-10 py-6">
