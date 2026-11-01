@@ -98,7 +98,7 @@ export default async function PublicChampionshipResultsPage({
 
       <header className="flex flex-wrap items-start gap-4">
         <ItpfLogo width={56} priority />
-        <div className="min-w-0 flex-1 space-y-1">
+        <div className="min-w-0 space-y-1">
           <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
             {championshipDisplayName(championship.name, championship.nameAr, locale)}
           </h1>
@@ -121,13 +121,16 @@ export default async function PublicChampionshipResultsPage({
           <p className="text-xs text-muted">{t("publicResults.subtitle")}</p>
         </div>
         {championship.hasChampionshipLogo || championship.hasOrganizerLogo ? (
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-3">
+            {/* Sized to match `ItpfLogo` above: same width, no border or
+                background box, so these read as logos sitting beside the
+                federation mark rather than thumbnails in a frame. */}
             {championship.hasChampionshipLogo ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={`/api/championships/${championship.id}/logo/championship`}
                 alt=""
-                className="h-12 max-w-28 rounded-md border border-border bg-surface-raised object-contain p-1"
+                className="h-auto w-14 object-contain"
               />
             ) : null}
             {championship.hasOrganizerLogo ? (
@@ -135,7 +138,7 @@ export default async function PublicChampionshipResultsPage({
               <img
                 src={`/api/championships/${championship.id}/logo/organizer`}
                 alt=""
-                className="h-12 max-w-28 rounded-md border border-border bg-surface-raised object-contain p-1"
+                className="h-auto w-14 object-contain"
               />
             ) : null}
           </div>

@@ -41,13 +41,16 @@ export function PrintHeader({
       </div>
       <div className="flex flex-col items-end gap-2">
         {showLogos ? (
-          <div className="flex items-center gap-2">
+          // Sized to match `ItpfLogoPrint` on the start side: same width, no
+          // border or background box, so these read as logos rather than
+          // thumbnails in a frame.
+          <div className="flex items-center gap-3">
             {hasChampionshipLogo ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={`/api/championships/${championshipId}/logo/championship`}
                 alt=""
-                className="h-10 max-w-28 shrink-0 object-contain"
+                className="h-auto w-24 shrink-0 object-contain"
               />
             ) : null}
             {hasOrganizerLogo ? (
@@ -55,7 +58,7 @@ export function PrintHeader({
               <img
                 src={`/api/championships/${championshipId}/logo/organizer`}
                 alt=""
-                className="h-10 max-w-28 shrink-0 object-contain"
+                className="h-auto w-24 shrink-0 object-contain"
               />
             ) : null}
           </div>
