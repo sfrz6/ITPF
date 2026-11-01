@@ -27,20 +27,20 @@ function paginate<T>(rows: readonly T[], pageSize: number): readonly (readonly T
 
 function RankedList({ rows }: { rows: readonly StandingRow[] }) {
   return (
-    <ol className="relative z-10 min-h-0 flex-1 space-y-2 overflow-hidden">
+    <ol className="relative z-10 flex min-h-0 flex-1 flex-col items-start space-y-2 overflow-hidden">
       {rows.map((row) => (
         <li
           key={row.key}
-          className="flex items-center gap-4 rounded-lg border border-black/10 bg-white/80 px-4 py-2 shadow-sm"
+          className="flex items-center gap-4 rounded-lg border border-black/10 bg-white/80 px-4 py-2.5 shadow-sm"
         >
-          <span className="w-12 shrink-0 text-end text-2xl font-bold text-neutral-400">
+          <span className="w-14 shrink-0 text-end text-3xl font-bold text-neutral-400">
             {row.rank}
           </span>
-          <CountryFlag iso2={row.iso2} className="h-9 w-12 shrink-0 rounded-sm" />
-          <span className="min-w-0 flex-1 truncate text-2xl font-semibold text-neutral-900">
+          <CountryFlag iso2={row.iso2} className="h-11 w-16 shrink-0 rounded-sm" />
+          <span className="max-w-xs truncate text-3xl font-semibold text-neutral-900">
             {row.name}
           </span>
-          <span className="numeric shrink-0 text-2xl font-bold text-neutral-900">{row.total}</span>
+          <span className="numeric shrink-0 text-3xl font-bold text-neutral-900">{row.total}</span>
         </li>
       ))}
     </ol>
@@ -157,14 +157,16 @@ export function DisplayBoard({
       />
 
       <header className="relative z-10 flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-black/10 bg-white/90 px-8 py-3">
-        <div className="flex items-center gap-4">
-          <ItpfLogo width={56} />
+        <div className="flex items-center gap-5">
+          <ItpfLogo width={76} />
           <div>
-            <p className="text-2xl font-bold leading-tight">{championshipName}</p>
-            <p className="text-base text-neutral-600">
-              {t("championships.daysOf", { day: dayNumber })}
-              {organizer ? ` · ${organizer}` : ""}
-            </p>
+            <div className="flex flex-wrap items-baseline gap-3">
+              <p className="text-4xl font-bold leading-tight">{championshipName}</p>
+              <span className="text-xl font-semibold text-neutral-500">
+                {t("championships.daysOf", { day: dayNumber })}
+              </span>
+            </div>
+            {organizer ? <p className="text-base text-neutral-600">{organizer}</p> : null}
           </div>
         </div>
         {hasOrganizerLogo ? (
@@ -172,7 +174,7 @@ export function DisplayBoard({
           <img
             src={`/api/championships/${championshipId}/logo/organizer`}
             alt=""
-            className="h-auto w-16 object-contain"
+            className="h-auto w-28 object-contain"
           />
         ) : null}
       </header>
