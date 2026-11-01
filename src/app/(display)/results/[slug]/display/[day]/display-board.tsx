@@ -25,37 +25,18 @@ function paginate<T>(rows: readonly T[], pageSize: number): readonly (readonly T
   return pages;
 }
 
-const ALIGN_CLASS = {
-  start: "",
-  center: "mx-auto",
-  end: "ms-auto",
-} as const;
-
 /**
- * `align` controls where the (shared-width) block of rows sits within its
- * half: the individual list stays flush against the divider, while the
- * country list sits centered in its half rather than pinned to the far
- * edge, leaving open margin on both sides so the watermark behind both
- * columns stays visible.
- *
- * The list itself is a plain flex column sized to its own content
- * (`w-fit`), with every row stretched to that resolved width (the flexbox
- * algorithm sizes an auto-width column to its widest child's max-content
- * size, then stretches every child to that same width) — so every row
- * shares the width of the longest one, and `align`'s auto margin then
- * positions that whole block within the section.
+ * A ranking column's rows, sized to its own content (`w-fit`) with every row
+ * stretched to that resolved width (the flexbox algorithm sizes an
+ * auto-width column to its widest child's max-content size, then stretches
+ * every child to that same width) — so every row shares the width of the
+ * longest one. Positioning the resulting block within its half is the
+ * caller's job (see the heading+list wrapper in `DisplayBoard`), so both the
+ * heading and the rows move together.
  */
-function RankedList({
-  rows,
-  align,
-}: {
-  rows: readonly StandingRow[];
-  align: "start" | "center" | "end";
-}) {
+function RankedList({ rows }: { rows: readonly StandingRow[] }) {
   return (
-    <ol
-      className={`relative z-10 flex min-h-0 w-fit flex-1 flex-col gap-2 overflow-hidden ${ALIGN_CLASS[align]}`}
-    >
+    <ol className="relative z-10 flex min-h-0 w-fit flex-1 flex-col gap-2 overflow-hidden">
       {rows.map((row) => (
         <li
           key={row.key}
@@ -220,19 +201,24 @@ export function DisplayBoard({
           {currentRiders.length === 0 ? (
             <p className="text-lg text-neutral-500">{t("display.waitingForResults")}</p>
           ) : (
-            <RankedList rows={currentRiders} align="start" />
+            <RankedList rows={currentRiders} />
           )}
         </section>
 
-        <section className="flex min-h-0 w-full flex-col items-start overflow-hidden px-6 py-4">
-          <h2 className="mb-2 shrink-0 text-2xl font-bold uppercase tracking-wide text-amber-600">
-            {t("display.countryRanking")}
-          </h2>
-          {currentCountries.length === 0 ? (
-            <p className="text-lg text-neutral-500">{t("display.waitingForResults")}</p>
-          ) : (
-            <RankedList rows={currentCountries} align="center" />
-          )}
+        <section className="flex min-h-0 w-full flex-col overflow-hidden px-6 py-4">
+          {/* Shifted right of true center, by this fixed margin on the
+              heading+rows together, so the heading always sits directly
+              above its list instead of staying pinned at the far left. */}
+          <div className="ms-[46%] flex min-h-0 flex-1 flex-col items-start overflow-hidden">
+            <h2 className="mb-2 shrink-0 text-2xl font-bold uppercase tracking-wide text-amber-600">
+              {t("display.countryRanking")}
+            </h2>
+            {currentCountries.length === 0 ? (
+              <p className="text-lg text-neutral-500">{t("display.waitingForResults")}</p>
+            ) : (
+              <RankedList rows={currentCountries} />
+            )}
+          </div>
         </section>
       </div>
     </div>
