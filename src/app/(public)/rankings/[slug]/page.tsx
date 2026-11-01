@@ -19,7 +19,7 @@ export async function generateMetadata({
   const { slug } = await params;
   const { locale } = await getTranslator();
   const series = await getSeriesBySlug(slug);
-  if (!series) return { title: "Qualification rankings" };
+  if (!series) return { title: "Rankings" };
   const name = championshipDisplayName(series.name, series.nameAr, locale);
   return {
     title: `${name} rankings`,

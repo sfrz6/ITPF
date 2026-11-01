@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ItpfLogo } from "@/components/common/itpf-logo";
 import { LocaleSwitcher, ThemeToggle } from "@/components/layout/toolbar";
+import { PublicMobileNav } from "@/components/layout/public-mobile-nav";
 import { getTranslator } from "@/lib/i18n/server";
 
 /**
@@ -42,7 +43,7 @@ export default async function PublicLayout({ children }: { children: React.React
               </span>
             </span>
           </Link>
-          <nav className="ms-auto hidden items-center gap-5 text-sm font-medium text-muted sm:flex">
+          <nav className="ms-auto hidden items-center gap-5 text-sm font-medium text-muted md:flex">
             <Link href="/results" className="hover:text-foreground">
               {t("nav.publicResults")}
             </Link>
@@ -53,7 +54,8 @@ export default async function PublicLayout({ children }: { children: React.React
               {t("publicCountries.title")}
             </Link>
           </nav>
-          <div className="flex shrink-0 items-center gap-1 sm:ms-0 ms-auto">
+          <div className="flex shrink-0 items-center gap-1 ms-auto md:ms-0">
+            <PublicMobileNav />
             <LocaleSwitcher />
             <ThemeToggle />
           </div>

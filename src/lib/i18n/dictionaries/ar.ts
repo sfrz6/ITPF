@@ -483,7 +483,7 @@ export const ar: Dictionary = {
     allResults: "جميع النتائج",
     exploreResults: "النتائج",
     exploreResultsHint: "كل بطولة، مع الترتيب الكامل وجداول الأشواط.",
-    exploreRankings: "تصنيف التأهل",
+    exploreRankings: "الترتيب",
     exploreRankingsHint: "الترتيب المجمّع عبر سلسلة تأهل.",
     exploreCountries: "الدول",
     exploreCountriesHint: "السجل الكامل لمشاركات كل دولة.",
@@ -512,7 +512,7 @@ export const ar: Dictionary = {
     deleteConfirmBody: "سيؤدي هذا إلى إزالة السلسلة وتصنيفها المنشور. لن تتأثر البطولات نفسها.",
   },
   rankings: {
-    title: "تصنيف التأهل",
+    title: "الترتيب",
     subtitle: "الترتيب المجمّع عبر سلسلة تأهل.",
     noSeries: "لم يتم نشر أي تصنيف تأهل بعد.",
     individual: "الأفراد",

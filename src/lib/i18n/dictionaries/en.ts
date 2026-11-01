@@ -482,7 +482,7 @@ export const en = {
     allResults: "All results",
     exploreResults: "Results",
     exploreResultsHint: "Every championship, with full standings and round sheets.",
-    exploreRankings: "Qualification rankings",
+    exploreRankings: "Rankings",
     exploreRankingsHint: "Combined standings across a qualification series.",
     exploreCountries: "Countries",
     exploreCountriesHint: "Every country's full championship history.",
@@ -511,7 +511,7 @@ export const en = {
     deleteConfirmBody: "This removes the series and its published rankings. The championships themselves are not affected.",
   },
   rankings: {
-    title: "Qualification rankings",
+    title: "Rankings",
     subtitle: "Combined standings across a qualification series.",
     noSeries: "No qualification rankings have been published yet.",
     individual: "Individual",

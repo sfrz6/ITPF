@@ -8,7 +8,7 @@ import { getTranslator } from "@/lib/i18n/server";
 import { listPublishedSeries } from "@/server/services/series";
 
 export const metadata: Metadata = {
-  title: "Qualification rankings",
+  title: "Rankings",
   description:
     "Combined qualification rankings of the International Tent Pegging Federation.",
   robots: { index: true, follow: true },
