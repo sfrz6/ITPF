@@ -25,7 +25,7 @@ export function PrintWatermark() {
         width={512}
         height={430}
         unoptimized
-        className="h-auto w-[55mm] opacity-10"
+        className="h-auto w-[110mm] opacity-10"
       />
     </div>
   );
