@@ -32,6 +32,8 @@ export interface SquadInput {
     readonly rosterSlot: "ACTIVE" | "RESERVE";
     /** 1 to 4 for an active rider, null for the reserve. */
     readonly initialOrder: number | null;
+    /** The rider's shirt number for this championship, optional. */
+    readonly shirtNumber?: number | null;
   }>;
 }
 
@@ -138,6 +140,13 @@ export function validateSquad(squad: SquadInput): void {
   const riderIds = new Set(squad.riders.map((rider) => rider.riderId));
   if (riderIds.size !== squad.riders.length) {
     throw new DomainError("A rider appears twice in the same squad.", "VALIDATION");
+  }
+
+  for (const rider of squad.riders) {
+    const shirtNumber = rider.shirtNumber;
+    if (shirtNumber != null && (shirtNumber < 1 || shirtNumber > 999)) {
+      throw new DomainError("A shirt number must be between 1 and 999.", "VALIDATION");
+    }
   }
 }
 
@@ -360,6 +369,7 @@ export async function createChampionshipFromTemplate(
           riderId: rider.riderId,
           rosterSlot: rider.rosterSlot,
           initialOrder: rider.initialOrder,
+          shirtNumber: rider.shirtNumber ?? null,
         })),
       );
     }
@@ -424,6 +434,7 @@ export async function replaceSquad(
       riderId: championshipRiders.riderId,
       rosterSlot: championshipRiders.rosterSlot,
       initialOrder: championshipRiders.initialOrder,
+      shirtNumber: championshipRiders.shirtNumber,
     })
     .from(championshipRiders)
     .where(eq(championshipRiders.championshipCountryId, input.championshipCountryId));
@@ -439,6 +450,7 @@ export async function replaceSquad(
         riderId: rider.riderId,
         rosterSlot: rider.rosterSlot,
         initialOrder: rider.initialOrder,
+        shirtNumber: rider.shirtNumber ?? null,
       })),
     );
   }

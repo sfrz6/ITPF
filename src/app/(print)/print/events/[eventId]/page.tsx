@@ -5,7 +5,12 @@ import { getTranslator } from "@/lib/i18n/server";
 import { getEventTypeDefinition } from "@/domain/scoring/event-types";
 import { buildScoringUnits } from "@/domain/entry-order";
 import { getEventPrintState } from "@/server/services/runs";
-import { formatCompetitionDate, formatPegSize, formatTime } from "@/components/common/formatting";
+import {
+  formatCompetitionDate,
+  formatPegSize,
+  formatTime,
+  riderDisplayName,
+} from "@/components/common/formatting";
 import { eventLabel } from "@/components/common/labels";
 import { targetLabels } from "@/components/common/target-labels";
 import { CountryFlag } from "@/components/common/country-flag";
@@ -95,7 +100,10 @@ export default async function EventRoundSheetPage({
       <div className="space-y-4">
         {state.countries.map((country) => {
           const names = new Map(
-            country.roster.map((member) => [member.championshipRiderId, member.fullName]),
+            country.roster.map((member) => [
+              member.championshipRiderId,
+              riderDisplayName(member.fullName, member.shirtNumber),
+            ]),
           );
           const units = buildScoringUnits(
             country.confirmedOrder,

@@ -14,11 +14,13 @@ import {
 import { scoreRun, type RunScoringInput } from "@/domain/scoring/engine";
 import { dec, formatPoints, ZERO } from "@/domain/scoring/decimal";
 import { targetLabels } from "@/components/common/target-labels";
+import { riderDisplayName } from "@/components/common/formatting";
 
 export interface ScoringRider {
   readonly runScoreId: string;
   readonly championshipRiderId: string;
   readonly riderName: string;
+  readonly shirtNumber: number | null;
   readonly positionInUnit: number;
   readonly targets: readonly (string | null)[];
 }
@@ -313,6 +315,7 @@ export function ScoringGrid({
                     <div className="divide-hairline">
                       {unit.riders.map((rider) => {
                         const riderResult = computed.ridersById.get(rider.championshipRiderId);
+                        const displayName = riderDisplayName(rider.riderName, rider.shirtNumber);
                         return (
                           <div
                             key={rider.runScoreId}
@@ -322,7 +325,7 @@ export function ScoringGrid({
                               <span className="numeric inline-flex size-5 shrink-0 items-center justify-center rounded-sm bg-surface-sunken text-xs font-semibold text-muted">
                                 {rider.positionInUnit}
                               </span>
-                              <span className="truncate text-sm">{rider.riderName}</span>
+                              <span className="truncate text-sm">{displayName}</span>
                             </span>
 
                             <span className="flex flex-wrap items-center gap-3">
@@ -337,7 +340,7 @@ export function ScoringGrid({
                                     value={draft.points[rider.runScoreId]?.[index] ?? null}
                                     onChange={(value) => setPoint(rider.runScoreId, index, value)}
                                     disabled={readOnly}
-                                    label={`${rider.riderName}: ${labels[index] ?? ""}`}
+                                    label={`${displayName}: ${labels[index] ?? ""}`}
                                     options={allowedTargetPoints(definition, index)}
                                   />
                                 </span>
@@ -362,7 +365,7 @@ export function ScoringGrid({
                                   inputMode="decimal"
                                   autoComplete="off"
                                   className="numeric h-8 w-20 text-end"
-                                  aria-label={`${rider.riderName}: ${t("runs.enterTime")}`}
+                                  aria-label={`${displayName}: ${t("runs.enterTime")}`}
                                 />
                               </span>
                             ) : null}

@@ -49,6 +49,7 @@ export default async function ParticipantsPage({
         fullName: rider.fullName,
         rosterSlot: rider.rosterSlot,
         initialOrder: rider.initialOrder,
+        shirtNumber: rider.shirtNumber,
       }));
 
     return {

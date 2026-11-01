@@ -256,6 +256,8 @@ export interface ChampionshipRiderRecord {
   readonly fullName: string;
   readonly rosterSlot: "ACTIVE" | "RESERVE";
   readonly initialOrder: number | null;
+  /** This championship's shirt number for the rider, if one was entered. */
+  readonly shirtNumber: number | null;
   readonly championshipCountryId: string;
   readonly countryId: string;
   readonly iso2: string;
@@ -275,6 +277,7 @@ export async function listChampionshipRiders(
       fullName: riders.fullName,
       rosterSlot: championshipRiders.rosterSlot,
       initialOrder: championshipRiders.initialOrder,
+      shirtNumber: championshipRiders.shirtNumber,
       championshipCountryId: championshipCountries.id,
       countryId: countries.id,
       iso2: countries.iso2,

@@ -21,6 +21,7 @@ const squadRiderSchema = z.object({
   riderId: z.uuid(),
   rosterSlot: z.enum(["ACTIVE", "RESERVE"]),
   initialOrder: z.number().int().min(1).max(ACTIVE_RIDERS_PER_COUNTRY).nullable(),
+  shirtNumber: z.number().int().min(1).max(999).nullable().optional(),
 });
 
 /**

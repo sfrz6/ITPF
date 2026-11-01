@@ -86,7 +86,7 @@ export function PublicStandings({
         </div>
       </CardHeader>
       <CardContent>
-        <StandingsTable subject={subject} scope={activeScope} days={days} rows={set?.rows ?? []} />
+        <StandingsTable subject={subject} scope={activeScope} rows={set?.rows ?? []} />
       </CardContent>
     </Card>
   );

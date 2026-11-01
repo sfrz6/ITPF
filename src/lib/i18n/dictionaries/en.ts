@@ -169,6 +169,7 @@ export const en = {
     ridersHint: "Each country fields four active riders, plus an optional reserve. Drag or use the arrows to set the starting order.",
     activeRiders: "Active riders",
     reserveRider: "Reserve rider (optional)",
+    shirtNumber: "Shirt number (optional)",
     addRider: "Add rider",
     riderName: "Rider name",
     noRidersRegistered: "No riders registered for this country yet.",

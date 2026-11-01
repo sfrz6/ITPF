@@ -168,6 +168,14 @@ export const championshipRiders = pgTable(
     rosterSlot: rosterSlotEnum("roster_slot").notNull(),
     /** Starting order for the first run, 1 to 4 for active riders. */
     initialOrder: integer("initial_order"),
+    /**
+     * The number on the rider's shirt for this championship, optional and
+     * scoped to this participation only — the same rider can wear a
+     * different number at a different championship. Shown next to the
+     * rider's name in the referee system and on the printed round sheet,
+     * never on the public results pages.
+     */
+    shirtNumber: integer("shirt_number"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -180,6 +188,10 @@ export const championshipRiders = pgTable(
       "championship_riders_order_check",
       sql`(${table.rosterSlot} = 'ACTIVE' and ${table.initialOrder} between 1 and 4)
           or (${table.rosterSlot} = 'RESERVE' and ${table.initialOrder} is null)`,
+    ),
+    check(
+      "championship_riders_shirt_number_check",
+      sql`${table.shirtNumber} is null or ${table.shirtNumber} between 1 and 999`,
     ),
   ],
 );

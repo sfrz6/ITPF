@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge, Callout, Card, CardContent, CardHeader, CardTitle } from "@/components/ui/surfaces";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/form-controls";
 import { CountryFlag } from "@/components/common/country-flag";
+import { riderDisplayName } from "@/components/common/formatting";
 import { useI18n } from "@/lib/i18n/client";
 import { confirmEntryOrderAction } from "@/server/actions/runs";
 import {
@@ -24,6 +25,7 @@ export interface EntryOrderRoster {
   readonly fullName: string;
   readonly rosterSlot: "ACTIVE" | "RESERVE";
   readonly initialOrder: number | null;
+  readonly shirtNumber: number | null;
 }
 
 export interface EntryOrderCountry {
@@ -68,7 +70,13 @@ function CountryEntryOrder({
   const { t } = useI18n();
   const members = React.useMemo(() => toRosterMembers(country.roster), [country.roster]);
   const names = React.useMemo(
-    () => new Map(country.roster.map((member) => [member.championshipRiderId, member.fullName])),
+    () =>
+      new Map(
+        country.roster.map((member) => [
+          member.championshipRiderId,
+          riderDisplayName(member.fullName, member.shirtNumber),
+        ]),
+      ),
     [country.roster],
   );
 
@@ -216,7 +224,7 @@ function CountryEntryOrder({
                       <option value="">{t("runs.substitute")}</option>
                       {reserves.map((member) => (
                         <option key={member.championshipRiderId} value={member.championshipRiderId}>
-                          {member.fullName}
+                          {riderDisplayName(member.fullName, member.shirtNumber)}
                           {member.rosterSlot === "RESERVE"
                             ? ` (${t("runs.reserveAvailable")})`
                             : ""}

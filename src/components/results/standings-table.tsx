@@ -7,7 +7,7 @@ import { CountryFlag } from "@/components/common/country-flag";
 import { Badge, EmptyState } from "@/components/ui/surfaces";
 import { Table, TBody, Td, TdNum, THead, Th, ThNum, TableWrapper, Tr } from "@/components/ui/table";
 import { useI18n } from "@/lib/i18n/client";
-import type { DayNumber, StandingsScope, StandingsSubject } from "@/domain/results";
+import type { StandingsScope, StandingsSubject } from "@/domain/results";
 import type { StandingRow } from "./standings-data";
 
 /**
@@ -161,19 +161,10 @@ function TruncatedName({ text }: { text: string }) {
 export function StandingsTable({
   subject,
   scope,
-  days,
   rows,
 }: {
   subject: StandingsSubject;
-  /**
-   * The day by day breakdown columns only add information in the overall
-   * view: once a single day is selected, the Total column already is that
-   * day's value, so repeating it as its own column plus showing every other
-   * day would only widen the table on exactly the device where width matters
-   * most, for no new information.
-   */
   scope: StandingsScope;
-  days: readonly DayNumber[];
   rows: readonly StandingRow[];
 }) {
   const { t } = useI18n();
@@ -184,7 +175,11 @@ export function StandingsTable({
   }
 
   const isCountry = subject === "COUNTRY";
-  const showDayBreakdown = scope === "OVERALL" && days.length > 1;
+  // The Overall scope only ever shows Rank / Name / Total on screen: the
+  // per day breakdown and, for countries, the rider points / fault split
+  // are still there, just reserved for the downloaded PDF
+  // (`StandingsPdfTable`) rather than widening this table.
+  const showBreakdown = isCountry && scope !== "OVERALL";
 
   return (
     <TableWrapper
@@ -201,19 +196,12 @@ export function StandingsTable({
             <Th className={cn(STICKY_NAME, "min-w-40 bg-surface-sunken border-e border-border")}>
               {isCountry ? t("common.country") : t("common.rider")}
             </Th>
-            {isCountry ? (
+            {showBreakdown ? (
               <>
                 <ThNum className="whitespace-nowrap">{t("results.riderPoints")}</ThNum>
                 <ThNum className="whitespace-nowrap">{t("results.countryFaults")}</ThNum>
               </>
             ) : null}
-            {showDayBreakdown
-              ? days.map((day) => (
-                  <ThNum key={day} className="whitespace-nowrap">
-                    {t("results.dayResults", { day })}
-                  </ThNum>
-                ))
-              : null}
             <ThNum className={cn(STICKY_END, "bg-surface-sunken border-s border-border")}>
               {t("common.total")}
             </ThNum>
@@ -259,19 +247,12 @@ export function StandingsTable({
                     ) : null}
                   </span>
                 </Td>
-                {isCountry ? (
+                {showBreakdown ? (
                   <>
                     <TdNum className="text-muted">{row.riderPoints}</TdNum>
                     <TdNum className="text-muted">{row.countryFaults}</TdNum>
                   </>
                 ) : null}
-                {showDayBreakdown
-                  ? row.dayValues.map((value) => (
-                      <TdNum key={value.day} className="text-muted">
-                        {value.value}
-                      </TdNum>
-                    ))
-                  : null}
                 <TdNum
                   className={cn(
                     STICKY_END,

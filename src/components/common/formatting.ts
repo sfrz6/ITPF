@@ -2,6 +2,16 @@ import type { Locale } from "@/lib/i18n/config";
 import { intlTagOf } from "@/lib/i18n/config";
 
 /**
+ * A rider's display name for the referee system and the printed round
+ * sheet, with their shirt number prefixed when one was entered for this
+ * championship. Never used on the public results pages, which show the
+ * rider's name only.
+ */
+export function riderDisplayName(fullName: string, shirtNumber: number | null): string {
+  return shirtNumber === null ? fullName : `#${shirtNumber} ${fullName}`;
+}
+
+/**
  * Dates are stored as calendar dates (no time of day) and must render as the
  * same day in every time zone, so they are formatted from their parts rather
  * than parsed into a `Date` that could shift across midnight.

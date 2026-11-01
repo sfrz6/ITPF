@@ -108,16 +108,33 @@ export function reserveRiderId(value: SquadSelection): string | null {
   return entry ? entry[0] : null;
 }
 
+/** A rider's shirt number for this championship, keyed by rider id. */
+export type ShirtNumbers = Readonly<Record<string, number | null>>;
+
 /** The selection as the payload shape the server actions accept. */
-export function squadRiders(value: SquadSelection): ReadonlyArray<{
+export function squadRiders(
+  value: SquadSelection,
+  shirtNumbers: ShirtNumbers = {},
+): ReadonlyArray<{
   readonly riderId: string;
   readonly rosterSlot: "ACTIVE" | "RESERVE";
   readonly initialOrder: number | null;
+  readonly shirtNumber: number | null;
 }> {
   return entriesOf(value).map(([riderId, slot]) =>
     slot === RESERVE_SLOT
-      ? { riderId, rosterSlot: "RESERVE" as const, initialOrder: null }
-      : { riderId, rosterSlot: "ACTIVE" as const, initialOrder: slot },
+      ? {
+          riderId,
+          rosterSlot: "RESERVE" as const,
+          initialOrder: null,
+          shirtNumber: shirtNumbers[riderId] ?? null,
+        }
+      : {
+          riderId,
+          rosterSlot: "ACTIVE" as const,
+          initialOrder: slot,
+          shirtNumber: shirtNumbers[riderId] ?? null,
+        },
   );
 }
 
@@ -140,6 +157,17 @@ export function selectionFromSquad(
   return selection;
 }
 
+/** Rebuilds the shirt-number map from a stored squad. */
+export function shirtNumbersFromSquad(
+  squad: ReadonlyArray<{ readonly riderId: string; readonly shirtNumber?: number | null }>,
+): ShirtNumbers {
+  const numbers: Record<string, number | null> = {};
+  for (const rider of squad) {
+    if (rider.shirtNumber != null) numbers[rider.riderId] = rider.shirtNumber;
+  }
+  return numbers;
+}
+
 function parseSlot(raw: string): SquadSlot | null {
   if (raw === RESERVE_SLOT) return RESERVE_SLOT;
   const position = Number(raw);
@@ -154,6 +182,9 @@ export interface SquadPickerProps {
   readonly value: SquadSelection;
   readonly onChange: (value: SquadSelection) => void;
   readonly onRiderAdded: (rider: SquadRiderOption) => void;
+  /** Omit to hide the shirt-number input, e.g. during initial creation. */
+  readonly shirtNumbers?: ShirtNumbers;
+  readonly onShirtNumbersChange?: (value: ShirtNumbers) => void;
 }
 
 /**
@@ -173,6 +204,8 @@ export function SquadPicker({
   value,
   onChange,
   onRiderAdded,
+  shirtNumbers,
+  onShirtNumbersChange,
 }: SquadPickerProps) {
   const { t } = useI18n();
   const [newName, setNewName] = React.useState("");
@@ -200,6 +233,19 @@ export function SquadPicker({
       next[riderId] = slot;
     }
     onChange(next);
+  }
+
+  function setShirtNumber(riderId: string, raw: string) {
+    if (!onShirtNumbersChange) return;
+    const next: Record<string, number | null> = { ...shirtNumbers };
+    const trimmed = raw.trim();
+    if (!trimmed) {
+      delete next[riderId];
+    } else {
+      const parsed = Number(trimmed);
+      next[riderId] = Number.isInteger(parsed) ? parsed : (shirtNumbers?.[riderId] ?? null);
+    }
+    onShirtNumbersChange(next);
   }
 
   function addRider(event: React.FormEvent) {
@@ -243,6 +289,19 @@ export function SquadPicker({
                 className="flex flex-wrap items-center gap-2 px-3 py-2 sm:flex-nowrap"
               >
                 <span className="min-w-0 flex-1 truncate text-sm">{rider.fullName}</span>
+                {onShirtNumbersChange ? (
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={999}
+                    placeholder={t("championships.shirtNumber")}
+                    aria-label={`${t("championships.shirtNumber")}: ${rider.fullName}`}
+                    value={shirtNumbers?.[rider.id] ?? ""}
+                    onChange={(event) => setShirtNumber(rider.id, event.target.value)}
+                    className="w-full sm:w-24"
+                  />
+                ) : null}
                 <div className="w-full sm:w-40">
                   <Select
                     aria-label={`${rider.fullName}, ${countryName}`}

@@ -29,6 +29,13 @@
       "when": 1793433379991,
       "tag": "0003_strange_gauntlet",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793524459245,
+      "tag": "0004_third_queen_noir",
+      "breakpoints": true
     }
   ]
 }

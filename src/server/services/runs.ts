@@ -86,6 +86,7 @@ export interface RunRosterRider {
   readonly fullName: string;
   readonly rosterSlot: "ACTIVE" | "RESERVE";
   readonly initialOrder: number | null;
+  readonly shirtNumber: number | null;
 }
 
 export interface RunCountryEntryOrder {
@@ -124,6 +125,7 @@ async function loadRoster(
       fullName: riders.fullName,
       rosterSlot: championshipRiders.rosterSlot,
       initialOrder: championshipRiders.initialOrder,
+      shirtNumber: championshipRiders.shirtNumber,
     })
     .from(championshipRiders)
     .innerJoin(
@@ -792,6 +794,7 @@ export interface RunScoringRider {
   readonly runScoreId: string;
   readonly championshipRiderId: string;
   readonly riderName: string;
+  readonly shirtNumber: number | null;
   readonly positionInUnit: number;
   readonly targets: readonly (string | null)[];
 }
@@ -841,6 +844,7 @@ export async function getRunScoringState(
       championshipRiderId: runScores.championshipRiderId,
       positionInUnit: runScores.positionInUnit,
       riderName: riders.fullName,
+      shirtNumber: championshipRiders.shirtNumber,
       targetIndex: runScoreTargets.targetIndex,
       points: runScoreTargets.points,
     })
@@ -906,6 +910,7 @@ export async function getRunScoringState(
           runScoreId: row.runScoreId,
           championshipRiderId: row.championshipRiderId,
           riderName: row.riderName,
+          shirtNumber: row.shirtNumber,
           positionInUnit: row.positionInUnit,
         },
         targets: [],

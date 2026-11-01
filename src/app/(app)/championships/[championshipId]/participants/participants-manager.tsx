@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { CountryLabel } from "@/components/common/country-flag";
+import { riderDisplayName } from "@/components/common/formatting";
 import { useI18n } from "@/lib/i18n/client";
 import {
   addChampionshipCountryAction,
@@ -29,7 +30,9 @@ import {
   SquadPicker,
   isSquadSavable,
   selectionFromSquad,
+  shirtNumbersFromSquad,
   squadRiders,
+  type ShirtNumbers,
   type SquadRiderOption,
   type SquadSelection,
 } from "../../squad-picker";
@@ -39,6 +42,7 @@ export interface ParticipantSquadRider {
   readonly fullName: string;
   readonly rosterSlot: "ACTIVE" | "RESERVE";
   readonly initialOrder: number | null;
+  readonly shirtNumber: number | null;
 }
 
 export interface ParticipantCountry {
@@ -106,12 +110,14 @@ export function ParticipantsManager({
 
   const [editing, setEditing] = React.useState<string | null>(null);
   const [editSelection, setEditSelection] = React.useState<SquadSelection>({});
+  const [editShirtNumbers, setEditShirtNumbers] = React.useState<ShirtNumbers>({});
   const [removeTarget, setRemoveTarget] = React.useState<ParticipantCountry | null>(null);
 
   const [addOpen, setAddOpen] = React.useState(false);
   const [addCountryId, setAddCountryId] = React.useState("");
   const [addRiders, setAddRiders] = React.useState<readonly SquadRiderOption[]>([]);
   const [addSelection, setAddSelection] = React.useState<SquadSelection>({});
+  const [addShirtNumbers, setAddShirtNumbers] = React.useState<ShirtNumbers>({});
   const [addLoading, setAddLoading] = React.useState(false);
 
   // Riders created from inside a picker, kept beside the server data so a new
@@ -138,6 +144,7 @@ export function ParticipantsManager({
   function startEditing(country: ParticipantCountry) {
     setEditing(country.championshipCountryId);
     setEditSelection(selectionFromSquad(country.squad));
+    setEditShirtNumbers(shirtNumbersFromSquad(country.squad));
   }
 
   function saveSquad(country: ParticipantCountry) {
@@ -146,7 +153,10 @@ export function ParticipantsManager({
       const result = await replaceSquadAction({
         championshipId,
         championshipCountryId: country.championshipCountryId,
-        squad: { countryId: country.countryId, riders: squadRiders(editSelection) },
+        squad: {
+          countryId: country.countryId,
+          riders: squadRiders(editSelection, editShirtNumbers),
+        },
       });
       if (!result.ok) {
         toast.error(result.error);
@@ -177,6 +187,7 @@ export function ParticipantsManager({
   function chooseCountryToAdd(countryId: string) {
     setAddCountryId(countryId);
     setAddSelection({});
+    setAddShirtNumbers({});
     setAddRiders([]);
     if (!countryId) return;
     setAddLoading(true);
@@ -195,7 +206,7 @@ export function ParticipantsManager({
     startTransition(async () => {
       const result = await addChampionshipCountryAction({
         championshipId,
-        squad: { countryId: addCountryId, riders: squadRiders(addSelection) },
+        squad: { countryId: addCountryId, riders: squadRiders(addSelection, addShirtNumbers) },
       });
       if (!result.ok) {
         toast.error(result.error);
@@ -204,6 +215,7 @@ export function ParticipantsManager({
       setAddOpen(false);
       setAddCountryId("");
       setAddSelection({});
+      setAddShirtNumbers({});
       setAddRiders([]);
       toast.success(t("championships.updatedSuccess"));
       router.refresh();
@@ -329,6 +341,8 @@ export function ParticipantsManager({
                         riders={ridersFor(country)}
                         value={editSelection}
                         onChange={setEditSelection}
+                        shirtNumbers={editShirtNumbers}
+                        onShirtNumbersChange={setEditShirtNumbers}
                         onRiderAdded={(rider) =>
                           setExtraRiders((previous) => ({
                             ...previous,
@@ -374,7 +388,7 @@ export function ParticipantsManager({
                                 {rider.initialOrder}
                               </span>
                               <span className="min-w-0 flex-1 truncate text-sm">
-                                {rider.fullName}
+                                {riderDisplayName(rider.fullName, rider.shirtNumber)}
                               </span>
                             </li>
                           ))}
@@ -385,7 +399,7 @@ export function ParticipantsManager({
                       </p>
                       {reserve ? (
                         <p className="rounded-md border border-border px-3 py-2 text-sm">
-                          {reserve.fullName}
+                          {riderDisplayName(reserve.fullName, reserve.shirtNumber)}
                         </p>
                       ) : (
                         <p className="text-sm text-muted">{t("championships.noReserveRider")}</p>
@@ -435,6 +449,8 @@ export function ParticipantsManager({
                 riders={addRiders}
                 value={addSelection}
                 onChange={setAddSelection}
+                shirtNumbers={addShirtNumbers}
+                onShirtNumbersChange={setAddShirtNumbers}
                 onRiderAdded={(rider) => setAddRiders((previous) => [...previous, rider])}
               />
             ) : null}

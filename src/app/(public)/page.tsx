@@ -36,7 +36,7 @@ export default async function PublicLandingPage() {
           alt=""
           aria-hidden
           width={263}
-          height={424}
+          height={323}
           priority
           className="pointer-events-none absolute left-1/2 top-1/2 h-[200px] w-auto -translate-x-1/2 -translate-y-1/2 opacity-10 select-none sm:h-[260px] dark:hidden"
         />
@@ -45,7 +45,7 @@ export default async function PublicLandingPage() {
           alt=""
           aria-hidden
           width={263}
-          height={420}
+          height={303}
           priority
           className="pointer-events-none absolute left-1/2 top-1/2 hidden h-[200px] w-auto -translate-x-1/2 -translate-y-1/2 opacity-10 select-none sm:h-[260px] dark:block"
         />

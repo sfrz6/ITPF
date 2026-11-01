@@ -1,0 +1,2 @@
+ALTER TABLE "championship_riders" ADD COLUMN "shirt_number" integer;--> statement-breakpoint
+ALTER TABLE "championship_riders" ADD CONSTRAINT "championship_riders_shirt_number_check" CHECK ("championship_riders"."shirt_number" is null or "championship_riders"."shirt_number" between 1 and 999);
