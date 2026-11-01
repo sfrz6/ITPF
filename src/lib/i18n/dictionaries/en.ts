@@ -424,6 +424,7 @@ export const en = {
     entryOrder: "Entry order",
     sheetFooter: "This sheet reflects the entry order confirmed in the electronic scoring system.",
     printedOn: "Printed on",
+    pointsSoFar: "{points} pts so far today",
   },
   audit: {
     title: "Audit log",

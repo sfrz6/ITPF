@@ -425,6 +425,7 @@ export const ar: Dictionary = {
     entryOrder: "ترتيب الدخول",
     sheetFooter: "يعكس هذا الكشف ترتيب الدخول المعتمد في نظام احتساب النقاط الإلكتروني.",
     printedOn: "تاريخ الطباعة",
+    pointsSoFar: "{points} نقطة حتى الآن اليوم",
   },
   audit: {
     title: "سجل التدقيق",

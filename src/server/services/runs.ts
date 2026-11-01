@@ -31,11 +31,13 @@ import {
 } from "@/domain/scoring/event-types";
 import { scoreRun, type RunScoringInput, type ScoringUnitInput } from "@/domain/scoring/engine";
 import { formatPoints } from "@/domain/scoring/decimal";
+import { aggregateChampionship, type DayNumber } from "@/domain/results";
 import type { Locale } from "@/lib/i18n/config";
 import type { Principal } from "@/lib/auth/session";
 import { ConcurrencyError, DomainError } from "@/server/actions/result";
 import { recordAudit } from "./audit";
 import { getRunContext, type RunContext } from "./championships";
+import { loadConfirmedRuns as loadChampionshipConfirmedRuns } from "./results";
 
 export type RunStatus =
   | "ENTRY_ORDER_PENDING"
@@ -319,6 +321,15 @@ export interface EventPrintState {
   readonly hasChampionshipLogo: boolean;
   readonly runs: readonly EventPrintRun[];
   readonly countries: readonly RunCountryEntryOrder[];
+  /**
+   * Points already confirmed today, as of this event — the running total a
+   * referee can write next to a name without doing the arithmetic by hand.
+   * Empty for a day's first event, since nothing is confirmed yet to carry
+   * over; keyed by championship rider/country id, only present for someone
+   * with at least one confirmed point this day.
+   */
+  readonly riderPointsSoFar: ReadonlyMap<string, string>;
+  readonly countryPointsSoFar: ReadonlyMap<string, string>;
 }
 
 /**
@@ -345,6 +356,7 @@ export async function getEventPrintState(
     .select({
       eventId: championshipEvents.id,
       eventType: championshipEvents.eventType,
+      orderIndex: championshipEvents.orderIndex,
       dayNumber: championshipDays.dayNumber,
       competitionDate: championshipDays.competitionDate,
       championshipId: championships.id,
@@ -376,6 +388,31 @@ export async function getEventPrintState(
   const firstRunState = await getRunEntryOrderState(runs[0]!.runId, locale);
   if (!firstRunState) return null;
 
+  // The day's first event has nothing confirmed yet to carry over, so this
+  // skips the extra query entirely rather than running it just to produce
+  // empty maps.
+  let riderPointsSoFar: ReadonlyMap<string, string> = new Map();
+  let countryPointsSoFar: ReadonlyMap<string, string> = new Map();
+  if (eventRow.orderIndex > 1) {
+    const day = eventRow.dayNumber as DayNumber;
+    const confirmedRuns = await loadChampionshipConfirmedRuns(eventRow.championshipId);
+    const totals = aggregateChampionship(confirmedRuns);
+
+    const riderMap = new Map<string, string>();
+    for (const [championshipRiderId, riderTotals] of totals.riders) {
+      const value = riderTotals.byDay.get(day);
+      if (value) riderMap.set(championshipRiderId, formatPoints(value));
+    }
+    riderPointsSoFar = riderMap;
+
+    const countryMap = new Map<string, string>();
+    for (const [championshipCountryId, countryTotals] of totals.countries) {
+      const value = countryTotals.byDay.get(day);
+      if (value) countryMap.set(championshipCountryId, formatPoints(value));
+    }
+    countryPointsSoFar = countryMap;
+  }
+
   return {
     eventId: eventRow.eventId,
     eventType: eventRow.eventType as EventTypeKey,
@@ -389,6 +426,8 @@ export async function getEventPrintState(
     hasChampionshipLogo: eventRow.hasChampionshipLogo,
     runs,
     countries: firstRunState.countries,
+    riderPointsSoFar,
+    countryPointsSoFar,
   };
 }
 

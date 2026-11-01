@@ -118,6 +118,13 @@ export default async function EventRoundSheetPage({
               <h2 className="flex items-center gap-2 border-b border-black bg-neutral-100 px-2 py-1 text-[10pt] font-bold">
                 <CountryFlag iso2={country.iso2} size="sm" />
                 {country.countryName}
+                {state.countryPointsSoFar.has(country.championshipCountryId) ? (
+                  <span className="text-[8pt] font-normal text-neutral-700">
+                    {t("print.pointsSoFar", {
+                      points: state.countryPointsSoFar.get(country.championshipCountryId)!,
+                    })}
+                  </span>
+                ) : null}
                 <span className="ms-auto text-[8pt] font-normal">
                   {country.decision === "CHANGED"
                     ? t("runs.changeOrder")
@@ -195,6 +202,13 @@ export default async function EventRoundSheetPage({
                               {definition.ruleType === "PAIR" && riderIndex === 0 ? (
                                 <span className="ms-2 text-[8pt]">
                                   ({t("runs.pairLabel", { number: unit.unitIndex + 1 })})
+                                </span>
+                              ) : null}
+                              {state.riderPointsSoFar.has(rider.championshipRiderId) ? (
+                                <span className="ms-2 text-[8pt] text-neutral-600">
+                                  {t("print.pointsSoFar", {
+                                    points: state.riderPointsSoFar.get(rider.championshipRiderId)!,
+                                  })}
                                 </span>
                               ) : null}
                             </td>
