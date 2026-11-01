@@ -25,22 +25,36 @@ function paginate<T>(rows: readonly T[], pageSize: number): readonly (readonly T
   return pages;
 }
 
+const ALIGN_CLASS = {
+  start: "",
+  center: "mx-auto",
+  end: "ms-auto",
+} as const;
+
 /**
- * `align` controls which edge of the column the (shared width) rows hug:
- * the individual list sits against the divider at the left of its half, the
- * country list against the far right of its half, leaving the center of the
- * page clear so the watermark behind both columns stays visible.
+ * `align` controls where the (shared-width) block of rows sits within its
+ * half: the individual list stays flush against the divider, while the
+ * country list sits centered in its half rather than pinned to the far
+ * edge, leaving open margin on both sides so the watermark behind both
+ * columns stays visible.
+ *
+ * The list itself is a plain flex column sized to its own content
+ * (`w-fit`), with every row stretched to that resolved width (the flexbox
+ * algorithm sizes an auto-width column to its widest child's max-content
+ * size, then stretches every child to that same width) — so every row
+ * shares the width of the longest one, and `align`'s auto margin then
+ * positions that whole block within the section.
  */
 function RankedList({
   rows,
   align,
 }: {
   rows: readonly StandingRow[];
-  align: "start" | "end";
+  align: "start" | "center" | "end";
 }) {
   return (
     <ol
-      className={`relative z-10 grid min-h-0 flex-1 auto-rows-min grid-cols-[max-content] gap-2 overflow-hidden ${align === "end" ? "justify-end" : "justify-start"}`}
+      className={`relative z-10 flex min-h-0 w-fit flex-1 flex-col gap-2 overflow-hidden ${ALIGN_CLASS[align]}`}
     >
       {rows.map((row) => (
         <li
@@ -54,7 +68,12 @@ function RankedList({
           <span className="max-w-xs truncate text-3xl font-semibold text-neutral-900">
             {row.name}
           </span>
-          <span className="numeric shrink-0 text-3xl font-bold text-neutral-900">{row.total}</span>
+          {/* `ms-auto` pins every row's points to the box's end edge
+              regardless of how long that row's name is, so the numbers line
+              up in one column instead of trailing right after each name. */}
+          <span className="numeric ms-auto shrink-0 text-3xl font-bold text-neutral-900">
+            {row.total}
+          </span>
         </li>
       ))}
     </ol>
@@ -194,7 +213,7 @@ export function DisplayBoard({
       </header>
 
       <div className="relative z-10 grid min-h-0 flex-1 grid-cols-2 divide-x divide-black/10">
-        <section className="flex min-h-0 flex-col overflow-hidden px-6 py-4">
+        <section className="flex min-h-0 flex-col items-start overflow-hidden px-6 py-4">
           <h2 className="mb-2 shrink-0 text-2xl font-bold uppercase tracking-wide text-amber-600">
             {t("display.individualRanking")}
           </h2>
@@ -205,14 +224,14 @@ export function DisplayBoard({
           )}
         </section>
 
-        <section className="flex min-h-0 flex-col overflow-hidden px-6 py-4">
+        <section className="flex min-h-0 w-full flex-col items-start overflow-hidden px-6 py-4">
           <h2 className="mb-2 shrink-0 text-2xl font-bold uppercase tracking-wide text-amber-600">
             {t("display.countryRanking")}
           </h2>
           {currentCountries.length === 0 ? (
             <p className="text-lg text-neutral-500">{t("display.waitingForResults")}</p>
           ) : (
-            <RankedList rows={currentCountries} align="end" />
+            <RankedList rows={currentCountries} align="center" />
           )}
         </section>
       </div>
