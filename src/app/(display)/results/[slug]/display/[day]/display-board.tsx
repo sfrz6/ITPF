@@ -38,10 +38,10 @@ const ROW_SIZE = {
   // the room to read larger.
   large: {
     li: "gap-5 px-5 py-3",
-    rank: "w-16 text-4xl",
+    rank: "w-16 text-[2rem]",
     flag: "h-14 w-20",
-    name: "text-4xl",
-    total: "text-4xl",
+    name: "text-[2rem]",
+    total: "text-[2rem]",
   },
 } as const;
 
