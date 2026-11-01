@@ -25,9 +25,23 @@ function paginate<T>(rows: readonly T[], pageSize: number): readonly (readonly T
   return pages;
 }
 
-function RankedList({ rows }: { rows: readonly StandingRow[] }) {
+/**
+ * `align` controls which edge of the column the (shared width) rows hug:
+ * the individual list sits against the divider at the left of its half, the
+ * country list against the far right of its half, leaving the center of the
+ * page clear so the watermark behind both columns stays visible.
+ */
+function RankedList({
+  rows,
+  align,
+}: {
+  rows: readonly StandingRow[];
+  align: "start" | "end";
+}) {
   return (
-    <ol className="relative z-10 flex min-h-0 flex-1 flex-col items-start space-y-2 overflow-hidden">
+    <ol
+      className={`relative z-10 grid min-h-0 flex-1 auto-rows-min grid-cols-[max-content] gap-2 overflow-hidden ${align === "end" ? "justify-end" : "justify-start"}`}
+    >
       {rows.map((row) => (
         <li
           key={row.key}
@@ -153,7 +167,7 @@ export function DisplayBoard({
         src={watermarkSrc}
         alt=""
         aria-hidden
-        className="pointer-events-none fixed inset-0 z-0 m-auto h-[70vh] w-[70vh] select-none object-contain opacity-20"
+        className="pointer-events-none fixed inset-0 z-0 m-auto h-[70vh] w-[70vh] select-none object-contain opacity-[0.35]"
       />
 
       <header className="relative z-10 flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-black/10 bg-white/90 px-8 py-3">
@@ -187,7 +201,7 @@ export function DisplayBoard({
           {currentRiders.length === 0 ? (
             <p className="text-lg text-neutral-500">{t("display.waitingForResults")}</p>
           ) : (
-            <RankedList rows={currentRiders} />
+            <RankedList rows={currentRiders} align="start" />
           )}
         </section>
 
@@ -198,7 +212,7 @@ export function DisplayBoard({
           {currentCountries.length === 0 ? (
             <p className="text-lg text-neutral-500">{t("display.waitingForResults")}</p>
           ) : (
-            <RankedList rows={currentCountries} />
+            <RankedList rows={currentCountries} align="end" />
           )}
         </section>
       </div>
