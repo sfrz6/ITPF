@@ -130,7 +130,7 @@ export default async function PublicChampionshipResultsPage({
               <img
                 src={`/api/championships/${championship.id}/logo/championship`}
                 alt=""
-                className="h-auto w-20 object-contain"
+                className="h-auto w-14 object-contain"
               />
             ) : null}
             {championship.hasOrganizerLogo ? (
@@ -138,7 +138,7 @@ export default async function PublicChampionshipResultsPage({
               <img
                 src={`/api/championships/${championship.id}/logo/organizer`}
                 alt=""
-                className="h-auto w-20 object-contain"
+                className="h-auto w-14 object-contain"
               />
             ) : null}
           </div>
