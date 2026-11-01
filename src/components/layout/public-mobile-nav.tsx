@@ -3,7 +3,7 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { Award, Flag, Menu, Trophy, X } from "lucide-react";
+import { Award, Flag, Home, Menu, Trophy, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LocaleSwitcher, ThemeToggle } from "@/components/layout/toolbar";
 import { useI18n } from "@/lib/i18n/client";
@@ -36,6 +36,7 @@ export function PublicMobileNav() {
   }, [open]);
 
   const items = [
+    { href: "/", label: t("nav.home"), icon: <Home /> },
     { href: "/results", label: t("nav.publicResults"), icon: <Trophy /> },
     { href: "/rankings", label: t("rankings.title"), icon: <Award /> },
     { href: "/results/countries", label: t("publicCountries.title"), icon: <Flag /> },

@@ -67,6 +67,7 @@ export const ar: Dictionary = {
     backToDashboard: "العودة إلى لوحة التحكم",
   },
   nav: {
+    home: "الرئيسية",
     dashboard: "لوحة التحكم",
     championships: "البطولات",
     templates: "القوالب",

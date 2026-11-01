@@ -44,6 +44,9 @@ export default async function PublicLayout({ children }: { children: React.React
             </span>
           </Link>
           <nav className="ms-auto hidden items-center gap-5 text-sm font-medium text-muted md:flex">
+            <Link href="/" className="hover:text-foreground">
+              {t("nav.home")}
+            </Link>
             <Link href="/results" className="hover:text-foreground">
               {t("nav.publicResults")}
             </Link>

@@ -66,6 +66,7 @@ export const en = {
     backToDashboard: "Back to the dashboard",
   },
   nav: {
+    home: "Home",
     dashboard: "Dashboard",
     championships: "Championships",
     templates: "Templates",
