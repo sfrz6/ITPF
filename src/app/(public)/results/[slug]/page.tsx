@@ -96,9 +96,9 @@ export default async function PublicChampionshipResultsPage({
         {t("publicResults.backToChampionships")}
       </Link>
 
-      <header className="flex flex-wrap items-start gap-4">
+      <header className="flex items-start gap-4">
         <ItpfLogo width={56} priority />
-        <div className="min-w-0 space-y-1">
+        <div className="min-w-0 flex-1 space-y-1">
           <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
             {championshipDisplayName(championship.name, championship.nameAr, locale)}
           </h1>
