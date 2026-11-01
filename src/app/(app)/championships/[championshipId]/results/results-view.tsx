@@ -113,7 +113,7 @@ export function ResultsView({
         </Callout>
       ) : null}
 
-      <StandingsTable subject={subject} scope={activeScope} rows={rows} />
+      <StandingsTable subject={subject} rows={rows} />
 
       {tieBreakOpen ? (
         <TieBreakDialog

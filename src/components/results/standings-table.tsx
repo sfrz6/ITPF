@@ -7,7 +7,7 @@ import { CountryFlag } from "@/components/common/country-flag";
 import { Badge, EmptyState } from "@/components/ui/surfaces";
 import { Table, TBody, Td, TdNum, THead, Th, ThNum, TableWrapper, Tr } from "@/components/ui/table";
 import { useI18n } from "@/lib/i18n/client";
-import type { StandingsScope, StandingsSubject } from "@/domain/results";
+import type { StandingsSubject } from "@/domain/results";
 import type { StandingRow } from "./standings-data";
 
 /**
@@ -160,11 +160,9 @@ function TruncatedName({ text }: { text: string }) {
 
 export function StandingsTable({
   subject,
-  scope,
   rows,
 }: {
   subject: StandingsSubject;
-  scope: StandingsScope;
   rows: readonly StandingRow[];
 }) {
   const { t } = useI18n();
@@ -175,11 +173,6 @@ export function StandingsTable({
   }
 
   const isCountry = subject === "COUNTRY";
-  // The Overall scope only ever shows Rank / Name / Total on screen: the
-  // per day breakdown and, for countries, the rider points / fault split
-  // are still there, just reserved for the downloaded PDF
-  // (`StandingsPdfTable`) rather than widening this table.
-  const showBreakdown = isCountry && scope !== "OVERALL";
 
   return (
     <TableWrapper
@@ -196,12 +189,6 @@ export function StandingsTable({
             <Th className={cn(STICKY_NAME, "min-w-40 bg-surface-sunken border-e border-border")}>
               {isCountry ? t("common.country") : t("common.rider")}
             </Th>
-            {showBreakdown ? (
-              <>
-                <ThNum className="whitespace-nowrap">{t("results.riderPoints")}</ThNum>
-                <ThNum className="whitespace-nowrap">{t("results.countryFaults")}</ThNum>
-              </>
-            ) : null}
             <ThNum className={cn(STICKY_END, "bg-surface-sunken border-s border-border")}>
               {t("common.total")}
             </ThNum>
@@ -247,12 +234,6 @@ export function StandingsTable({
                     ) : null}
                   </span>
                 </Td>
-                {showBreakdown ? (
-                  <>
-                    <TdNum className="text-muted">{row.riderPoints}</TdNum>
-                    <TdNum className="text-muted">{row.countryFaults}</TdNum>
-                  </>
-                ) : null}
                 <TdNum
                   className={cn(
                     STICKY_END,
