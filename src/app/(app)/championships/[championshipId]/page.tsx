@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarDays, ChevronRight } from "lucide-react";
+import { CalendarDays, ChevronRight, MonitorPlay } from "lucide-react";
 import { requirePageUser } from "@/lib/auth/page-guards";
 import { hasPermission } from "@/domain/permissions";
 import { getTranslator } from "@/lib/i18n/server";
 import { getChampionshipDetail } from "@/server/services/championships";
 import { getEventTypeDefinition } from "@/domain/scoring/event-types";
 import { Badge, Card, CardContent, CardHeader, CardTitle, EmptyState } from "@/components/ui/surfaces";
+import { Button } from "@/components/ui/button";
 import { formatCompetitionDate, formatPegSize, formatTime } from "@/components/common/formatting";
 import { eventLabel, runStatusLabel, runStatusTone } from "@/components/common/labels";
 import { ChampionshipSettings } from "./championship-settings";
@@ -59,9 +60,22 @@ export default async function ChampionshipSchedulePage({
                     {formatCompetitionDate(day.competitionDate, locale)}
                   </p>
                 </div>
-                <Badge tone="outline">
-                  {t("championships.eventsCount", { count: day.events.length })}
-                </Badge>
+                <span className="flex items-center gap-2">
+                  <Badge tone="outline">
+                    {t("championships.eventsCount", { count: day.events.length })}
+                  </Badge>
+                  {championship.isPublished ? (
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link
+                        href={`/results/${championship.slug}/display/${day.dayNumber}`}
+                        target="_blank"
+                      >
+                        <MonitorPlay aria-hidden />
+                        {t("championships.openDisplay")}
+                      </Link>
+                    </Button>
+                  ) : null}
+                </span>
               </CardHeader>
               <CardContent className="space-y-3">
                 {day.events.length === 0 ? (

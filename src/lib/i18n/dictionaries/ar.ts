@@ -197,6 +197,7 @@ export const ar: Dictionary = {
     needTwoCountries: "اختر دولتين على الأقل.",
     incompleteSquads: "يجب أن يكون لكل دولة أربعة متسابقين أساسيين قبل أن تبدأ البطولة. المتسابق الاحتياطي اختياري.",
     daysOf: "اليوم {day} من 3",
+    openDisplay: "شاشة العرض",
     eventsCount: "{count} فعالية",
     runsCount: "{count} شوط",
     ridersOptionalHint: "اختيار المتسابقين هنا اختياري. يمكن ترك دولة دون متسابقين لإضافتهم لاحقاً من صفحة المشاركين، في أي وقت قبل أول شوط لتلك الدولة.",
@@ -540,5 +541,11 @@ export const ar: Dictionary = {
     allCountries: "جميع الدول",
     noCountriesYet: "لم تشارك أي دولة في بطولة منشورة بعد.",
     overallRank: "المركز {rank} عموماً",
+  },
+  display: {
+    start: "بدء شاشة العرض",
+    individualRanking: "الأفراد",
+    countryRanking: "الدول",
+    waitingForResults: "بانتظار تأكيد أول شوط...",
   },
 };

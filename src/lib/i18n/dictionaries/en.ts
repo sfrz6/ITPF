@@ -196,6 +196,7 @@ export const en = {
     needTwoCountries: "Select at least two countries.",
     incompleteSquads: "Every country needs its four active riders before the championship can start. A reserve is optional.",
     daysOf: "Day {day} of 3",
+    openDisplay: "Display",
     eventsCount: "{count} event(s)",
     runsCount: "{count} run(s)",
     ridersOptionalHint: "Riders are optional here. Leave a country empty to add its squad later, from the Participants page, any time before that country's first run.",
@@ -539,6 +540,12 @@ export const en = {
     allCountries: "All countries",
     noCountriesYet: "No countries have taken part in a published championship yet.",
     overallRank: "{rank} overall",
+  },
+  display: {
+    start: "Start display",
+    individualRanking: "Individual",
+    countryRanking: "Countries",
+    waitingForResults: "Waiting for the first confirmed run...",
   },
 } as const;
 
