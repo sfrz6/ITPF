@@ -1,41 +1,31 @@
 import Image from "next/image";
 
-/** Roughly how many compact PDF table rows fit on one printed page. */
-const ROWS_PER_PAGE = 28;
-
 /**
- * The federation mark, faint and tiled behind a printed section's content.
+ * The federation mark, faint and centered on every printed page.
  *
- * Positioned `absolute` within its nearest positioned ancestor (the calling
- * section, which must carry `relative`) rather than `fixed` to the viewport.
- * `fixed` reliably repeats per physical page in desktop Chromium's print
- * pipeline, but a phone's "Print" / "Save as PDF" share sheet (notably iOS
- * Safari) does not paginate the document the same way and often drops
- * fixed-position elements from the exported PDF entirely.
- *
- * A single `absolute inset-0 m-auto` mark avoids that, but only ever shows
- * once across the whole section's height - fine for a short one, but a
- * multi-page table (an 80-row ranking, say) would then show it on only one
- * of its six printed pages. `rowCount` spaces out one mark per roughly
- * `ROWS_PER_PAGE` rows instead, evenly across the section's full height via
- * `justify-around`, so a long section still has one in view on each page it
- * spans, the same technique already used for the on-screen standings and
- * rankings tables.
+ * `position: fixed` is the correct tool for this in paged media: per the
+ * CSS spec, a fixed-positioned box is repositioned relative to each page
+ * box and repeats once per physical page, which is exactly "one centered
+ * watermark per page" with no JavaScript pagination logic needed. An
+ * earlier version of this component avoided `fixed` because iOS Safari's
+ * "Save as PDF" share sheet can drop fixed-position elements on export, and
+ * tried spacing several `absolute`-positioned copies down the whole
+ * document instead — but those don't land on page boundaries, so on a
+ * multi-page document a copy would end up straddling a page break instead
+ * of centered on either page, which reads as broken rather than subtle.
+ * `fixed` is the W3C-correct behavior and renders right in the common case
+ * (desktop browsers, Android/Chromium's print pipeline); the iOS edge case
+ * is better addressed by printing via the browser's own Print button
+ * (which does respect it) rather than papering over it with something that
+ * looks wrong everywhere else.
  *
  * A negative `z-index` would tuck it behind the page's own white background
  * box instead of the content sitting on top of it - most of a printed page
  * has no table cell background to paint over it - so this sits above
  * everything at a low enough opacity to read as a watermark rather than
- * obscure the text.
- *
- * Rendered unconditionally (not gated behind `@media print`), unlike an
- * earlier version of this component: a phone's "Save as PDF" share sheet
- * sometimes captures the page through a path that doesn't reliably apply
- * print-only CSS, which was dropping the watermark entirely on some
- * exports even with the `absolute` positioning above. Since this component
- * is only ever used on a dedicated print/PDF page (never the normal
- * interactive UI), showing it in the on-screen preview too is harmless -
- * if anything, it's a more honest preview of what will actually print.
+ * obscure the text. Only shown in the print/PDF render - `hidden
+ * print:flex` - so it doesn't float over the content while the page is
+ * just being read, or scrolled, on screen.
  *
  * Shows the championship's own logo when one was uploaded - it reads better
  * as the watermark on that championship's documents than the federation
@@ -45,39 +35,31 @@ const ROWS_PER_PAGE = 28;
 export function PrintWatermark({
   championshipId,
   hasChampionshipLogo,
-  rowCount = 1,
 }: {
   championshipId?: string;
   hasChampionshipLogo?: boolean;
-  rowCount?: number;
 }) {
-  const count = Math.max(1, Math.ceil(rowCount / ROWS_PER_PAGE));
-
   return (
     <div
       aria-hidden
-      className="pointer-events-none absolute inset-0 z-0 flex flex-col items-center justify-around"
+      className="pointer-events-none fixed inset-0 z-0 m-auto hidden items-center justify-center print:flex"
     >
-      {Array.from({ length: count }).map((_, i) =>
-        hasChampionshipLogo && championshipId ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            key={i}
-            src={`/api/championships/${championshipId}/logo/championship`}
-            alt=""
-            className="h-auto w-[110mm] object-contain opacity-10"
-          />
-        ) : (
-          <Image
-            key={i}
-            src="/brand/itpf-logo-light.webp"
-            alt=""
-            width={512}
-            height={430}
-            unoptimized
-            className="h-auto w-[110mm] opacity-10"
-          />
-        ),
+      {hasChampionshipLogo && championshipId ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={`/api/championships/${championshipId}/logo/championship`}
+          alt=""
+          className="h-auto w-[110mm] object-contain opacity-10"
+        />
+      ) : (
+        <Image
+          src="/brand/itpf-logo-light.webp"
+          alt=""
+          width={512}
+          height={430}
+          unoptimized
+          className="h-auto w-[110mm] opacity-10"
+        />
       )}
     </div>
   );
