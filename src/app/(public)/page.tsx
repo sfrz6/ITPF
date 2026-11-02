@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { Award, ChevronRight, Flag, Trophy } from "lucide-react";
 import { championshipDisplayName, formatCompetitionDate } from "@/components/common/formatting";
 import { Badge, Card, CardContent, CardHeader, CardTitle } from "@/components/ui/surfaces";
 import { Button } from "@/components/ui/button";
 import { getTranslator } from "@/lib/i18n/server";
 import { listChampionships } from "@/server/services/championships";
+import { currentPrincipalOrNull } from "@/lib/auth/authorize";
 
 /**
  * Standings change only when an official confirms a run, and this page is
@@ -22,6 +25,15 @@ export const metadata: Metadata = {
 };
 
 export default async function PublicLandingPage() {
+  // The admin subdomain is just a friendlier front door into the same app:
+  // officials land straight on sign-in (or the dashboard, if already signed
+  // in) instead of the public landing page meant for spectators.
+  const host = (await headers()).get("host") ?? "";
+  if (host.startsWith("admin.")) {
+    const principal = await currentPrincipalOrNull();
+    redirect(principal ? "/dashboard" : "/sign-in");
+  }
+
   const { locale, t } = await getTranslator();
   const championships = await listChampionships({ publishedOnly: true });
   const latest = championships.slice(0, 3);
