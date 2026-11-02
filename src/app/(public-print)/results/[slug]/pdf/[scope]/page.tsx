@@ -66,6 +66,7 @@ export default async function PublicStandingsPdfPage({
       <PrintWatermark
         championshipId={championship.id}
         hasChampionshipLogo={championship.hasChampionshipLogo}
+        rowCount={countrySet.rows.length + individualSet.rows.length}
       />
 
       <PrintHeader

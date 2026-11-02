@@ -48,6 +48,7 @@ export default async function EventRoundSheetPage({
       <PrintWatermark
         championshipId={state.championshipId}
         hasChampionshipLogo={state.hasChampionshipLogo}
+        rowCount={state.countries.reduce((sum, country) => sum + country.confirmedOrder.length, 0)}
       />
 
       <PrintHeader

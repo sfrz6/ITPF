@@ -70,6 +70,7 @@ export default async function InternalStandingsPdfPage({
       <PrintWatermark
         championshipId={detail.id}
         hasChampionshipLogo={detail.hasChampionshipLogo}
+        rowCount={countrySet.rows.length + individualSet.rows.length}
       />
 
       <PrintHeader
