@@ -1,0 +1,5 @@
+itpf.app, www.itpf.app, admin.itpf.app {
+	encode gzip
+
+	reverse_proxy app:3000
+}

@@ -4,6 +4,11 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   typedRoutes: false,
+  // A self-contained server bundle for the Docker image, so the production
+  // container only needs the built output and a minimal `node_modules`
+  // rather than the whole dev dependency tree. Vercel ignores this (it has
+  // its own build pipeline), so it's safe for both deployment targets.
+  output: "standalone",
   experimental: {
     // Creating a championship can carry two base64-encoded logo images
     // (up to 2 MB raw each) alongside the rest of the form, well past the
