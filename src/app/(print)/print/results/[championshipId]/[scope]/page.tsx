@@ -67,7 +67,10 @@ export default async function InternalStandingsPdfPage({
   return (
     <main className="relative mx-auto max-w-[210mm] px-6 py-6 print:px-0 print:py-0">
       <PrintTrigger />
-      <PrintWatermark />
+      <PrintWatermark
+        championshipId={detail.id}
+        hasChampionshipLogo={detail.hasChampionshipLogo}
+      />
 
       <PrintHeader
         federationLabel={t("common.federation")}

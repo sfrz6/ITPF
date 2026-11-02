@@ -73,7 +73,7 @@ function RankedList({
             {row.rank}
           </span>
           <CountryFlag iso2={row.iso2} className={`shrink-0 rounded-sm ${s.flag}`} />
-          <span className={`max-w-xs truncate font-semibold text-neutral-900 ${s.name}`}>
+          <span className={`max-w-lg truncate font-semibold text-neutral-900 ${s.name}`}>
             {row.name}
           </span>
           {/* `ms-auto` pins every row's points to the box's end edge

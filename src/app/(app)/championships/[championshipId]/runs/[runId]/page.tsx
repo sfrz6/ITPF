@@ -68,9 +68,9 @@ export default async function RunPage({
       <div className="space-y-1">
         <Link
           href={`/championships/${championshipId}`}
-          className="inline-flex items-center gap-1 text-xs text-muted hover:text-foreground"
+          className="inline-flex items-center gap-1 text-sm font-medium text-foreground hover:text-primary"
         >
-          <ChevronLeft className="size-3.5 rtl:rotate-180" aria-hidden />
+          <ChevronLeft className="size-4 rtl:rotate-180" aria-hidden />
           {t("championships.schedule")}
         </Link>
         <h2 className="text-lg font-semibold tracking-tight">

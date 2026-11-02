@@ -45,7 +45,10 @@ export default async function EventRoundSheetPage({
   return (
     <main className="relative mx-auto max-w-[297mm] px-6 py-6 print:px-0 print:py-0">
       <PrintTrigger />
-      <PrintWatermark />
+      <PrintWatermark
+        championshipId={state.championshipId}
+        hasChampionshipLogo={state.hasChampionshipLogo}
+      />
 
       <PrintHeader
         federationLabel={t("common.federation")}
