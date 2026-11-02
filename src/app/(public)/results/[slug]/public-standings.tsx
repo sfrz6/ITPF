@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ItpfLogo } from "@/components/common/itpf-logo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/surfaces";
 import { useI18n } from "@/lib/i18n/client";
 import type { DayNumber, StandingsScope, StandingsSubject } from "@/domain/results";
@@ -29,12 +30,16 @@ export function PublicStandings({
   sets,
   slug,
   pdfAvailable,
+  championshipId,
+  hasChampionshipLogo,
 }: {
   days: readonly DayNumber[];
   sets: readonly StandingsSet[];
   slug: string;
   /** Whether a PDF can be produced for each scope, see `pdfAvailability`. */
   pdfAvailable: Partial<Record<StandingsScope, boolean>>;
+  championshipId: string;
+  hasChampionshipLogo: boolean;
 }) {
   const { t } = useI18n();
   const [subject, setSubject] = React.useState<StandingsSubject>("INDIVIDUAL");
@@ -85,8 +90,28 @@ export function PublicStandings({
           ) : null}
         </div>
       </CardHeader>
-      <CardContent>
-        <StandingsTable subject={subject} rows={set?.rows ?? []} />
+      <CardContent className="relative">
+        {/* Fills the empty space a short list leaves below its rows. A row's
+            own solid background still covers it, so it only ever shows
+            through genuinely empty space, same as the printed watermark. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center overflow-hidden"
+        >
+          {hasChampionshipLogo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={`/api/championships/${championshipId}/logo/championship`}
+              alt=""
+              className="h-auto w-48 object-contain opacity-10 sm:w-64"
+            />
+          ) : (
+            <ItpfLogo width={192} className="opacity-10" />
+          )}
+        </div>
+        <div className="relative z-10">
+          <StandingsTable subject={subject} rows={set?.rows ?? []} />
+        </div>
       </CardContent>
     </Card>
   );

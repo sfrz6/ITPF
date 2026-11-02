@@ -177,6 +177,11 @@ export function StandingsTable({
   return (
     <TableWrapper
       ref={scrollRef}
+      // Transparent rather than the usual solid surface: nothing sits behind
+      // a row to hide any more (every column is sticky, so there is nothing
+      // left to scroll underneath), and a watermark the caller paints behind
+      // the table (see the public results page) can show straight through.
+      className="bg-transparent"
       data-can-scroll-start={canScrollStart || undefined}
       data-can-scroll-end={canScrollEnd || undefined}
     >
@@ -204,12 +209,10 @@ export function StandingsTable({
             const isPodium = row.rank <= 3;
             return (
               <Tr key={row.key} className={cn(isPodium && "font-medium")}>
-                <TdNum
-                  className={cn(STICKY_START, "w-14 bg-surface-raised text-center text-muted")}
-                >
+                <TdNum className={cn(STICKY_START, "w-14 text-center text-muted")}>
                   {row.rank}
                 </TdNum>
-                <Td className={cn(STICKY_NAME, "min-w-40 bg-surface-raised border-e border-border")}>
+                <Td className={cn(STICKY_NAME, "min-w-40 border-e border-border")}>
                   <span className="flex items-center gap-2">
                     <CountryFlag iso2={row.iso2} className="shrink-0" />
                     <span className="min-w-0 max-w-64 flex-1">
@@ -234,12 +237,7 @@ export function StandingsTable({
                     ) : null}
                   </span>
                 </Td>
-                <TdNum
-                  className={cn(
-                    STICKY_END,
-                    "bg-surface-raised border-s border-border font-semibold",
-                  )}
-                >
+                <TdNum className={cn(STICKY_END, "border-s border-border font-semibold")}>
                   {row.total}
                 </TdNum>
               </Tr>

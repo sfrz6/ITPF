@@ -190,7 +190,14 @@ export default async function PublicChampionshipResultsPage({
       {results.confirmedRunCount === 0 ? (
         <EmptyState icon={<Trophy />} title={t("results.noConfirmedRuns")} />
       ) : (
-        <PublicStandings days={days} sets={sets} slug={championship.slug} pdfAvailable={pdfAvailable} />
+        <PublicStandings
+          days={days}
+          sets={sets}
+          slug={championship.slug}
+          pdfAvailable={pdfAvailable}
+          championshipId={championship.id}
+          hasChampionshipLogo={championship.hasChampionshipLogo}
+        />
       )}
     </div>
   );
