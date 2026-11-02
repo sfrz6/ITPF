@@ -28,7 +28,7 @@ function paginate<T>(rows: readonly T[], pageSize: number): readonly (readonly T
 const ROW_SIZE = {
   // Up to 12 riders fit a page, so individual rows keep the tighter size.
   normal: {
-    li: "gap-4 px-4 py-2.5",
+    li: "gap-x-4 px-4 py-2.5",
     rank: "w-14 text-3xl",
     flag: "h-11 w-16",
     name: "text-3xl",
@@ -37,7 +37,7 @@ const ROW_SIZE = {
   // The country list rarely has more than ~10 entries on a page, so it has
   // the room to read larger.
   large: {
-    li: "gap-5 px-5 py-3",
+    li: "gap-x-5 px-5 py-3",
     rank: "w-16 text-[2rem]",
     flag: "h-12 w-[4.5rem]",
     name: "text-[2rem]",
@@ -46,13 +46,18 @@ const ROW_SIZE = {
 } as const;
 
 /**
- * A ranking column's rows, sized to its own content (`w-fit`) with every row
- * stretched to that resolved width (the flexbox algorithm sizes an
- * auto-width column to its widest child's max-content size, then stretches
- * every child to that same width) — so every row shares the width of the
- * longest one. Positioning the resulting block within its half is the
- * caller's job (see the heading+list wrapper in `DisplayBoard`), so both the
- * heading and the rows move together.
+ * A ranking column's rows, sized to its own content (`w-fit`), every row
+ * sharing the same four column widths via CSS subgrid.
+ *
+ * This replaced a flex `w-fit` + stretch trick that sized every row to the
+ * single widest row at layout time: correct on a fresh page load, but it
+ * could leave a row truncated after a live update changed which row was
+ * widest (e.g. a different rider's total gained a digit), since nothing
+ * forced the other rows to re-measure against the new widest one. Grid
+ * `auto` columns don't have that failure mode — all cells in the rank/
+ * flag/name/total columns are measured together in one pass, every time,
+ * so a name is only ever truncated if it's genuinely too long for the
+ * screen, not because of which row happened to be widest before.
  */
 function RankedList({
   rows,
@@ -63,23 +68,22 @@ function RankedList({
 }) {
   const s = ROW_SIZE[size];
   return (
-    <ol className="relative z-10 flex min-h-0 w-fit flex-1 flex-col gap-2 overflow-hidden">
+    <ol className="relative z-10 grid min-h-0 w-fit flex-1 auto-rows-max grid-cols-[auto_auto_auto_auto] gap-y-2 overflow-hidden">
       {rows.map((row) => (
         <li
           key={row.key}
-          className={`flex items-center rounded-lg border border-black/10 bg-white/80 shadow-sm ${s.li}`}
+          className={`col-span-full grid grid-cols-subgrid items-center rounded-lg border border-black/10 bg-white/80 shadow-sm ${s.li}`}
         >
-          <span className={`shrink-0 text-end font-bold text-neutral-400 ${s.rank}`}>
-            {row.rank}
-          </span>
-          <CountryFlag iso2={row.iso2} className={`shrink-0 rounded-sm ${s.flag}`} />
-          <span className={`max-w-lg truncate font-semibold text-neutral-900 ${s.name}`}>
+          <span className={`text-end font-bold text-neutral-400 ${s.rank}`}>{row.rank}</span>
+          <CountryFlag iso2={row.iso2} className={`rounded-sm ${s.flag}`} />
+          <span className={`min-w-0 truncate font-semibold text-neutral-900 ${s.name}`}>
             {row.name}
           </span>
-          {/* `ms-auto` pins every row's points to the box's end edge
-              regardless of how long that row's name is, so the numbers line
-              up in one column instead of trailing right after each name. */}
-          <span className={`numeric ms-auto shrink-0 font-bold text-neutral-900 ${s.total}`}>
+          {/* `justify-self-end` pins every row's points to its column's end
+              edge regardless of how long that row's name is, so the numbers
+              line up in one column instead of trailing right after each
+              name. */}
+          <span className={`numeric justify-self-end font-bold text-neutral-900 ${s.total}`}>
             {row.total}
           </span>
         </li>
