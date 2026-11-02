@@ -58,6 +58,12 @@ export function PublicStandings({
   }));
 
   const set = sets.find((item) => item.scope === activeScope && item.subject === subject);
+  const rows = set?.rows ?? [];
+  // One watermark per ten rows (minimum one, so a short list still gets a
+  // single centered mark) rather than one fixed mark for the whole table,
+  // which a long list would either bury between two arbitrary rows or never
+  // reach at all.
+  const watermarkCount = Math.max(1, Math.ceil(rows.length / 10));
 
   return (
     <Card>
@@ -91,26 +97,29 @@ export function PublicStandings({
         </div>
       </CardHeader>
       <CardContent className="relative">
-        {/* Fills the empty space a short list leaves below its rows. A row's
-            own solid background still covers it, so it only ever shows
-            through genuinely empty space, same as the printed watermark. */}
+        {/* Evenly spaced down the full table height, one per ten rows, so a
+            long list still has a mark in view wherever it's scrolled to
+            instead of a single one buried between two arbitrary rows. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center overflow-hidden"
+          className="pointer-events-none absolute inset-0 z-0 flex flex-col items-center justify-around overflow-hidden"
         >
-          {hasChampionshipLogo ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={`/api/championships/${championshipId}/logo/championship`}
-              alt=""
-              className="h-auto w-48 object-contain opacity-10 sm:w-64"
-            />
-          ) : (
-            <ItpfLogo width={192} className="opacity-10" />
+          {Array.from({ length: watermarkCount }).map((_, i) =>
+            hasChampionshipLogo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={i}
+                src={`/api/championships/${championshipId}/logo/championship`}
+                alt=""
+                className="h-auto w-48 object-contain opacity-10 sm:w-64"
+              />
+            ) : (
+              <ItpfLogo key={i} width={192} className="opacity-10" />
+            ),
           )}
         </div>
         <div className="relative z-10">
-          <StandingsTable subject={subject} rows={set?.rows ?? []} />
+          <StandingsTable subject={subject} rows={rows} />
         </div>
       </CardContent>
     </Card>
