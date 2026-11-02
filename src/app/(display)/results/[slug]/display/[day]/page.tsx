@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
-import { getTranslator } from "@/lib/i18n/server";
+import { createTranslator, getDictionary, LOCALES } from "@/lib/i18n";
 import { championshipDisplayName, localizedOptionalText } from "@/components/common/formatting";
-import { buildStandingsData } from "@/components/results/standings-data";
+import { buildStandingsData, type StandingRow } from "@/components/results/standings-data";
 import { getChampionshipBySlug, getChampionshipDetail } from "@/server/services/championships";
 import { loadChampionshipResults } from "@/server/services/results";
 import { scopeForDay, type DayNumber } from "@/domain/results";
@@ -29,8 +29,6 @@ export default async function ChampionshipDisplayPage({
   const day = parseDayNumber(dayParam);
   if (!day) notFound();
 
-  const { locale, t } = await getTranslator();
-
   // Only a published championship resolves, same as every other public page.
   const championship = await getChampionshipBySlug(slug);
   if (!championship) notFound();
@@ -39,24 +37,48 @@ export default async function ChampionshipDisplayPage({
   const dayDetail = detail?.days.find((candidate) => candidate.dayNumber === day);
   if (!dayDetail) notFound();
 
-  const results = await loadChampionshipResults(championship.id, locale);
-  const { sets } = buildStandingsData(results, t);
   const scope = scopeForDay(day);
-  const individualRows =
-    sets.find((set) => set.scope === scope && set.subject === "INDIVIDUAL")?.rows ?? [];
-  const countryRows =
-    sets.find((set) => set.scope === scope && set.subject === "COUNTRY")?.rows ?? [];
+
+  // A schedulable phase names its own language (Top 5 Countries can rotate
+  // through an Arabic instance and an English instance back to back), so
+  // every bit of text the board can show is pre-built in both languages
+  // rather than resolved once from a single page-wide locale.
+  const byLocale = Object.fromEntries(
+    await Promise.all(
+      LOCALES.map(async (locale) => {
+        const results = await loadChampionshipResults(championship.id, locale);
+        const t = createTranslator(getDictionary(locale));
+        const { sets } = buildStandingsData(results, t);
+        return [
+          locale,
+          {
+            championshipName: championshipDisplayName(championship.name, championship.nameAr, locale),
+            organizer: localizedOptionalText(championship.organizer, championship.organizerAr, locale),
+            individualRows:
+              sets.find((set) => set.scope === scope && set.subject === "INDIVIDUAL")?.rows ?? [],
+            countryRows:
+              sets.find((set) => set.scope === scope && set.subject === "COUNTRY")?.rows ?? [],
+          },
+        ] as const;
+      }),
+    ),
+  ) as Record<
+    (typeof LOCALES)[number],
+    {
+      championshipName: string;
+      organizer: string | null;
+      individualRows: readonly StandingRow[];
+      countryRows: readonly StandingRow[];
+    }
+  >;
 
   return (
     <DisplayBoard
       championshipId={championship.id}
-      championshipName={championshipDisplayName(championship.name, championship.nameAr, locale)}
-      organizer={localizedOptionalText(championship.organizer, championship.organizerAr, locale)}
       dayNumber={day}
       hasOrganizerLogo={championship.hasOrganizerLogo}
       hasChampionshipLogo={championship.hasChampionshipLogo}
-      individualRows={individualRows}
-      countryRows={countryRows}
+      byLocale={byLocale}
       displaySettings={dayDetail.displaySettings}
     />
   );

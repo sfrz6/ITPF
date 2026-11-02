@@ -5,10 +5,15 @@ import { useRouter } from "next/navigation";
 import { Maximize } from "lucide-react";
 import { ItpfLogo } from "@/components/common/itpf-logo";
 import { CountryFlag } from "@/components/common/country-flag";
-import { useI18n } from "@/lib/i18n/client";
+import { createTranslator, getDictionary, directionOf, DEFAULT_LOCALE, type Locale } from "@/lib/i18n";
 import type { DayNumber } from "@/domain/results";
 import type { StandingRow } from "@/components/results/standings-data";
-import { durationMsFor, type DisplayPhase, type DisplaySettings } from "@/domain/display/settings";
+import {
+  durationMsFor,
+  phaseId,
+  type DisplayPhase,
+  type DisplaySettings,
+} from "@/domain/display/settings";
 
 const TOP_FIVE_COUNT = 5;
 /** Two columns of five, so a "full list" page always reads as two even rows. */
@@ -18,40 +23,29 @@ const SUBPAGE_ROTATE_MS = 8_000;
 /** How often fresh results are pulled in, so a just-confirmed run shows up quickly. */
 const REFRESH_MS = 10_000;
 
-type Phase = DisplayPhase;
-
-function paginate<T>(rows: readonly T[], pageSize: number): readonly (readonly T[])[] {
-  if (rows.length === 0) return [[]];
-  const pages: T[][] = [];
-  for (let index = 0; index < rows.length; index += pageSize) {
-    pages.push(rows.slice(index, index + pageSize));
-  }
-  return pages;
-}
-
-/** Splits one page's rows into two columns, the second never longer than the first. */
-function splitColumns<T>(rows: readonly T[]): readonly [readonly T[], readonly T[]] {
-  const half = Math.ceil(rows.length / 2);
-  return [rows.slice(0, half), rows.slice(half)];
+interface LocaleData {
+  readonly championshipName: string;
+  readonly organizer: string | null;
+  readonly individualRows: readonly StandingRow[];
+  readonly countryRows: readonly StandingRow[];
 }
 
 const ROW_SIZE = {
-  // The Top 5 phase has an entire screen to itself for five rows, so it can
-  // afford to run much larger than a full-list page sharing the screen with
-  // nine or ten others.
+  // The Top 5 phase has an entire screen to itself for five rows, so it runs
+  // as large as the screen allows.
   topFive: {
-    li: "gap-x-6 px-7 py-5",
-    rank: "w-16 text-4xl",
-    flag: "h-12 w-20",
-    name: "text-4xl",
-    total: "text-4xl",
+    li: "gap-x-8 px-9 py-7",
+    rank: "w-20 text-6xl",
+    flag: "h-16 w-24",
+    name: "text-6xl",
+    total: "text-6xl",
   },
   full: {
-    li: "gap-x-4 px-5 py-3.5",
-    rank: "w-10 text-2xl",
-    flag: "h-9 w-[3.25rem]",
-    name: "text-2xl",
-    total: "text-2xl",
+    li: "gap-x-5 px-6 py-5",
+    rank: "w-12 text-3xl",
+    flag: "h-11 w-16",
+    name: "text-3xl",
+    total: "text-3xl",
   },
 } as const;
 
@@ -94,12 +88,18 @@ function RankedList({
   );
 }
 
-/** The leading five, centered and large, filling the whole screen on its own. */
+/**
+ * The leading five, large and anchored near the top of the screen rather
+ * than centered in the middle — at this size five rows plus the heading
+ * don't fill the whole height, and centering them left as much empty space
+ * above the heading as below the last row, which reads as broken on a TV
+ * rather than deliberate.
+ */
 function TopFivePhase({ title, rows }: { title: string; rows: readonly StandingRow[] }) {
   return (
-    <div className="flex h-full w-full items-center justify-center px-10">
-      <div className="w-full max-w-4xl">
-        <h2 className="mb-7 text-center text-3xl font-bold uppercase tracking-[0.2em] text-amber-600">
+    <div className="flex h-full w-full justify-center px-10 pt-12">
+      <div className="w-full max-w-5xl">
+        <h2 className="mb-9 text-center text-5xl font-bold uppercase tracking-[0.2em] text-amber-600">
           {title}
         </h2>
         <RankedList rows={rows.slice(0, TOP_FIVE_COUNT)} size="topFive" />
@@ -120,11 +120,13 @@ function FullListPhase({
   totalPages: number;
   currentPage: number;
 }) {
-  const [col1, col2] = splitColumns(page);
+  const half = Math.ceil(page.length / 2);
+  const col1 = page.slice(0, half);
+  const col2 = page.slice(half);
   return (
     <div className="flex h-full w-full items-center justify-center px-14 py-6">
-      <div className="w-full max-w-6xl">
-        <h2 className="mb-6 text-center text-2xl font-bold uppercase tracking-[0.2em] text-amber-600">
+      <div className="w-full max-w-7xl">
+        <h2 className="mb-7 text-center text-4xl font-bold uppercase tracking-[0.2em] text-amber-600">
           {title}
         </h2>
         <div className="grid grid-cols-2 gap-10">
@@ -150,12 +152,12 @@ function FullListPhase({
 
 /**
  * The live results board, built to sit full screen on a venue TV for one
- * championship day. It cycles through four phases — the leading five
- * countries, the leading five riders, then the full country standings and
- * full rider standings (each paging through a slice of names at a time
- * when there are more than fit on one screen) — rather than splitting the
- * screen permanently between riders and countries, so every phase can use
- * the whole screen and run large.
+ * championship day. It cycles through configured phases — each one a
+ * layout (Top 5 Countries, Top 5 Riders, full Country standings, full
+ * Rider standings) in one specific language — rather than splitting the
+ * screen permanently between riders and countries or being pinned to one
+ * language, so an operator can schedule, say, Arabic and English instances
+ * of the same layout back to back.
  *
  * Refreshes itself on a timer rather than waiting for a visitor to reload,
  * so a run a referee just confirmed appears here within `REFRESH_MS`. The
@@ -165,26 +167,19 @@ function FullListPhase({
  */
 export function DisplayBoard({
   championshipId,
-  championshipName,
-  organizer,
   dayNumber,
   hasOrganizerLogo,
   hasChampionshipLogo,
-  individualRows,
-  countryRows,
+  byLocale,
   displaySettings,
 }: {
   championshipId: string;
-  championshipName: string;
-  organizer: string | null;
   dayNumber: DayNumber;
   hasOrganizerLogo: boolean;
   hasChampionshipLogo: boolean;
-  individualRows: readonly StandingRow[];
-  countryRows: readonly StandingRow[];
+  byLocale: Record<Locale, LocaleData>;
   displaySettings: DisplaySettings;
 }) {
-  const { t } = useI18n();
   const router = useRouter();
   const [started, setStarted] = React.useState(false);
 
@@ -195,47 +190,48 @@ export function DisplayBoard({
     return () => clearInterval(id);
   }, [router]);
 
-  const riderPages = React.useMemo(
-    () => paginate(individualRows, FULL_PAGE_SIZE),
-    [individualRows],
-  );
-  const countryPages = React.useMemo(() => paginate(countryRows, FULL_PAGE_SIZE), [countryRows]);
+  // Row counts are the same regardless of language — only the text differs —
+  // so pagination math is computed once and the matching slice is read from
+  // whichever language the current phase names.
+  const riderCount = byLocale[DEFAULT_LOCALE].individualRows.length;
+  const countryCount = byLocale[DEFAULT_LOCALE].countryRows.length;
+  const riderPageCount = Math.max(1, Math.ceil(riderCount / FULL_PAGE_SIZE));
+  const countryPageCount = Math.max(1, Math.ceil(countryCount / FULL_PAGE_SIZE));
 
   const [riderPage, setRiderPage] = React.useState(0);
   const [countryPage, setCountryPage] = React.useState(0);
 
   React.useEffect(() => {
-    if (riderPages.length <= 1) return;
+    if (riderPageCount <= 1) return;
     const id = setInterval(
-      () => setRiderPage((page) => (page + 1) % riderPages.length),
+      () => setRiderPage((page) => (page + 1) % riderPageCount),
       SUBPAGE_ROTATE_MS,
     );
     return () => clearInterval(id);
-  }, [riderPages.length]);
+  }, [riderPageCount]);
 
   React.useEffect(() => {
-    if (countryPages.length <= 1) return;
+    if (countryPageCount <= 1) return;
     const id = setInterval(
-      () => setCountryPage((page) => (page + 1) % countryPages.length),
+      () => setCountryPage((page) => (page + 1) % countryPageCount),
       SUBPAGE_ROTATE_MS,
     );
     return () => clearInterval(id);
-  }, [countryPages.length]);
+  }, [countryPageCount]);
 
   // A refresh can shrink the row count (a correction removes a competitor),
   // which could otherwise strand the current page index past the new last
   // page; clamped here at read time rather than re-synced with an effect, so
   // there is no frame where an out of range page is looked up.
-  const safeRiderPage = riderPage < riderPages.length ? riderPage : 0;
-  const safeCountryPage = countryPage < countryPages.length ? countryPage : 0;
-
-  const hasCountries = countryRows.length > 0;
-  const hasRiders = individualRows.length > 0;
+  const safeRiderPage = riderPage < riderPageCount ? riderPage : 0;
+  const safeCountryPage = countryPage < countryPageCount ? countryPage : 0;
 
   const hasDataForPhase = React.useCallback(
-    (phase: Phase) =>
-      phase === "topCountries" || phase === "fullCountries" ? hasCountries : hasRiders,
-    [hasCountries, hasRiders],
+    (phase: DisplayPhase) =>
+      phase.layout === "topCountries" || phase.layout === "fullCountries"
+        ? countryCount > 0
+        : riderCount > 0,
+    [countryCount, riderCount],
   );
 
   // Built fresh on every render from whatever data and settings exist right
@@ -245,8 +241,11 @@ export function DisplayBoard({
   // A pause pins the board to one phase — as long as it actually has data,
   // so pausing never leaves the board stuck on a blank screen.
   const phases = React.useMemo(() => {
-    if (displaySettings.pausedOnPhase && hasDataForPhase(displaySettings.pausedOnPhase)) {
-      return [displaySettings.pausedOnPhase];
+    if (displaySettings.pausedOnPhase) {
+      const paused = displaySettings.phases.find(
+        (phase) => phaseId(phase) === displaySettings.pausedOnPhase,
+      );
+      if (paused && hasDataForPhase(paused)) return [paused];
     }
     return displaySettings.phases.filter(hasDataForPhase);
   }, [displaySettings, hasDataForPhase]);
@@ -267,7 +266,15 @@ export function DisplayBoard({
   }, [phases, phaseIndex, displaySettings]);
 
   const safePhaseIndex = phaseIndex < phases.length ? phaseIndex : 0;
-  const currentPhase: Phase | null = phases[safePhaseIndex] ?? null;
+  const currentPhase: DisplayPhase | null = phases[safePhaseIndex] ?? null;
+
+  // The board's language follows the *current phase*, not a single
+  // page-wide setting — so an Arabic "Top 5 Countries" phase and an English
+  // "Top 5 Riders" phase can take turns on the same screen.
+  const language: Locale = currentPhase?.language ?? DEFAULT_LOCALE;
+  const t = React.useMemo(() => createTranslator(getDictionary(language)), [language]);
+  const dir = directionOf(language);
+  const current = byLocale[language];
 
   function start() {
     setStarted(true);
@@ -284,8 +291,11 @@ export function DisplayBoard({
     ? `/api/championships/${championshipId}/logo/championship`
     : "/brand/itpf-logo-light.webp";
 
+  const riderPageStart = safeRiderPage * FULL_PAGE_SIZE;
+  const countryPageStart = safeCountryPage * FULL_PAGE_SIZE;
+
   return (
-    <div className="relative flex h-dvh flex-col overflow-hidden bg-white text-neutral-900">
+    <div dir={dir} className="relative flex h-dvh flex-col overflow-hidden bg-white text-neutral-900">
       {!started ? (
         <button
           type="button"
@@ -302,7 +312,7 @@ export function DisplayBoard({
         src={watermarkSrc}
         alt=""
         aria-hidden
-        className="pointer-events-none fixed inset-0 z-0 m-auto h-[60vh] w-[60vh] select-none object-contain opacity-[0.12]"
+        className="pointer-events-none fixed inset-0 z-0 m-auto h-[80vh] w-[80vh] select-none object-contain opacity-[0.22]"
       />
 
       <header className="relative z-10 flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-black/10 bg-white/95 px-8 py-3">
@@ -310,12 +320,12 @@ export function DisplayBoard({
           <ItpfLogo width={64} />
           <div>
             <div className="flex flex-wrap items-baseline gap-3">
-              <p className="text-4xl font-bold leading-tight">{championshipName}</p>
+              <p className="text-4xl font-bold leading-tight">{current.championshipName}</p>
               <span className="text-xl font-semibold text-neutral-500">
                 {t("championships.daysOf", { day: dayNumber })}
               </span>
             </div>
-            {organizer ? <p className="text-base text-neutral-600">{organizer}</p> : null}
+            {current.organizer ? <p className="text-base text-neutral-600">{current.organizer}</p> : null}
           </div>
         </div>
         {/* The championship's own logo sits beside the organizer's, each shown
@@ -342,22 +352,22 @@ export function DisplayBoard({
       </header>
 
       <div className="relative z-10 min-h-0 flex-1">
-        {currentPhase === "topCountries" ? (
-          <TopFivePhase title={t("display.topCountries")} rows={countryRows} />
-        ) : currentPhase === "topRiders" ? (
-          <TopFivePhase title={t("display.topRiders")} rows={individualRows} />
-        ) : currentPhase === "fullCountries" ? (
+        {currentPhase?.layout === "topCountries" ? (
+          <TopFivePhase title={t("display.topCountries")} rows={current.countryRows} />
+        ) : currentPhase?.layout === "topRiders" ? (
+          <TopFivePhase title={t("display.topRiders")} rows={current.individualRows} />
+        ) : currentPhase?.layout === "fullCountries" ? (
           <FullListPhase
             title={t("display.countryRanking")}
-            page={countryPages[safeCountryPage] ?? []}
-            totalPages={countryPages.length}
+            page={current.countryRows.slice(countryPageStart, countryPageStart + FULL_PAGE_SIZE)}
+            totalPages={countryPageCount}
             currentPage={safeCountryPage}
           />
-        ) : currentPhase === "fullRiders" ? (
+        ) : currentPhase?.layout === "fullRiders" ? (
           <FullListPhase
             title={t("display.individualRanking")}
-            page={riderPages[safeRiderPage] ?? []}
-            totalPages={riderPages.length}
+            page={current.individualRows.slice(riderPageStart, riderPageStart + FULL_PAGE_SIZE)}
+            totalPages={riderPageCount}
             currentPage={safeRiderPage}
           />
         ) : (

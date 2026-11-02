@@ -17,17 +17,20 @@ import {
 import { Checkbox, Input, Label, Select } from "@/components/ui/form-controls";
 import { useI18n } from "@/lib/i18n/client";
 import type { MessageKey } from "@/lib/i18n";
+import { LOCALE_LABELS } from "@/lib/i18n/config";
 import { updateDisplaySettingsAction } from "@/server/actions/display-settings";
 import {
+  ALL_PHASES,
   DEFAULT_PHASE_DURATION_SECONDS,
-  DISPLAY_PHASES,
   MAX_PHASE_DURATION_SECONDS,
   MIN_PHASE_DURATION_SECONDS,
+  phaseId,
+  type DisplayLayout,
   type DisplayPhase,
   type DisplaySettings,
 } from "@/domain/display/settings";
 
-const PHASE_LABEL_KEY: Record<DisplayPhase, MessageKey> = {
+const LAYOUT_LABEL_KEY: Record<DisplayLayout, MessageKey> = {
   topCountries: "display.topCountries",
   topRiders: "display.topRiders",
   fullCountries: "display.countryRanking",
@@ -48,31 +51,28 @@ export function DisplaySettingsDialog({
   const [open, setOpen] = React.useState(false);
   const [pending, startTransition] = React.useTransition();
 
-  const [enabled, setEnabled] = React.useState<Record<DisplayPhase, boolean>>(() =>
-    Object.fromEntries(
-      DISPLAY_PHASES.map((phase) => [phase, settings.phases.includes(phase)]),
-    ) as Record<DisplayPhase, boolean>,
+  const enabledIds = new Set(settings.phases.map(phaseId));
+  const [enabled, setEnabled] = React.useState<Record<string, boolean>>(() =>
+    Object.fromEntries(ALL_PHASES.map((phase) => [phaseId(phase), enabledIds.has(phaseId(phase))])),
   );
-  const [durations, setDurations] = React.useState<Record<DisplayPhase, number>>(() =>
+  const [durations, setDurations] = React.useState<Record<string, number>>(() =>
     Object.fromEntries(
-      DISPLAY_PHASES.map((phase) => [
-        phase,
-        settings.durationsSeconds[phase] ?? DEFAULT_PHASE_DURATION_SECONDS,
+      ALL_PHASES.map((phase) => [
+        phaseId(phase),
+        settings.durationsSeconds[phaseId(phase)] ?? DEFAULT_PHASE_DURATION_SECONDS,
       ]),
-    ) as Record<DisplayPhase, number>,
+    ),
   );
-  const [pausedOnPhase, setPausedOnPhase] = React.useState<DisplayPhase | "">(
-    settings.pausedOnPhase ?? "",
-  );
+  const [pausedOnPhase, setPausedOnPhase] = React.useState<string>(settings.pausedOnPhase ?? "");
 
   // Pausing on a phase the operator just unchecked would pin the board to a
   // layout that no longer shows — clear it instead of leaving it dangling.
-  function setPhaseEnabled(phase: DisplayPhase, value: boolean) {
-    setEnabled((previous) => ({ ...previous, [phase]: value }));
-    if (!value && pausedOnPhase === phase) setPausedOnPhase("");
+  function setPhaseEnabled(id: string, value: boolean) {
+    setEnabled((previous) => ({ ...previous, [id]: value }));
+    if (!value && pausedOnPhase === id) setPausedOnPhase("");
   }
 
-  const enabledPhases = DISPLAY_PHASES.filter((phase) => enabled[phase]);
+  const enabledPhases = ALL_PHASES.filter((phase) => enabled[phaseId(phase)]);
 
   function save(event: React.FormEvent) {
     event.preventDefault();
@@ -83,8 +83,10 @@ export function DisplaySettingsDialog({
     startTransition(async () => {
       const result = await updateDisplaySettingsAction({
         championshipDayId,
-        phases: enabledPhases,
-        durationsSeconds: Object.fromEntries(enabledPhases.map((phase) => [phase, durations[phase]])),
+        phases: enabledPhases.map((phase) => ({ layout: phase.layout, language: phase.language })),
+        durationsSeconds: Object.fromEntries(
+          enabledPhases.map((phase) => [phaseId(phase), durations[phaseId(phase)]]),
+        ),
         pausedOnPhase: pausedOnPhase || null,
       });
       if (!result.ok) {
@@ -95,6 +97,10 @@ export function DisplaySettingsDialog({
       toast.success(t("championships.displaySettingsSaved"));
       router.refresh();
     });
+  }
+
+  function phaseLabel(phase: DisplayPhase): string {
+    return `${t(LAYOUT_LABEL_KEY[phase.layout])} — ${LOCALE_LABELS[phase.language]}`;
   }
 
   return (
@@ -114,34 +120,37 @@ export function DisplaySettingsDialog({
         <form onSubmit={save}>
           <DialogBody className="space-y-4">
             <div className="space-y-2.5">
-              {DISPLAY_PHASES.map((phase) => (
-                <div key={phase} className="flex items-center gap-3">
-                  <Checkbox
-                    id={`phase-${phase}`}
-                    checked={enabled[phase]}
-                    onCheckedChange={(checked) => setPhaseEnabled(phase, checked === true)}
-                  />
-                  <Label htmlFor={`phase-${phase}`} className="min-w-0 flex-1 font-normal">
-                    {t(PHASE_LABEL_KEY[phase])}
-                  </Label>
-                  <Input
-                    type="number"
-                    min={MIN_PHASE_DURATION_SECONDS}
-                    max={MAX_PHASE_DURATION_SECONDS}
-                    value={durations[phase]}
-                    disabled={!enabled[phase]}
-                    onChange={(event) =>
-                      setDurations((previous) => ({
-                        ...previous,
-                        [phase]: Number(event.target.value) || DEFAULT_PHASE_DURATION_SECONDS,
-                      }))
-                    }
-                    className="w-20 shrink-0"
-                    aria-label={t("championships.displaySettingsDuration")}
-                  />
-                  <span className="shrink-0 text-xs text-muted">{t("common.seconds")}</span>
-                </div>
-              ))}
+              {ALL_PHASES.map((phase) => {
+                const id = phaseId(phase);
+                return (
+                  <div key={id} className="flex items-center gap-3">
+                    <Checkbox
+                      id={`phase-${id}`}
+                      checked={enabled[id]}
+                      onCheckedChange={(checked) => setPhaseEnabled(id, checked === true)}
+                    />
+                    <Label htmlFor={`phase-${id}`} className="min-w-0 flex-1 font-normal">
+                      {phaseLabel(phase)}
+                    </Label>
+                    <Input
+                      type="number"
+                      min={MIN_PHASE_DURATION_SECONDS}
+                      max={MAX_PHASE_DURATION_SECONDS}
+                      value={durations[id]}
+                      disabled={!enabled[id]}
+                      onChange={(event) =>
+                        setDurations((previous) => ({
+                          ...previous,
+                          [id]: Number(event.target.value) || DEFAULT_PHASE_DURATION_SECONDS,
+                        }))
+                      }
+                      className="w-20 shrink-0"
+                      aria-label={t("championships.displaySettingsDuration")}
+                    />
+                    <span className="shrink-0 text-xs text-muted">{t("common.seconds")}</span>
+                  </div>
+                );
+              })}
             </div>
 
             <div className="border-t border-border pt-3">
@@ -151,12 +160,12 @@ export function DisplaySettingsDialog({
               <Select
                 id="display-pause"
                 value={pausedOnPhase}
-                onChange={(event) => setPausedOnPhase(event.target.value as DisplayPhase | "")}
+                onChange={(event) => setPausedOnPhase(event.target.value)}
               >
                 <option value="">{t("championships.displaySettingsAutoRotate")}</option>
                 {enabledPhases.map((phase) => (
-                  <option key={phase} value={phase}>
-                    {t(PHASE_LABEL_KEY[phase])}
+                  <option key={phaseId(phase)} value={phaseId(phase)}>
+                    {phaseLabel(phase)}
                   </option>
                 ))}
               </Select>

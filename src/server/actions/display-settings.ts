@@ -6,29 +6,33 @@ import { z } from "zod";
 import { getDb } from "@/db";
 import { championshipDays } from "@/db/schema";
 import { requirePermission } from "@/lib/auth/authorize";
+import { LOCALES } from "@/lib/i18n/config";
 import {
-  DISPLAY_PHASES,
+  ALL_PHASES,
+  DISPLAY_LAYOUTS,
   MAX_PHASE_DURATION_SECONDS,
   MIN_PHASE_DURATION_SECONDS,
   normalizeDisplaySettings,
-  type DisplayPhase,
   type DisplaySettings,
 } from "@/domain/display/settings";
 import { DomainError, ok, run, type ActionResult } from "./result";
 
-const phaseSchema = z.enum(DISPLAY_PHASES);
+const phaseSchema = z.object({
+  layout: z.enum(DISPLAY_LAYOUTS),
+  language: z.enum(LOCALES),
+});
 
 const updateSchema = z.object({
   championshipDayId: z.uuid(),
-  phases: z.array(phaseSchema).min(1, "Select at least one layout.").max(DISPLAY_PHASES.length),
-  // Keyed loosely by string rather than the phase enum: `normalizeDisplaySettings`
+  phases: z.array(phaseSchema).min(1, "Select at least one layout.").max(ALL_PHASES.length),
+  // Keyed loosely by string rather than a phase schema: `normalizeDisplaySettings`
   // below already drops any key that isn't a real phase, so there is no need
   // to duplicate that exhaustiveness check here.
   durationsSeconds: z.record(
     z.string(),
     z.number().int().min(MIN_PHASE_DURATION_SECONDS).max(MAX_PHASE_DURATION_SECONDS),
   ),
-  pausedOnPhase: phaseSchema.nullable(),
+  pausedOnPhase: z.string().nullable(),
 });
 
 export async function updateDisplaySettingsAction(
@@ -54,7 +58,7 @@ export async function updateDisplaySettingsAction(
 
     const settings: DisplaySettings = normalizeDisplaySettings({
       phases: parsed.data.phases,
-      durationsSeconds: parsed.data.durationsSeconds as Partial<Record<DisplayPhase, number>>,
+      durationsSeconds: parsed.data.durationsSeconds,
       pausedOnPhase: parsed.data.pausedOnPhase,
     });
 
