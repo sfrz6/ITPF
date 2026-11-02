@@ -8,6 +8,7 @@ import {
   championshipDisplayName,
   formatCompetitionDate,
   formatPegSize,
+  localizedOptionalText,
 } from "@/components/common/formatting";
 import { eventLabel } from "@/components/common/labels";
 import { Badge, Callout, EmptyState } from "@/components/ui/surfaces";
@@ -40,9 +41,10 @@ export async function generateMetadata({
   const championship = await getChampionshipBySlug(slug);
   if (!championship) return { title: "Official results" };
   const name = championshipDisplayName(championship.name, championship.nameAr, locale);
+  const location = championshipDisplayName(championship.location, championship.locationAr, locale);
   return {
     title: `${name} results`,
-    description: `Official results of ${name}, ${championship.location}.`,
+    description: `Official results of ${name}, ${location}.`,
     robots: { index: true, follow: true },
   };
 }
@@ -103,18 +105,20 @@ export default async function PublicChampionshipResultsPage({
             {championshipDisplayName(championship.name, championship.nameAr, locale)}
           </h1>
           {/*
-            Location and organizer are untranslated proper nouns. In Arabic,
-            left as plain text either can be torn apart mid-phrase by the
-            browser's bidi reordering when the line wraps; `bdi` isolates each
-            as one atomic run so it wraps as a whole without disturbing the
-            date's own (already correct) right-to-left flow.
+            `bdi` isolates each of location/organizer as one atomic run so
+            Arabic's bidi reordering doesn't tear either apart mid-phrase when
+            the line wraps, without disturbing the date's own (already
+            correct) right-to-left flow.
           */}
           <p className="text-sm text-muted">
-            {formatCompetitionDate(championship.startDate, locale)} · <bdi>{championship.location}</bdi>
+            {formatCompetitionDate(championship.startDate, locale)} ·{" "}
+            <bdi>
+              {championshipDisplayName(championship.location, championship.locationAr, locale)}
+            </bdi>
             {championship.organizer ? (
               <>
                 {" "}
-                · <bdi>{championship.organizer}</bdi>
+                · <bdi>{localizedOptionalText(championship.organizer, championship.organizerAr, locale)}</bdi>
               </>
             ) : null}
           </p>

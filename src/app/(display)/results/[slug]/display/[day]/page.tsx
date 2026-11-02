@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getTranslator } from "@/lib/i18n/server";
-import { championshipDisplayName } from "@/components/common/formatting";
+import { championshipDisplayName, localizedOptionalText } from "@/components/common/formatting";
 import { buildStandingsData } from "@/components/results/standings-data";
 import { getChampionshipBySlug, getChampionshipDetail } from "@/server/services/championships";
 import { loadChampionshipResults } from "@/server/services/results";
@@ -51,12 +51,13 @@ export default async function ChampionshipDisplayPage({
     <DisplayBoard
       championshipId={championship.id}
       championshipName={championshipDisplayName(championship.name, championship.nameAr, locale)}
-      organizer={championship.organizer}
+      organizer={localizedOptionalText(championship.organizer, championship.organizerAr, locale)}
       dayNumber={day}
       hasOrganizerLogo={championship.hasOrganizerLogo}
       hasChampionshipLogo={championship.hasChampionshipLogo}
       individualRows={individualRows}
       countryRows={countryRows}
+      displaySettings={dayDetail.displaySettings}
     />
   );
 }

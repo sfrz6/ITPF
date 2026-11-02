@@ -100,7 +100,13 @@ export default async function PublicLandingPage() {
                       </CardTitle>
                       <p className="text-sm text-muted">
                         {formatCompetitionDate(championship.startDate, locale)} ·{" "}
-                        <bdi>{championship.location}</bdi>
+                        <bdi>
+                          {championshipDisplayName(
+                            championship.location,
+                            championship.locationAr,
+                            locale,
+                          )}
+                        </bdi>
                       </p>
                     </CardHeader>
                     <CardContent>

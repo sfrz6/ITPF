@@ -1,7 +1,11 @@
 import { notFound } from "next/navigation";
 import { requirePagePermission } from "@/lib/auth/page-guards";
 import { getTranslator } from "@/lib/i18n/server";
-import { championshipDisplayName, formatCompetitionDate } from "@/components/common/formatting";
+import {
+  championshipDisplayName,
+  formatCompetitionDate,
+  localizedOptionalText,
+} from "@/components/common/formatting";
 import { PrintHeader } from "@/components/common/print-header";
 import { PrintTrigger } from "@/components/common/print-trigger";
 import { PrintWatermark } from "@/components/common/print-watermark";
@@ -77,8 +81,10 @@ export default async function InternalStandingsPdfPage({
         championshipName={championshipDisplayName(detail.name, detail.nameAr, locale)}
         locationLine={
           <>
-            {detail.location}
-            {detail.organizer ? ` · ${detail.organizer}` : ""}
+            {championshipDisplayName(detail.location, detail.locationAr, locale)}
+            {detail.organizer
+              ? ` · ${localizedOptionalText(detail.organizer, detail.organizerAr, locale)}`
+              : ""}
           </>
         }
         championshipId={detail.id}

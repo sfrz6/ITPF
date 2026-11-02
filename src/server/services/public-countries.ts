@@ -76,6 +76,7 @@ export interface CountryChampionshipHistoryEntry {
   readonly slug: string;
   readonly startDate: string;
   readonly location: string;
+  readonly locationAr: string | null;
   /** Null only if the country has no recorded country-total yet (no confirmed runs). */
   readonly rank: number | null;
 }
@@ -98,6 +99,7 @@ export async function getCountryChampionshipHistory(
       slug: championships.slug,
       startDate: championships.startDate,
       location: championships.location,
+      locationAr: championships.locationAr,
     })
     .from(championshipCountries)
     .innerJoin(championships, eq(championships.id, championshipCountries.championshipId))

@@ -16,23 +16,28 @@ const riderNameSchema = z
   .min(2, "A rider name must be at least 2 characters.")
   .max(120, "A rider name must be at most 120 characters.");
 
+const riderNameArSchema = z.string().trim().max(120).nullable();
+
 const createSchema = z.object({
   countryId: z.uuid(),
   fullName: riderNameSchema,
+  fullNameAr: riderNameArSchema,
 });
 
 export interface CreatedRider {
   readonly id: string;
   readonly fullName: string;
+  readonly fullNameAr: string | null;
 }
 
 export async function createRiderAction(input: {
   countryId: string;
   fullName: string;
+  fullNameAr?: string | null;
 }): Promise<ActionResult<CreatedRider>> {
   return run(async () => {
     const actor = await requirePermission("MANAGE_RIDERS");
-    const parsed = createSchema.safeParse(input);
+    const parsed = createSchema.safeParse({ ...input, fullNameAr: input.fullNameAr ?? null });
     if (!parsed.success) {
       throw new DomainError(parsed.error.issues[0]?.message ?? "Invalid rider.", "VALIDATION", {
         fullName: parsed.error.issues[0]?.message ?? "",
@@ -45,35 +50,46 @@ export async function createRiderAction(input: {
         action: "RIDER_CREATED",
         entityType: "rider",
         entityId: rider.id,
-        after: { countryId: rider.countryId, fullName: rider.fullName },
+        after: { countryId: rider.countryId, fullName: rider.fullName, fullNameAr: rider.fullNameAr },
       });
       return rider;
     });
 
     revalidatePath(`/countries/${parsed.data.countryId}`);
     revalidatePath("/countries");
-    return ok({ id: created.id, fullName: created.fullName });
+    return ok({ id: created.id, fullName: created.fullName, fullNameAr: created.fullNameAr });
   });
 }
 
-const renameSchema = z.object({ riderId: z.uuid(), fullName: riderNameSchema });
+const renameSchema = z.object({
+  riderId: z.uuid(),
+  fullName: riderNameSchema,
+  fullNameAr: riderNameArSchema,
+});
 
 export async function renameRiderAction(input: {
   riderId: string;
   fullName: string;
+  fullNameAr?: string | null;
 }): Promise<ActionResult<undefined>> {
   return run(async () => {
     const actor = await requirePermission("MANAGE_RIDERS");
-    const parsed = renameSchema.safeParse(input);
+    const parsed = renameSchema.safeParse({ ...input, fullNameAr: input.fullNameAr ?? null });
     if (!parsed.success) {
       throw new DomainError(parsed.error.issues[0]?.message ?? "Invalid rider.", "VALIDATION");
     }
 
     const fullName = parsed.data.fullName.replace(/\s+/g, " ");
+    const fullNameAr = parsed.data.fullNameAr ? parsed.data.fullNameAr.replace(/\s+/g, " ") : null;
 
     const countryId = await getDb().transaction(async (tx) => {
       const [existing] = await tx
-        .select({ id: riders.id, fullName: riders.fullName, countryId: riders.countryId })
+        .select({
+          id: riders.id,
+          fullName: riders.fullName,
+          fullNameAr: riders.fullNameAr,
+          countryId: riders.countryId,
+        })
         .from(riders)
         .where(eq(riders.id, parsed.data.riderId))
         .limit(1);
@@ -100,15 +116,15 @@ export async function renameRiderAction(input: {
 
       await tx
         .update(riders)
-        .set({ fullName, updatedAt: new Date() })
+        .set({ fullName, fullNameAr, updatedAt: new Date() })
         .where(eq(riders.id, existing.id));
 
       await recordAudit(tx, actor, {
         action: "RIDER_UPDATED",
         entityType: "rider",
         entityId: existing.id,
-        before: { fullName: existing.fullName },
-        after: { fullName },
+        before: { fullName: existing.fullName, fullNameAr: existing.fullNameAr },
+        after: { fullName, fullNameAr },
       });
 
       return existing.countryId;

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { formatCompetitionDate, formatPegSize, formatTime } from "@/components/common/formatting";
 import { eventLabel, runStatusLabel, runStatusTone } from "@/components/common/labels";
 import { ChampionshipSettings } from "./championship-settings";
+import { DisplaySettingsDialog } from "./display-settings-dialog";
 import { ResetEventButton } from "./reset-event-button";
 
 export default async function ChampionshipSchedulePage({
@@ -37,7 +38,9 @@ export default async function ChampionshipSchedulePage({
             name: championship.name,
             nameAr: championship.nameAr,
             location: championship.location,
+            locationAr: championship.locationAr,
             organizer: championship.organizer,
+            organizerAr: championship.organizerAr,
             status: championship.status,
             isPublished: championship.isPublished,
             slug: championship.slug,
@@ -74,6 +77,13 @@ export default async function ChampionshipSchedulePage({
                         {t("championships.openDisplay")}
                       </Link>
                     </Button>
+                  ) : null}
+                  {championship.isPublished && canEdit ? (
+                    <DisplaySettingsDialog
+                      championshipDayId={day.id}
+                      dayNumber={day.dayNumber}
+                      settings={day.displaySettings}
+                    />
                   ) : null}
                 </span>
               </CardHeader>

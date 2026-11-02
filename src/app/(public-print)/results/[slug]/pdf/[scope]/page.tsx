@@ -1,6 +1,10 @@
 import { notFound } from "next/navigation";
 import { getTranslator } from "@/lib/i18n/server";
-import { championshipDisplayName, formatCompetitionDate } from "@/components/common/formatting";
+import {
+  championshipDisplayName,
+  formatCompetitionDate,
+  localizedOptionalText,
+} from "@/components/common/formatting";
 import { PrintHeader } from "@/components/common/print-header";
 import { PrintTrigger } from "@/components/common/print-trigger";
 import { PrintWatermark } from "@/components/common/print-watermark";
@@ -73,8 +77,10 @@ export default async function PublicStandingsPdfPage({
         championshipName={championshipDisplayName(championship.name, championship.nameAr, locale)}
         locationLine={
           <>
-            {championship.location}
-            {championship.organizer ? ` · ${championship.organizer}` : ""}
+            {championshipDisplayName(championship.location, championship.locationAr, locale)}
+            {championship.organizer
+              ? ` · ${localizedOptionalText(championship.organizer, championship.organizerAr, locale)}`
+              : ""}
           </>
         }
         championshipId={championship.id}

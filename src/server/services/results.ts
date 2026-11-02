@@ -271,11 +271,13 @@ export async function loadParticipantDirectory(
 ): Promise<ChampionshipParticipantDirectory> {
   const db = getDb();
   const countryName = locale === "ar" ? countries.nameAr : countries.nameEn;
+  const riderName =
+    locale === "ar" ? sql<string>`coalesce(${riders.fullNameAr}, ${riders.fullName})` : riders.fullName;
 
   const rows = await db
     .select({
       championshipRiderId: championshipRiders.id,
-      riderName: riders.fullName,
+      riderName,
       rosterSlot: championshipRiders.rosterSlot,
       championshipCountryId: championshipCountries.id,
       iso2: countries.iso2,

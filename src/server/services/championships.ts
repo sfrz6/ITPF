@@ -11,6 +11,7 @@ import {
   riders,
 } from "@/db/schema";
 import type { EventTypeKey } from "@/domain/scoring/event-types";
+import { normalizeDisplaySettings, type DisplaySettings } from "@/domain/display/settings";
 import type { Locale } from "@/lib/i18n/config";
 
 export interface ChampionshipSummary {
@@ -20,7 +21,9 @@ export interface ChampionshipSummary {
   readonly slug: string;
   readonly startDate: string;
   readonly location: string;
+  readonly locationAr: string | null;
   readonly organizer: string | null;
+  readonly organizerAr: string | null;
   readonly status: "DRAFT" | "ACTIVE" | "COMPLETED";
   readonly isPublished: boolean;
   readonly hasChampionshipLogo: boolean;
@@ -72,7 +75,9 @@ export async function listChampionships(options: {
       slug: championships.slug,
       startDate: championships.startDate,
       location: championships.location,
+      locationAr: championships.locationAr,
       organizer: championships.organizer,
+      organizerAr: championships.organizerAr,
       status: championships.status,
       isPublished: championships.isPublished,
       hasChampionshipLogo: sql<boolean>`${championships.championshipLogo} is not null`,
@@ -95,6 +100,7 @@ export interface ChampionshipDayDetail {
   readonly id: string;
   readonly dayNumber: number;
   readonly competitionDate: string;
+  readonly displaySettings: DisplaySettings;
   readonly events: readonly ChampionshipEventDetail[];
 }
 
@@ -128,7 +134,9 @@ export async function getChampionshipDetail(
       slug: championships.slug,
       startDate: championships.startDate,
       location: championships.location,
+      locationAr: championships.locationAr,
       organizer: championships.organizer,
+      organizerAr: championships.organizerAr,
       status: championships.status,
       isPublished: championships.isPublished,
       hasChampionshipLogo: sql<boolean>`${championships.championshipLogo} is not null`,
@@ -149,6 +157,7 @@ export async function getChampionshipDetail(
       dayId: championshipDays.id,
       dayNumber: championshipDays.dayNumber,
       competitionDate: championshipDays.competitionDate,
+      displaySettings: championshipDays.displaySettings,
       eventId: championshipEvents.id,
       eventType: championshipEvents.eventType,
       orderIndex: championshipEvents.orderIndex,
@@ -179,6 +188,7 @@ export async function getChampionshipDetail(
           id: entry.dayId,
           dayNumber: entry.dayNumber,
           competitionDate: entry.competitionDate,
+          displaySettings: normalizeDisplaySettings(entry.displaySettings),
           events: [],
         },
         events: new Map(),
@@ -276,11 +286,13 @@ export async function listChampionshipRiders(
 ): Promise<readonly ChampionshipRiderRecord[]> {
   const db = getDb();
   const countryName = locale === "ar" ? countries.nameAr : countries.nameEn;
+  const fullName =
+    locale === "ar" ? sql<string>`coalesce(${riders.fullNameAr}, ${riders.fullName})` : riders.fullName;
   return db
     .select({
       championshipRiderId: championshipRiders.id,
       riderId: riders.id,
-      fullName: riders.fullName,
+      fullName,
       rosterSlot: championshipRiders.rosterSlot,
       initialOrder: championshipRiders.initialOrder,
       shirtNumber: championshipRiders.shirtNumber,
@@ -401,7 +413,9 @@ export async function getChampionshipBySlug(slug: string): Promise<ChampionshipS
       slug: championships.slug,
       startDate: championships.startDate,
       location: championships.location,
+      locationAr: championships.locationAr,
       organizer: championships.organizer,
+      organizerAr: championships.organizerAr,
       status: championships.status,
       isPublished: championships.isPublished,
       hasChampionshipLogo: sql<boolean>`${championships.championshipLogo} is not null`,

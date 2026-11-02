@@ -98,7 +98,9 @@ export default async function PublicParticipantsPage({
                     ) : (
                       <ul className="space-y-0.5 text-sm">
                         {squad.map((rider) => (
-                          <li key={rider.championshipRiderId}>{rider.fullName}</li>
+                          <li key={rider.championshipRiderId}>
+                            <bdi>{rider.fullName}</bdi>
+                          </li>
                         ))}
                       </ul>
                     )}

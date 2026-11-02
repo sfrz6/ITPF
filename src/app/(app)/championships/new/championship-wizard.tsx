@@ -222,7 +222,9 @@ export function ChampionshipWizard({
   const [nameAr, setNameAr] = React.useState("");
   const [startDate, setStartDate] = React.useState("");
   const [location, setLocation] = React.useState("");
+  const [locationAr, setLocationAr] = React.useState("");
   const [organizer, setOrganizer] = React.useState("");
+  const [organizerAr, setOrganizerAr] = React.useState("");
   const [organizerLogo, setOrganizerLogo] = React.useState<LogoValue | null>(null);
   const [championshipLogo, setChampionshipLogo] = React.useState<LogoValue | null>(null);
   const [selected, setSelected] = React.useState<readonly string[]>([]);
@@ -264,7 +266,9 @@ export function ChampionshipWizard({
   const trimmedName = name.trim();
   const trimmedNameAr = nameAr.trim();
   const trimmedLocation = location.trim();
+  const trimmedLocationAr = locationAr.trim();
   const trimmedOrganizer = organizer.trim();
+  const trimmedOrganizerAr = organizerAr.trim();
 
   const competitionDates = competitionDatesFrom(startDate);
 
@@ -274,7 +278,9 @@ export function ChampionshipWizard({
     trimmedNameAr.length <= MAX_TEXT_LENGTH &&
     trimmedLocation.length >= MIN_LOCATION_LENGTH &&
     trimmedLocation.length <= MAX_TEXT_LENGTH &&
+    trimmedLocationAr.length <= MAX_TEXT_LENGTH &&
     trimmedOrganizer.length <= MAX_TEXT_LENGTH &&
+    trimmedOrganizerAr.length <= MAX_TEXT_LENGTH &&
     competitionDates !== null;
 
   // Riders are optional at this step: a country's squad is either the full
@@ -347,7 +353,9 @@ export function ChampionshipWizard({
         nameAr: trimmedNameAr || null,
         startDate,
         location: trimmedLocation,
+        locationAr: trimmedLocationAr || null,
         organizer: trimmedOrganizer || null,
+        organizerAr: trimmedOrganizerAr || null,
         organizerLogo: organizerLogo
           ? { data: organizerLogo.data, contentType: organizerLogo.contentType }
           : null,
@@ -536,6 +544,20 @@ export function ChampionshipWizard({
                 />
               </Field>
               <Field
+                label={t("championships.locationAr")}
+                htmlFor="wizard-location-ar"
+                hint={t("common.optional")}
+              >
+                <Input
+                  id="wizard-location-ar"
+                  dir="rtl"
+                  value={locationAr}
+                  onChange={(event) => setLocationAr(event.target.value)}
+                  maxLength={MAX_TEXT_LENGTH}
+                  autoComplete="off"
+                />
+              </Field>
+              <Field
                 label={t("championships.organizer")}
                 htmlFor="wizard-organizer"
                 hint={t("common.optional")}
@@ -544,6 +566,20 @@ export function ChampionshipWizard({
                   id="wizard-organizer"
                   value={organizer}
                   onChange={(event) => setOrganizer(event.target.value)}
+                  maxLength={MAX_TEXT_LENGTH}
+                  autoComplete="off"
+                />
+              </Field>
+              <Field
+                label={t("championships.organizerAr")}
+                htmlFor="wizard-organizer-ar"
+                hint={t("common.optional")}
+              >
+                <Input
+                  id="wizard-organizer-ar"
+                  dir="rtl"
+                  value={organizerAr}
+                  onChange={(event) => setOrganizerAr(event.target.value)}
                   maxLength={MAX_TEXT_LENGTH}
                   autoComplete="off"
                 />

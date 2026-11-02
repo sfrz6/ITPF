@@ -221,7 +221,9 @@ suite("concurrency and data integrity", () => {
           nameAr: null,
           startDate: "2026-09-18",
           location: "Amman",
+          locationAr: null,
           organizer: null,
+          organizerAr: null,
           squads: [
             {
               countryId: jordan,
@@ -246,7 +248,9 @@ suite("concurrency and data integrity", () => {
           nameAr: null,
           startDate: "2026-09-18",
           location: "Amman",
+          locationAr: null,
           organizer: null,
+          organizerAr: null,
           squads: [goodSquad(jordan, jordanRiders)],
         }),
       ),
@@ -261,7 +265,9 @@ suite("concurrency and data integrity", () => {
           nameAr: null,
           startDate: "2026-09-18",
           location: "Amman",
+          locationAr: null,
           organizer: null,
+          organizerAr: null,
           squads: [
             goodSquad(jordan, [...jordanRiders.slice(0, 4), omanRiders[0]!]),
             goodSquad(oman, omanRiders),

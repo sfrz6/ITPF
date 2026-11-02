@@ -83,7 +83,8 @@ export default async function PublicCountryProfilePage({
                     {championshipDisplayName(entry.name, entry.nameAr, locale)}
                   </p>
                   <p className="text-sm text-muted">
-                    {formatCompetitionDate(entry.startDate, locale)} · <bdi>{entry.location}</bdi>
+                    {formatCompetitionDate(entry.startDate, locale)} ·{" "}
+                    <bdi>{championshipDisplayName(entry.location, entry.locationAr, locale)}</bdi>
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">

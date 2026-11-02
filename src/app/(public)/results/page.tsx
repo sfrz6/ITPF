@@ -63,16 +63,20 @@ export default async function PublicResultsIndexPage() {
                       {championshipDisplayName(championship.name, championship.nameAr, locale)}
                     </CardTitle>
                     {/*
-                      Location is an untranslated proper noun. In Arabic, left
-                      as plain text it can be torn apart mid-phrase by the
-                      browser's bidi reordering when the line wraps; `bdi`
-                      isolates it as one atomic run so it wraps as a whole
-                      without disturbing the date's own (already correct)
-                      right-to-left flow.
+                      `bdi` isolates the location as one atomic run so Arabic's
+                      bidi reordering doesn't tear it apart mid-phrase when the
+                      line wraps, without disturbing the date's own (already
+                      correct) right-to-left flow.
                     */}
                     <p className="text-sm text-muted">
                       {formatCompetitionDate(championship.startDate, locale)} ·{" "}
-                      <bdi>{championship.location}</bdi>
+                      <bdi>
+                        {championshipDisplayName(
+                          championship.location,
+                          championship.locationAr,
+                          locale,
+                        )}
+                      </bdi>
                     </p>
                   </span>
                 </CardHeader>

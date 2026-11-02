@@ -64,7 +64,9 @@ suite("championship country order and optional squads", () => {
         nameAr: null,
         startDate: "2026-09-18",
         location: "Amman",
+        locationAr: null,
         organizer: null,
+        organizerAr: null,
         squads: [pakistan, oman, jordan],
       }),
     );
@@ -94,7 +96,9 @@ suite("championship country order and optional squads", () => {
         nameAr: null,
         startDate: "2026-09-18",
         location: "Amman",
+        locationAr: null,
         organizer: null,
+        organizerAr: null,
         squads: [{ countryId: jordan, riders: [] }, oman],
       }),
     );
@@ -185,7 +189,9 @@ suite("championship country order and optional squads", () => {
         nameAr: null,
         startDate: "2026-09-18",
         location: "Amman",
+        locationAr: null,
         organizer: null,
+        organizerAr: null,
         squads: [fourOnly, oman],
       }),
     );
@@ -222,7 +228,9 @@ suite("championship country order and optional squads", () => {
         nameAr: null,
         startDate: "2026-09-18",
         location: "Amman",
+        locationAr: null,
         organizer: null,
+        organizerAr: null,
         squads: [{ countryId: jordan, riders: [] }, oman],
       }),
     );

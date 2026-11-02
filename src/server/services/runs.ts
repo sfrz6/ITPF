@@ -879,6 +879,8 @@ export async function getRunScoringState(
   if (!run) return null;
 
   const countryName = locale === "ar" ? countries.nameAr : countries.nameEn;
+  const riderName =
+    locale === "ar" ? sql<string>`coalesce(${riders.fullNameAr}, ${riders.fullName})` : riders.fullName;
 
   const rows = await db
     .select({
@@ -892,7 +894,7 @@ export async function getRunScoringState(
       runScoreId: runScores.id,
       championshipRiderId: runScores.championshipRiderId,
       positionInUnit: runScores.positionInUnit,
-      riderName: riders.fullName,
+      riderName,
       shirtNumber: championshipRiders.shirtNumber,
       targetIndex: runScoreTargets.targetIndex,
       points: runScoreTargets.points,

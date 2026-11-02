@@ -43,6 +43,20 @@
       "when": 1793528951261,
       "tag": "0005_legal_doctor_faustus",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793637193076,
+      "tag": "0006_dry_madame_hydra",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793639281705,
+      "tag": "0007_reflective_harrier",
+      "breakpoints": true
     }
   ]
 }

@@ -5,6 +5,7 @@ import {
   date,
   index,
   integer,
+  jsonb,
   numeric,
   pgTable,
   text,
@@ -13,6 +14,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { bytea } from "./custom-types";
+import type { DisplaySettings } from "@/domain/display/settings";
 import {
   championshipStatusEnum,
   eventTypeEnum,
@@ -32,7 +34,11 @@ export const championships = pgTable(
     nameAr: text("name_ar"),
     startDate: date("start_date").notNull(),
     location: text("location").notNull(),
+    /** Shown instead of `location` on an Arabic-locale page when set. */
+    locationAr: text("location_ar"),
     organizer: text("organizer"),
+    /** Shown instead of `organizer` on an Arabic-locale page when set. */
+    organizerAr: text("organizer_ar"),
     /**
      * Optional logos, stored directly in the database rather than an external
      * blob store: small images, read far less often than the rest of a
@@ -86,6 +92,13 @@ export const championshipDays = pgTable(
       .references(() => championships.id, { onDelete: "cascade" }),
     dayNumber: integer("day_number").notNull(),
     competitionDate: date("competition_date").notNull(),
+    /**
+     * Which TV display-board phases are shown for this day, their order, how
+     * long each stays up, and whether rotation is paused on one of them. Null
+     * means "use the defaults" — every day works out of the box without an
+     * operator ever opening this screen.
+     */
+    displaySettings: jsonb("display_settings").$type<DisplaySettings>(),
   },
   (table) => [
     uniqueIndex("championship_days_unique_idx").on(table.championshipId, table.dayNumber),

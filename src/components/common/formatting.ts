@@ -78,6 +78,19 @@ export function championshipDisplayName(
   return locale === "ar" && nameAr ? nameAr : name;
 }
 
+/**
+ * Same `en`/`ar` fallback as `championshipDisplayName`, for a field that may
+ * be unset altogether (an optional organizer) rather than always present and
+ * only missing its Arabic translation.
+ */
+export function localizedOptionalText(
+  value: string | null,
+  valueAr: string | null,
+  locale: Locale,
+): string | null {
+  return locale === "ar" && valueAr ? valueAr : value;
+}
+
 export function formatDateTime(value: Date, locale: Locale): string {
   return new Intl.DateTimeFormat(intlTagOf(locale), {
     dateStyle: "medium",

@@ -196,7 +196,9 @@ async function main(): Promise<void> {
       nameAr: "تجريبي: بطولة التأهل لكأس العالم، الأردن 2026",
       startDate: "2026-09-18",
       location: "Amman, Jordan",
+      locationAr: "عمّان، الأردن",
       organizer: "Royal Jordanian Equestrian Federation",
+      organizerAr: null,
       squads,
     }),
   );

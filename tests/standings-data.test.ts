@@ -10,6 +10,7 @@ import type {
   TieBreakKey,
 } from "@/server/services/results";
 import type { ChampionshipDayDetail, ChampionshipRunDetail } from "@/server/services/championships";
+import { DEFAULT_DISPLAY_SETTINGS } from "@/domain/display/settings";
 import type { Translator } from "@/lib/i18n";
 
 const t: Translator = ((key: string) => key) as Translator;
@@ -165,6 +166,7 @@ function dayOf(dayNumber: number, statuses: readonly ChampionshipRunDetail["stat
     id: `day-${dayNumber}`,
     dayNumber,
     competitionDate: "2026-01-01",
+    displaySettings: DEFAULT_DISPLAY_SETTINGS,
     events: [{ id: `event-${dayNumber}`, eventType: "INDIVIDUAL_LANCE", orderIndex: 1, runs: statuses.map(run) }],
   };
 }

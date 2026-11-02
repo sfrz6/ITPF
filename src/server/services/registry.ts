@@ -15,6 +15,7 @@ export interface CountrySummary {
 export interface RiderRecord {
   readonly id: string;
   readonly fullName: string;
+  readonly fullNameAr: string | null;
   readonly isActive: boolean;
   readonly countryId: string;
 }
@@ -87,6 +88,7 @@ export async function listRidersForCountry(
     .select({
       id: riders.id,
       fullName: riders.fullName,
+      fullNameAr: riders.fullNameAr,
       isActive: riders.isActive,
       countryId: riders.countryId,
     })
@@ -109,18 +111,20 @@ export async function listRidersForCountry(
  */
 export async function createRider(
   tx: Executor,
-  input: { countryId: string; fullName: string },
+  input: { countryId: string; fullName: string; fullNameAr?: string | null },
 ): Promise<RiderRecord> {
   const fullName = input.fullName.trim().replace(/\s+/g, " ");
   if (!fullName) throw new DomainError("A rider name is required.", "VALIDATION");
+  const fullNameAr = input.fullNameAr?.trim().replace(/\s+/g, " ") || null;
 
   const inserted = await tx
     .insert(riders)
-    .values({ countryId: input.countryId, fullName })
+    .values({ countryId: input.countryId, fullName, fullNameAr })
     .onConflictDoNothing()
     .returning({
       id: riders.id,
       fullName: riders.fullName,
+      fullNameAr: riders.fullNameAr,
       isActive: riders.isActive,
       countryId: riders.countryId,
     });
@@ -132,6 +136,7 @@ export async function createRider(
     .select({
       id: riders.id,
       fullName: riders.fullName,
+      fullNameAr: riders.fullNameAr,
       isActive: riders.isActive,
       countryId: riders.countryId,
     })

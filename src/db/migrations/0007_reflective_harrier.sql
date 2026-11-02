@@ -1,0 +1,1 @@
+ALTER TABLE "championship_days" ADD COLUMN "display_settings" jsonb;

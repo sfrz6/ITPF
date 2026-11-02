@@ -60,7 +60,9 @@ const createSchema = z.object({
   nameAr: z.string().trim().max(160).nullable(),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "A start date is required."),
   location: z.string().trim().min(2).max(160),
+  locationAr: z.string().trim().max(160).nullable(),
   organizer: z.string().trim().max(160).nullable(),
+  organizerAr: z.string().trim().max(160).nullable(),
   organizerLogo: logoSchema,
   championshipLogo: logoSchema,
   squads: z.array(squadSchema).min(2).max(40),
@@ -99,7 +101,9 @@ const updateSchema = z.object({
   name: z.string().trim().min(3).max(160),
   nameAr: z.string().trim().max(160).nullable(),
   location: z.string().trim().min(2).max(160),
+  locationAr: z.string().trim().max(160).nullable(),
   organizer: z.string().trim().max(160).nullable(),
+  organizerAr: z.string().trim().max(160).nullable(),
   status: z.enum(["DRAFT", "ACTIVE", "COMPLETED"]),
 });
 
@@ -123,7 +127,9 @@ export async function updateChampionshipAction(
           name: championships.name,
           nameAr: championships.nameAr,
           location: championships.location,
+          locationAr: championships.locationAr,
           organizer: championships.organizer,
+          organizerAr: championships.organizerAr,
           status: championships.status,
         })
         .from(championships)
@@ -137,7 +143,9 @@ export async function updateChampionshipAction(
           name: parsed.data.name,
           nameAr: parsed.data.nameAr,
           location: parsed.data.location,
+          locationAr: parsed.data.locationAr,
           organizer: parsed.data.organizer,
+          organizerAr: parsed.data.organizerAr,
           status: parsed.data.status,
           updatedAt: new Date(),
         })
@@ -153,7 +161,9 @@ export async function updateChampionshipAction(
           name: parsed.data.name,
           nameAr: parsed.data.nameAr,
           location: parsed.data.location,
+          locationAr: parsed.data.locationAr,
           organizer: parsed.data.organizer,
+          organizerAr: parsed.data.organizerAr,
           status: parsed.data.status,
         },
       });
