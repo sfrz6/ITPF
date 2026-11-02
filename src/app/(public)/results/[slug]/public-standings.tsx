@@ -111,10 +111,10 @@ export function PublicStandings({
                 key={i}
                 src={`/api/championships/${championshipId}/logo/championship`}
                 alt=""
-                className="h-auto w-48 object-contain opacity-10 sm:w-64"
+                className="h-auto w-56 object-contain opacity-10 sm:w-80"
               />
             ) : (
-              <ItpfLogo key={i} width={192} className="opacity-10" />
+              <ItpfLogo key={i} width={240} className="opacity-10" />
             ),
           )}
         </div>
