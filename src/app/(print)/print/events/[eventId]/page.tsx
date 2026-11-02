@@ -201,18 +201,32 @@ export default async function EventRoundSheetPage({
                               {position}
                             </td>
                             <td className="border-e border-black px-2 py-2">
-                              {names.get(rider.championshipRiderId) ?? ""}
+                              {/* `bdi` isolates the name as one atomic run so an
+                                  Arabic name's bidi reordering doesn't tear it
+                                  apart from the Latin-script badges that can
+                                  follow it; the literal spaces between them
+                                  (not just the `ms-*` margin, which can
+                                  collapse to nothing when two mixed-direction
+                                  runs sit back to back) keep them from
+                                  visually running into the name. */}
+                              <bdi>{names.get(rider.championshipRiderId) ?? ""}</bdi>
                               {definition.ruleType === "PAIR" && riderIndex === 0 ? (
-                                <span className="ms-2 text-[8pt]">
-                                  ({t("runs.pairLabel", { number: unit.unitIndex + 1 })})
-                                </span>
+                                <>
+                                  {" "}
+                                  <span className="text-[8pt]">
+                                    ({t("runs.pairLabel", { number: unit.unitIndex + 1 })})
+                                  </span>
+                                </>
                               ) : null}
                               {state.riderPointsSoFar.has(rider.championshipRiderId) ? (
-                                <span className="ms-2 text-[8pt] text-neutral-600">
-                                  {t("print.pointsSoFar", {
-                                    points: state.riderPointsSoFar.get(rider.championshipRiderId)!,
-                                  })}
-                                </span>
+                                <>
+                                  {" "}
+                                  <span className="text-[8pt] text-neutral-600">
+                                    {t("print.pointsSoFar", {
+                                      points: state.riderPointsSoFar.get(rider.championshipRiderId)!,
+                                    })}
+                                  </span>
+                                </>
                               ) : null}
                             </td>
                             {state.runs.map((run) => (

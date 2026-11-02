@@ -118,13 +118,16 @@ export interface RunEntryOrderState {
 async function loadRoster(
   tx: Executor,
   championshipId: string,
+  locale: Locale,
 ): Promise<Map<string, RunRosterRider[]>> {
+  const fullName =
+    locale === "ar" ? sql<string>`coalesce(${riders.fullNameAr}, ${riders.fullName})` : riders.fullName;
   const rows = await tx
     .select({
       championshipCountryId: championshipRiders.championshipCountryId,
       championshipRiderId: championshipRiders.id,
       riderId: riders.id,
-      fullName: riders.fullName,
+      fullName,
       rosterSlot: championshipRiders.rosterSlot,
       initialOrder: championshipRiders.initialOrder,
       shirtNumber: championshipRiders.shirtNumber,
@@ -248,7 +251,7 @@ export async function getRunEntryOrderState(
     .orderBy(asc(championshipCountries.orderIndex));
 
   const [rosterByCountry, previousOrders, confirmed] = await Promise.all([
-    loadRoster(db, run.championshipId),
+    loadRoster(db, run.championshipId, locale),
     loadPreviousOrders(db, run),
     db
       .select({
@@ -577,7 +580,10 @@ export async function confirmCountryEntryOrder(
     throw new DomainError("This country does not take part in this championship.", "NOT_FOUND");
   }
 
-  const rosterByCountry = await loadRoster(tx, run.championshipId);
+  // Only championshipRiderId/rosterSlot/initialOrder are read below — the
+  // locale-dependent `fullName` this returns is never displayed here, so
+  // which language it comes back in makes no difference to this validation.
+  const rosterByCountry = await loadRoster(tx, run.championshipId, "en");
   const roster = rosterByCountry.get(input.championshipCountryId) ?? [];
   const rosterMembers: RosterMember[] = roster.map((member) => ({
     championshipRiderId: member.championshipRiderId,

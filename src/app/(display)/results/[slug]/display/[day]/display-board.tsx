@@ -97,8 +97,8 @@ function RankedList({
  */
 function TopFivePhase({ title, rows }: { title: string; rows: readonly StandingRow[] }) {
   return (
-    <div className="flex h-full w-full justify-center px-10 pt-12">
-      <div className="w-full max-w-5xl">
+    <div className="flex h-full w-full justify-center px-8 pt-12">
+      <div className="w-full max-w-[90rem]">
         <h2 className="mb-9 text-center text-5xl font-bold uppercase tracking-[0.2em] text-amber-600">
           {title}
         </h2>
