@@ -3,12 +3,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { Award, ChevronRight, Flag, Trophy } from "lucide-react";
+import { Award, ChevronRight, Flag, Trophy, Users } from "lucide-react";
 import { championshipDisplayName, formatCompetitionDate } from "@/components/common/formatting";
-import { Badge, Card, CardContent, CardHeader, CardTitle } from "@/components/ui/surfaces";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/surfaces";
 import { Button } from "@/components/ui/button";
 import { getTranslator } from "@/lib/i18n/server";
-import { listChampionships } from "@/server/services/championships";
+import type { Locale } from "@/lib/i18n/config";
+import type { Translator } from "@/lib/i18n";
+import { listChampionships, type ChampionshipSummary } from "@/server/services/championships";
 import { currentPrincipalOrNull } from "@/lib/auth/authorize";
 
 /**
@@ -24,6 +26,55 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
+/**
+ * Shared by the "Latest results" and "Upcoming championships" sections: a
+ * light tint of the primary color rather than a plain bordered card, so the
+ * landing page's boxes read as one deliberate palette instead of a wall of
+ * identical white cards. Dark mode keeps the existing neutral card look —
+ * the tint is a light-mode-only accent.
+ */
+const TINTED_CARD = "border-primary/15 bg-primary-subtle dark:border-border dark:bg-surface-raised";
+
+function ChampionshipCard({
+  championship,
+  locale,
+  t,
+}: {
+  championship: ChampionshipSummary;
+  locale: Locale;
+  t: Translator;
+}) {
+  return (
+    <Card className={`h-full transition-colors hover:border-primary/40 ${TINTED_CARD}`}>
+      <CardHeader className="flex-col items-start gap-1">
+        <CardTitle className="text-base">
+          {championshipDisplayName(championship.name, championship.nameAr, locale)}
+        </CardTitle>
+        <p className="text-sm text-muted">
+          {formatCompetitionDate(championship.startDate, locale)} ·{" "}
+          <bdi>
+            {championshipDisplayName(championship.location, championship.locationAr, locale)}
+          </bdi>
+        </p>
+      </CardHeader>
+      <CardContent className="flex flex-wrap gap-2">
+        <Button variant="secondary" size="sm" asChild>
+          <Link href={`/results/${championship.slug}`}>
+            {t("publicResults.viewResults")}
+            <ChevronRight className="rtl:rotate-180" aria-hidden />
+          </Link>
+        </Button>
+        <Button variant="ghost" size="sm" asChild>
+          <Link href={`/results/${championship.slug}/participants`}>
+            <Users aria-hidden />
+            {t("publicResults.participatingCountries")}
+          </Link>
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default async function PublicLandingPage() {
   // The admin subdomain is just a friendlier front door into the same app:
   // officials land straight on sign-in (or the dashboard, if already signed
@@ -36,7 +87,17 @@ export default async function PublicLandingPage() {
 
   const { locale, t } = await getTranslator();
   const championships = await listChampionships({ publishedOnly: true });
-  const latest = championships.slice(0, 3);
+
+  // Dates are plain "YYYY-MM-DD" strings, which compare correctly against
+  // another ISO date string without parsing into a `Date` that could shift
+  // across a time zone boundary — the same rule `formatCompetitionDate`
+  // follows.
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const latest = championships.filter((c) => c.startDate <= todayIso).slice(0, 3);
+  const upcoming = championships
+    .filter((c) => c.startDate > todayIso)
+    .sort((a, b) => a.startDate.localeCompare(b.startDate))
+    .slice(0, 3);
 
   return (
     <div className="space-y-14">
@@ -92,28 +153,22 @@ export default async function PublicLandingPage() {
           <ul className="grid gap-4 sm:grid-cols-3">
             {latest.map((championship) => (
               <li key={championship.id}>
-                <Link href={`/results/${championship.slug}`} className="block h-full">
-                  <Card className="h-full transition-colors hover:border-border-strong">
-                    <CardHeader className="flex-col items-start gap-1">
-                      <CardTitle className="text-base">
-                        {championshipDisplayName(championship.name, championship.nameAr, locale)}
-                      </CardTitle>
-                      <p className="text-sm text-muted">
-                        {formatCompetitionDate(championship.startDate, locale)} ·{" "}
-                        <bdi>
-                          {championshipDisplayName(
-                            championship.location,
-                            championship.locationAr,
-                            locale,
-                          )}
-                        </bdi>
-                      </p>
-                    </CardHeader>
-                    <CardContent>
-                      <Badge tone="success">{t("runs.statusConfirmed")}</Badge>
-                    </CardContent>
-                  </Card>
-                </Link>
+                <ChampionshipCard championship={championship} locale={locale} t={t} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {upcoming.length > 0 ? (
+        <section className="space-y-4">
+          <h2 className="text-lg font-semibold text-foreground">
+            {t("landing.upcomingChampionships")}
+          </h2>
+          <ul className="grid gap-4 sm:grid-cols-3">
+            {upcoming.map((championship) => (
+              <li key={championship.id}>
+                <ChampionshipCard championship={championship} locale={locale} t={t} />
               </li>
             ))}
           </ul>
@@ -125,7 +180,7 @@ export default async function PublicLandingPage() {
         <ul className="grid gap-4 sm:grid-cols-3">
           <li>
             <Link href="/results" className="block h-full">
-              <Card className="h-full transition-colors hover:border-border-strong">
+              <Card className={`h-full transition-colors hover:border-primary/40 ${TINTED_CARD}`}>
                 <CardContent className="space-y-2 pt-4">
                   <Trophy className="size-5 text-accent" aria-hidden />
                   <p className="font-semibold text-foreground">{t("landing.exploreResults")}</p>
@@ -136,7 +191,7 @@ export default async function PublicLandingPage() {
           </li>
           <li>
             <Link href="/rankings" className="block h-full">
-              <Card className="h-full transition-colors hover:border-border-strong">
+              <Card className={`h-full transition-colors hover:border-primary/40 ${TINTED_CARD}`}>
                 <CardContent className="space-y-2 pt-4">
                   <Award className="size-5 text-accent" aria-hidden />
                   <p className="font-semibold text-foreground">{t("landing.exploreRankings")}</p>
@@ -147,7 +202,7 @@ export default async function PublicLandingPage() {
           </li>
           <li>
             <Link href="/results/countries" className="block h-full">
-              <Card className="h-full transition-colors hover:border-border-strong">
+              <Card className={`h-full transition-colors hover:border-primary/40 ${TINTED_CARD}`}>
                 <CardContent className="space-y-2 pt-4">
                   <Flag className="size-5 text-accent" aria-hidden />
                   <p className="font-semibold text-foreground">{t("landing.exploreCountries")}</p>
