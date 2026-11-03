@@ -538,13 +538,13 @@ export const en = {
   },
   rankings: {
     title: "Rankings",
-    subtitle: "Combined standings across a qualification series.",
+    subtitle: "Combined standings for selected championships.",
     noSeries: "No qualification rankings have been published yet.",
     individual: "Athletes",
     countries: "National Teams",
     noResultsYet: "No results have been recorded for this series yet.",
     footnote: "Ranked on combined points across every championship in this series.",
-    championshipsInSeries: "Championships in this series",
+    championshipsInSeries: "Championships in this ranking",
   },
   publicCountries: {
     title: "Countries",

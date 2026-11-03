@@ -539,13 +539,13 @@ export const ar: Dictionary = {
   },
   rankings: {
     title: "التصنيف",
-    subtitle: "التصنيف المجمّع عبر سلسلة تأهل.",
+    subtitle: "التصنيف المجمّع لبطولات مختارة.",
     noSeries: "لم يتم نشر أي تصنيف تأهل بعد.",
     individual: "المتسابقين",
     countries: "المنتخبات",
     noResultsYet: "لم تُسجَّل أي نتائج لهذه السلسلة بعد.",
     footnote: "التصنيف مبني على مجموع النقاط عبر كل بطولة في هذه السلسلة.",
-    championshipsInSeries: "بطولات هذه السلسلة",
+    championshipsInSeries: "بطولات هذا التصنيف",
   },
   publicCountries: {
     title: "المنتخبات",
