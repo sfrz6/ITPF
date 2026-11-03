@@ -123,7 +123,7 @@ export default async function PublicLandingPage() {
           width={263}
           height={323}
           priority
-          className="pointer-events-none absolute left-1/2 top-1/2 h-[200px] w-auto -translate-x-1/2 -translate-y-1/2 opacity-10 select-none sm:h-[260px] dark:hidden"
+          className="pointer-events-none absolute left-1/2 top-1/2 h-[200px] w-auto -translate-x-1/2 -translate-y-1/2 opacity-25 select-none sm:h-[260px] dark:hidden"
         />
         <Image
           src="/brand/itpf-horse-dark.png"
@@ -132,7 +132,7 @@ export default async function PublicLandingPage() {
           width={263}
           height={303}
           priority
-          className="pointer-events-none absolute left-1/2 top-1/2 hidden h-[200px] w-auto -translate-x-1/2 -translate-y-1/2 opacity-10 select-none sm:h-[260px] dark:block"
+          className="pointer-events-none absolute left-1/2 top-1/2 hidden h-[200px] w-auto -translate-x-1/2 -translate-y-1/2 opacity-25 select-none sm:h-[260px] dark:block"
         />
         <div className="relative space-y-4">
           <h1 className="text-balance text-lg font-bold tracking-tight text-foreground sm:text-xl">
