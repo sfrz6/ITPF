@@ -43,6 +43,8 @@ export const en = {
     time: "Time",
     country: "Country",
     rider: "Rider",
+    team: "Team",
+    athlete: "Athlete",
     day: "Day",
     event: "Event",
     run: "Run",

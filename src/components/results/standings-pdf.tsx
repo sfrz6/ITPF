@@ -36,7 +36,7 @@ export function StandingsPdfTable({
         <tr className="border-b border-black bg-neutral-100">
           <th className="w-10 border-e border-black px-1 py-1 text-center">{t("common.rank")}</th>
           <th className="border-e border-black px-2 py-1 text-start">
-            {isCountry ? t("common.country") : t("common.rider")}
+            {isCountry ? t("common.team") : t("common.athlete")}
           </th>
           {isCountry ? (
             <>
