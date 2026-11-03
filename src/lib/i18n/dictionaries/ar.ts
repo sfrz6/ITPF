@@ -510,8 +510,8 @@ export const ar: Dictionary = {
     exploreResults: "النتائج",
     exploreResultsHint: "كل بطولة، مع الترتيب الكامل وجداول الجولات.",
     exploreRankings: "التصنيف",
-    exploreRankingsHint: "التصنيف المجمّع عبر سلسلة تأهل.",
-    exploreCountries: "الدول",
+    exploreRankingsHint: "التصنيف المجمّع لبطولات مختارة.",
+    exploreCountries: "الفرق",
     exploreCountriesHint: "السجل الكامل لمشاركات كل دولة.",
   },
   series: {

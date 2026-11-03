@@ -509,8 +509,8 @@ export const en = {
     exploreResults: "Results",
     exploreResultsHint: "Every championship, with full standings and round sheets.",
     exploreRankings: "Rankings",
-    exploreRankingsHint: "Combined standings across a qualification series.",
-    exploreCountries: "Countries",
+    exploreRankingsHint: "Combined standings for selected championships.",
+    exploreCountries: "Teams",
     exploreCountriesHint: "Every country's full championship history.",
   },
   series: {
