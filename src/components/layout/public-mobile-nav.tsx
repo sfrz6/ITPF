@@ -46,11 +46,12 @@ export function PublicMobileNav() {
     <div className="md:hidden">
       <Button
         variant="ghost"
-        size="iconSm"
+        size="icon"
         onClick={() => setOpen(true)}
         aria-label={t("nav.mainMenu")}
+        className="size-11 [&_svg]:size-6"
       >
-        <Menu aria-hidden />
+        <Menu strokeWidth={2.5} aria-hidden />
       </Button>
 
       {open
