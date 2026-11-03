@@ -512,7 +512,7 @@ export const ar: Dictionary = {
     exploreRankings: "التصنيف",
     exploreRankingsHint: "التصنيف المجمّع لبطولات مختارة.",
     exploreCountries: "الفرق",
-    exploreCountriesHint: "السجل الكامل لمشاركات كل دولة.",
+    exploreCountriesHint: "السجل الكامل لمشاركات كل فريق.",
   },
   series: {
     title: "سلاسل التأهل",
@@ -549,12 +549,12 @@ export const ar: Dictionary = {
   },
   publicCountries: {
     title: "المنتخبات",
-    subtitle: "كل دولة شاركت في بطولة للاتحاد الدولي لالتقاط الأوتاد. افتح دولة لرؤية سجلها الكامل.",
+    subtitle: "كل فريق شارك في بطولة للاتحاد الدولي لالتقاط الأوتاد. افتح فريقاً لرؤية سجله الكامل.",
     championshipsCount: "{count} بطولة",
     mostRecently: "آخرها {date}",
     championshipHistory: "سجل البطولات",
     allCountries: "جميع الدول",
-    noCountriesYet: "لم تشارك أي دولة في بطولة منشورة بعد.",
+    noCountriesYet: "لم يشارك أي فريق في بطولة منشورة بعد.",
     overallRank: "المركز {rank} عموماً",
   },
   display: {

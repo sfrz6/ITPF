@@ -511,7 +511,7 @@ export const en = {
     exploreRankings: "Rankings",
     exploreRankingsHint: "Combined standings for selected championships.",
     exploreCountries: "Teams",
-    exploreCountriesHint: "Every country's full championship history.",
+    exploreCountriesHint: "Every team's full championship history.",
   },
   series: {
     title: "Qualification series",
@@ -548,12 +548,12 @@ export const en = {
   },
   publicCountries: {
     title: "Countries",
-    subtitle: "Every country that has taken part in an ITPF championship. Open one to see its full history.",
+    subtitle: "Every team that has taken part in an ITPF championship. Open one to see its full history.",
     championshipsCount: "{count} championship(s)",
     mostRecently: "most recently {date}",
     championshipHistory: "Championship history",
     allCountries: "All countries",
-    noCountriesYet: "No countries have taken part in a published championship yet.",
+    noCountriesYet: "No teams have taken part in a published championship yet.",
     overallRank: "{rank} overall",
   },
   display: {
