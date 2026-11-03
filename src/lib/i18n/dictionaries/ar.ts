@@ -506,6 +506,7 @@ export const ar: Dictionary = {
     latestResults: "أحدث النتائج",
     allResults: "جميع النتائج",
     upcomingChampionships: "البطولات القادمة",
+    liveChampionships: "البطولات القائمة",
     exploreResults: "النتائج",
     exploreResultsHint: "كل بطولة، مع الترتيب الكامل وجداول الجولات.",
     exploreRankings: "التصنيف",

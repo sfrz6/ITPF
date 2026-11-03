@@ -505,6 +505,7 @@ export const en = {
     latestResults: "Latest results",
     allResults: "All results",
     upcomingChampionships: "Upcoming championships",
+    liveChampionships: "Live championship",
     exploreResults: "Results",
     exploreResultsHint: "Every championship, with full standings and round sheets.",
     exploreRankings: "Rankings",
