@@ -41,7 +41,12 @@ export default async function PublicRankingsIndexPage() {
                   </p>
                 </CardHeader>
                 <CardContent className="mt-auto">
-                  <Button variant="secondary" size="sm" asChild>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="border-transparent bg-primary text-primary-foreground hover:bg-primary-hover dark:border-border-strong dark:bg-surface-raised dark:text-foreground dark:hover:bg-surface-sunken"
+                    asChild
+                  >
                     <Link href={`/rankings/${item.slug}`}>
                       {t("publicResults.viewResults")}
                       <ChevronRight className="rtl:rotate-180" aria-hidden />

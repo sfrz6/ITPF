@@ -88,7 +88,12 @@ export default async function PublicResultsIndexPage() {
                     </span>
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    <Button variant="secondary" size="sm" asChild>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="border-transparent bg-primary text-primary-foreground hover:bg-primary-hover dark:border-border-strong dark:bg-surface-raised dark:text-foreground dark:hover:bg-surface-sunken"
+                      asChild
+                    >
                       <Link href={`/results/${championship.slug}`}>
                         {t("publicResults.viewResults")}
                         <ChevronRight className="rtl:rotate-180" aria-hidden />
