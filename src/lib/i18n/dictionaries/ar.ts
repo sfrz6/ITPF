@@ -415,7 +415,7 @@ export const ar: Dictionary = {
     subtitle: "صادرة عن الاتحاد الدولي لإلتقاط الأوتاد",
     noChampionships: "لم تُعلن أي نتائج بعد.",
     lastConfirmed: "آخر اعتماد",
-    currentDay: "يوم المنافسة {day}",
+    currentDay: "يوم البطولة {day}",
     viewResults: "عرض النتائج",
     individualStandings: "ترتيب المتسابقين",
     countryStandings: "ترتيب المنتخبات",

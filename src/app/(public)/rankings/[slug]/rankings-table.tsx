@@ -65,7 +65,7 @@ export function RankingsTable({
                 <THead>
                   <Tr>
                     <ThNum className="w-14 text-center">{t("common.rank")}</ThNum>
-                    <Th>{isCountry ? t("common.country") : t("common.rider")}</Th>
+                    <Th>{isCountry ? t("common.team") : t("common.athlete")}</Th>
                     <ThNum>{t("common.total")}</ThNum>
                   </Tr>
                 </THead>

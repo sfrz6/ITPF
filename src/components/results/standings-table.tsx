@@ -192,7 +192,7 @@ export function StandingsTable({
               {t("common.rank")}
             </ThNum>
             <Th className={cn(STICKY_NAME, "min-w-40 bg-surface-sunken border-e border-border")}>
-              {isCountry ? t("common.country") : t("common.rider")}
+              {isCountry ? t("common.team") : t("common.athlete")}
             </Th>
             <ThNum className={cn(STICKY_END, "bg-surface-sunken border-s border-border")}>
               {t("common.total")}

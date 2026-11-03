@@ -414,7 +414,7 @@ export const en = {
     subtitle: "Published by the International Tent Pegging Federation",
     noChampionships: "No results have been published yet.",
     lastConfirmed: "Last confirmed",
-    currentDay: "Competition day {day}",
+    currentDay: "Championship Day {day}",
     viewResults: "View results",
     individualStandings: "Athlete standings",
     countryStandings: "National Team standings",
