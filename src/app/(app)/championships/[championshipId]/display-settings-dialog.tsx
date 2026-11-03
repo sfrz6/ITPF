@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox, Input, Label, Select } from "@/components/ui/form-controls";
 import { useI18n } from "@/lib/i18n/client";
-import type { MessageKey } from "@/lib/i18n";
+import { createTranslator, getDictionary, type MessageKey } from "@/lib/i18n";
 import { LOCALE_LABELS } from "@/lib/i18n/config";
 import { updateDisplaySettingsAction } from "@/server/actions/display-settings";
 import {
@@ -99,8 +99,14 @@ export function DisplaySettingsDialog({
     });
   }
 
+  // The layout name is shown in *that phase's own language* — an Arabic
+  // phase reads "أفضل 5 — الفرق" and an English phase reads "Top 5 — Teams"
+  // — rather than always in whatever language the operator's own admin
+  // session happens to be in, since the two phases are genuinely different
+  // text the board will show, not the same text merely tagged by language.
   function phaseLabel(phase: DisplayPhase): string {
-    return `${t(LAYOUT_LABEL_KEY[phase.layout])} — ${LOCALE_LABELS[phase.language]}`;
+    const phaseT = createTranslator(getDictionary(phase.language));
+    return `${phaseT(LAYOUT_LABEL_KEY[phase.layout])} — ${LOCALE_LABELS[phase.language]}`;
   }
 
   return (
