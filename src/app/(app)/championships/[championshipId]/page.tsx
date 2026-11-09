@@ -37,6 +37,7 @@ export default async function ChampionshipSchedulePage({
             id: championship.id,
             name: championship.name,
             nameAr: championship.nameAr,
+            startDate: championship.startDate,
             location: championship.location,
             locationAr: championship.locationAr,
             organizer: championship.organizer,

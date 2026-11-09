@@ -145,6 +145,7 @@ export const en = {
     championshipName: "Championship name",
     championshipNameAr: "Championship name (Arabic)",
     startDate: "Start date",
+    startDateEditHint: "Changes every day's own schedule date to match (day 1 = this date, day 2 = +1, day 3 = +2).",
     location: "Location",
     locationAr: "Location (Arabic)",
     organizer: "Organizer",

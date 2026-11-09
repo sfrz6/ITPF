@@ -146,6 +146,7 @@ export const ar: Dictionary = {
     championshipName: "اسم البطولة",
     championshipNameAr: "اسم البطولة (بالعربية)",
     startDate: "تاريخ البداية",
+    startDateEditHint: "يغيّر تاريخ كل يوم من البطولة ليطابقه (اليوم 1 = هذا التاريخ، اليوم 2 = +1، اليوم 3 = +2).",
     location: "المكان",
     locationAr: "المكان (بالعربية)",
     organizer: "الجهة المنظمة",

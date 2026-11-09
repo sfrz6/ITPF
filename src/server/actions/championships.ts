@@ -4,12 +4,13 @@ import { revalidatePath } from "next/cache";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "@/db";
-import { championshipCountries, championshipRiders, championships } from "@/db/schema";
+import { championshipCountries, championshipDays, championshipRiders, championships } from "@/db/schema";
 import { requireAdmin, requirePermission } from "@/lib/auth/authorize";
 import { ACTIVE_RIDERS_PER_COUNTRY } from "@/domain/scoring/event-types";
 import { ALLOWED_LOGO_CONTENT_TYPES } from "@/lib/logo";
 import { recordAudit } from "@/server/services/audit";
 import {
+  addDays,
   createChampionshipFromTemplate,
   deleteChampionship,
   reorderChampionshipCountries,
@@ -100,6 +101,7 @@ const updateSchema = z.object({
   championshipId: z.uuid(),
   name: z.string().trim().min(3).max(160),
   nameAr: z.string().trim().max(160).nullable(),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "A start date is required."),
   location: z.string().trim().min(2).max(160),
   locationAr: z.string().trim().max(160).nullable(),
   organizer: z.string().trim().max(160).nullable(),
@@ -126,6 +128,7 @@ export async function updateChampionshipAction(
           id: championships.id,
           name: championships.name,
           nameAr: championships.nameAr,
+          startDate: championships.startDate,
           location: championships.location,
           locationAr: championships.locationAr,
           organizer: championships.organizer,
@@ -142,6 +145,7 @@ export async function updateChampionshipAction(
         .set({
           name: parsed.data.name,
           nameAr: parsed.data.nameAr,
+          startDate: parsed.data.startDate,
           location: parsed.data.location,
           locationAr: parsed.data.locationAr,
           organizer: parsed.data.organizer,
@@ -150,6 +154,24 @@ export async function updateChampionshipAction(
           updatedAt: new Date(),
         })
         .where(eq(championships.id, existing.id));
+
+      // Each day's own competition date was set from the original start date
+      // at creation time (day N = start date + N-1), so correcting the start
+      // date has to shift every day along with it, not just the championship's
+      // own summary field, or the schedule and the start date would silently
+      // disagree from here on.
+      if (parsed.data.startDate !== existing.startDate) {
+        const days = await tx
+          .select({ id: championshipDays.id, dayNumber: championshipDays.dayNumber })
+          .from(championshipDays)
+          .where(eq(championshipDays.championshipId, existing.id));
+        for (const day of days) {
+          await tx
+            .update(championshipDays)
+            .set({ competitionDate: addDays(parsed.data.startDate, day.dayNumber - 1) })
+            .where(eq(championshipDays.id, day.id));
+        }
+      }
 
       await recordAudit(tx, actor, {
         action: "CHAMPIONSHIP_UPDATED",
@@ -160,6 +182,7 @@ export async function updateChampionshipAction(
         after: {
           name: parsed.data.name,
           nameAr: parsed.data.nameAr,
+          startDate: parsed.data.startDate,
           location: parsed.data.location,
           locationAr: parsed.data.locationAr,
           organizer: parsed.data.organizer,

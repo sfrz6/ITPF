@@ -18,6 +18,7 @@ export interface ChampionshipSettingsData {
   readonly id: string;
   readonly name: string;
   readonly nameAr: string | null;
+  readonly startDate: string;
   readonly location: string;
   readonly locationAr: string | null;
   readonly organizer: string | null;
@@ -43,6 +44,7 @@ export function ChampionshipSettings({
   const [form, setForm] = React.useState({
     name: championship.name,
     nameAr: championship.nameAr ?? "",
+    startDate: championship.startDate,
     location: championship.location,
     locationAr: championship.locationAr ?? "",
     organizer: championship.organizer ?? "",
@@ -57,6 +59,7 @@ export function ChampionshipSettings({
         championshipId: championship.id,
         name: form.name.trim(),
         nameAr: form.nameAr.trim() || null,
+        startDate: form.startDate,
         location: form.location.trim(),
         locationAr: form.locationAr.trim() || null,
         organizer: form.organizer.trim() || null,
@@ -139,6 +142,21 @@ export function ChampionshipSettings({
                 maxLength={160}
               />
             </Field>
+            <Field
+              label={t("championships.startDate")}
+              htmlFor="ch-start-date"
+              hint={t("championships.startDateEditHint")}
+              required
+            >
+              <Input
+                id="ch-start-date"
+                type="date"
+                value={form.startDate}
+                onChange={(event) => setForm({ ...form, startDate: event.target.value })}
+                required
+              />
+            </Field>
+            <div className="hidden sm:block" aria-hidden />
             <Field label={t("championships.location")} htmlFor="ch-location" required>
               <Input
                 id="ch-location"
