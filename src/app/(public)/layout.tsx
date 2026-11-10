@@ -56,6 +56,9 @@ export default async function PublicLayout({ children }: { children: React.React
             <Link href="/results/countries" className="hover:text-foreground">
               {t("publicCountries.title")}
             </Link>
+            <Link href="/results/riders" className="hover:text-foreground">
+              {t("publicRiders.title")}
+            </Link>
           </nav>
           <div className="hidden shrink-0 items-center gap-1 md:flex">
             <LocaleSwitcher />

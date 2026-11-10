@@ -576,6 +576,15 @@ export const ar: Dictionary = {
     noCountriesYet: "لم يشارك أي منتخب في بطولة منشورة بعد.",
     overallRank: "المركز {rank} عموماً",
   },
+  publicRiders: {
+    title: "المتسابقين",
+    subtitle: "كل دولة شارك أحد متسابقيها في بطولة للاتحاد الدولي لالتقاط الأوتاد. افتح دولة لرؤية نتائج متسابقيها مجتمعة.",
+    ridersCount: "{count} متسابق",
+    allCountries: "جميع الدول",
+    noCountriesYet: "لم يشارك أي متسابق في بطولة منشورة بعد.",
+    noRidersYet: "لم تُسجَّل أي نتائج لمتسابقي هذه الدولة بعد.",
+    backToAthletes: "المتسابقين",
+  },
   display: {
     start: "بدء شاشة العرض",
     individualRanking: "ترتيب المتسابقين",

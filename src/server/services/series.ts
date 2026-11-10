@@ -207,7 +207,12 @@ export interface SeriesRankingChampionship {
  */
 export type SeriesRankingDiscipline = "ALL" | "LANCE" | "SWORD" | "HANGING";
 
-const DISCIPLINE_FILTERS: readonly SeriesRankingDiscipline[] = ["ALL", "LANCE", "SWORD", "HANGING"];
+export const DISCIPLINE_FILTERS: readonly SeriesRankingDiscipline[] = [
+  "ALL",
+  "LANCE",
+  "SWORD",
+  "HANGING",
+];
 
 const EVENT_TYPE_GROUP: Record<EventTypeKey, Exclude<SeriesRankingDiscipline, "ALL">> = {
   INDIVIDUAL_LANCE: "LANCE",
@@ -243,7 +248,11 @@ interface CountryAccumulator {
   total: Decimal;
 }
 
-function matchesDiscipline(run: ConfirmedRun, discipline: SeriesRankingDiscipline): boolean {
+/** Shared with the public countries/riders pages, which group a rider's or country's confirmed runs the same way. */
+export function matchesDiscipline(
+  run: Pick<ConfirmedRun, "eventType">,
+  discipline: SeriesRankingDiscipline,
+): boolean {
   return discipline === "ALL" || EVENT_TYPE_GROUP[run.eventType] === discipline;
 }
 

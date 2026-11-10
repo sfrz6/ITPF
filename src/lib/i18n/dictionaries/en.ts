@@ -575,6 +575,15 @@ export const en = {
     noCountriesYet: "No national teams have taken part in a published championship yet.",
     overallRank: "{rank} overall",
   },
+  publicRiders: {
+    title: "Athletes",
+    subtitle: "Every country with an athlete who has taken part in an ITPF championship. Open one to see its athletes' combined results.",
+    ridersCount: "{count} athlete(s)",
+    allCountries: "All countries",
+    noCountriesYet: "No athlete has taken part in a published championship yet.",
+    noRidersYet: "No results have been recorded for this country's athletes yet.",
+    backToAthletes: "Athletes",
+  },
   display: {
     start: "Start display",
     individualRanking: "Athlete Standings",
