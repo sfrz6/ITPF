@@ -123,7 +123,7 @@ function TopFivePhase({ title, rows }: { title: string; rows: readonly StandingR
   return (
     <div className="flex h-full w-full justify-center px-8 pt-12">
       <div className="w-full max-w-[90rem]">
-        <h2 className="mb-9 text-center text-5xl font-bold uppercase tracking-[0.2em] text-amber-600">
+        <h2 className="mb-9 text-center text-5xl font-bold uppercase tracking-[0.2em] text-blue-950">
           {title}
         </h2>
         <RankedList rows={rows.slice(0, TOP_FIVE_COUNT)} size="topFive" />
@@ -150,7 +150,7 @@ function FullListPhase({
   return (
     <div className="flex h-full w-full items-center justify-center px-14 py-6">
       <div className="w-full max-w-7xl">
-        <h2 className="mb-7 text-center text-4xl font-bold uppercase tracking-[0.2em] text-amber-600">
+        <h2 className="mb-7 text-center text-4xl font-bold uppercase tracking-[0.2em] text-blue-950">
           {title}
         </h2>
         <div className="grid grid-cols-2 gap-10">
