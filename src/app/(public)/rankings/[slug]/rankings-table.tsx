@@ -7,30 +7,40 @@ import { EmptyState } from "@/components/ui/surfaces";
 import { Table, TBody, Td, TdNum, THead, Th, ThNum, TableWrapper, Tr } from "@/components/ui/table";
 import { StandingsToggle, type ToggleOption } from "@/components/results/standings-table";
 import { useI18n } from "@/lib/i18n/client";
-import type { SeriesRankingRow } from "@/server/services/series";
+import type { SeriesRankingDiscipline, SeriesRankingRow } from "@/server/services/series";
 
 /**
  * The series leaderboard: rank, name and total only. Unlike a single
  * championship's standings table, this deliberately drops the
  * per-championship breakdown columns — the series can grow to many
  * championships, and the combined total is the number that matters here.
+ *
+ * A second toggle narrows the same leaderboard to just Lance or just Sword
+ * events, so a visitor can see who's actually best at one discipline rather
+ * than only the combined total.
  */
 export function RankingsTable({
   individual,
   country,
 }: {
-  individual: readonly SeriesRankingRow[];
-  country: readonly SeriesRankingRow[];
+  individual: Readonly<Record<SeriesRankingDiscipline, readonly SeriesRankingRow[]>>;
+  country: Readonly<Record<SeriesRankingDiscipline, readonly SeriesRankingRow[]>>;
 }) {
   const { t } = useI18n();
   const [subject, setSubject] = React.useState<"INDIVIDUAL" | "COUNTRY">("INDIVIDUAL");
+  const [discipline, setDiscipline] = React.useState<SeriesRankingDiscipline>("ALL");
 
   const subjectOptions: readonly ToggleOption<"INDIVIDUAL" | "COUNTRY">[] = [
     { value: "INDIVIDUAL", label: t("rankings.individual") },
     { value: "COUNTRY", label: t("rankings.countries") },
   ];
+  const disciplineOptions: readonly ToggleOption<SeriesRankingDiscipline>[] = [
+    { value: "ALL", label: t("rankings.allEvents") },
+    { value: "LANCE", label: t("rankings.lance") },
+    { value: "SWORD", label: t("rankings.sword") },
+  ];
 
-  const rows = subject === "INDIVIDUAL" ? individual : country;
+  const rows = (subject === "INDIVIDUAL" ? individual : country)[discipline];
   const isCountry = subject === "COUNTRY";
   // One watermark per ten rows, same as the public standings table: a
   // single mark would either sit buried mid-list or never be reached on a
@@ -40,12 +50,20 @@ export function RankingsTable({
 
   return (
     <div className="space-y-3">
-      <StandingsToggle
-        label={t("rankings.title")}
-        value={subject}
-        options={subjectOptions}
-        onChange={setSubject}
-      />
+      <div className="flex flex-wrap items-center gap-2">
+        <StandingsToggle
+          label={t("rankings.selectSubject")}
+          value={subject}
+          options={subjectOptions}
+          onChange={setSubject}
+        />
+        <StandingsToggle
+          label={t("rankings.selectDiscipline")}
+          value={discipline}
+          options={disciplineOptions}
+          onChange={setDiscipline}
+        />
+      </div>
 
       {rows.length === 0 ? (
         <EmptyState title={t("rankings.noResultsYet")} />

@@ -1,13 +1,15 @@
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { getDb, type Executor } from "@/db";
 import { championships, qualificationSeries, qualificationSeriesChampionships } from "@/db/schema";
+import { aggregateChampionship, type ConfirmedRun } from "@/domain/results";
 import { formatPoints, ZERO, type Decimal } from "@/domain/scoring/decimal";
+import { getEventTypeDefinition } from "@/domain/scoring/event-types";
 import { calculateStandings } from "@/domain/scoring/standings";
 import { DomainError } from "@/server/actions/result";
 import { shortenPersonName } from "@/components/common/formatting";
 import type { Locale } from "@/lib/i18n/config";
 import { listChampionshipCountries, listChampionshipRiders } from "./championships";
-import { loadChampionshipResults } from "./results";
+import { loadConfirmedRuns } from "./results";
 
 export const MAX_SERIES_NAME_LENGTH = 120;
 
@@ -195,9 +197,14 @@ export interface SeriesRankingChampionship {
   readonly startDate: string;
 }
 
+/** "ALL" sums every event; "LANCE"/"SWORD" sum only that discipline's events. */
+export type SeriesRankingDiscipline = "ALL" | "LANCE" | "SWORD";
+
+const DISCIPLINE_FILTERS: readonly SeriesRankingDiscipline[] = ["ALL", "LANCE", "SWORD"];
+
 export interface SeriesRankings {
-  readonly individual: readonly SeriesRankingRow[];
-  readonly country: readonly SeriesRankingRow[];
+  readonly individual: Readonly<Record<SeriesRankingDiscipline, readonly SeriesRankingRow[]>>;
+  readonly country: Readonly<Record<SeriesRankingDiscipline, readonly SeriesRankingRow[]>>;
   readonly championships: readonly SeriesRankingChampionship[];
 }
 
@@ -216,15 +223,24 @@ interface CountryAccumulator {
   total: Decimal;
 }
 
+function matchesDiscipline(run: ConfirmedRun, discipline: SeriesRankingDiscipline): boolean {
+  return discipline === "ALL" || getEventTypeDefinition(run.eventType).discipline === discipline;
+}
+
 /**
- * Combines every championship in a series into one leaderboard.
+ * Combines every championship in a series into one leaderboard, computed
+ * separately for every event / Lance / Sword — each is a straightforward
+ * re-aggregation of the same confirmed runs filtered by discipline, not a
+ * different formula, so a rider or country's Lance and Sword totals always
+ * add up to their "ALL" total.
  *
  * Reuses the same machinery as a single championship's results page
- * (`loadChampionshipResults`, `calculateStandings`) rather than recomputing
- * scoring: each championship's confirmed OVERALL total is summed per rider
- * and per country, keyed by their *permanent* identity (so the same rider or
- * country across different championships accumulates into one row), then
- * ranked with the same tie handling used everywhere else in the app.
+ * (`loadConfirmedRuns`, `aggregateChampionship`, `calculateStandings`) rather
+ * than recomputing scoring: each championship's confirmed total is summed
+ * per rider and per country, keyed by their *permanent* identity (so the
+ * same rider or country across different championships accumulates into one
+ * row), then ranked with the same tie handling used everywhere else in the
+ * app.
  */
 export async function computeSeriesRankings(
   seriesId: string,
@@ -252,12 +268,16 @@ export async function computeSeriesRankings(
     .where(eq(qualificationSeriesChampionships.seriesId, seriesId))
     .orderBy(asc(championships.startDate));
 
-  const riderAcc = new Map<string, RiderAccumulator>();
-  const countryAcc = new Map<string, CountryAccumulator>();
+  const riderAccByDiscipline = new Map<SeriesRankingDiscipline, Map<string, RiderAccumulator>>(
+    DISCIPLINE_FILTERS.map((discipline) => [discipline, new Map()]),
+  );
+  const countryAccByDiscipline = new Map<SeriesRankingDiscipline, Map<string, CountryAccumulator>>(
+    DISCIPLINE_FILTERS.map((discipline) => [discipline, new Map()]),
+  );
 
   for (const championship of championshipRows) {
-    const [results, championshipRiders, championshipCountries] = await Promise.all([
-      loadChampionshipResults(championship.id, locale),
+    const [runs, championshipRiders, championshipCountries] = await Promise.all([
+      loadConfirmedRuns(championship.id),
       listChampionshipRiders(championship.id, locale),
       listChampionshipCountries(championship.id, locale),
     ]);
@@ -267,41 +287,61 @@ export async function computeSeriesRankings(
       championshipCountries.map((country) => [country.championshipCountryId, country]),
     );
 
-    for (const [championshipRiderId, riderTotals] of results.totals.riders) {
-      const info = riderInfo.get(championshipRiderId);
-      if (!info) continue;
-      const existing = riderAcc.get(info.riderId);
-      riderAcc.set(info.riderId, {
-        riderId: info.riderId,
-        name: info.fullName,
-        iso2: info.iso2,
-        countryName: info.countryName,
-        total: (existing?.total ?? ZERO).plus(riderTotals.overall),
-      });
-    }
+    for (const discipline of DISCIPLINE_FILTERS) {
+      const totals = aggregateChampionship(runs.filter((run) => matchesDiscipline(run, discipline)));
+      const riderAcc = riderAccByDiscipline.get(discipline)!;
+      const countryAcc = countryAccByDiscipline.get(discipline)!;
 
-    for (const [championshipCountryId, countryTotals] of results.totals.countries) {
-      const info = countryInfo.get(championshipCountryId);
-      if (!info) continue;
-      const existing = countryAcc.get(info.countryId);
-      countryAcc.set(info.countryId, {
-        countryId: info.countryId,
-        name: info.name,
-        iso2: info.iso2,
-        total: (existing?.total ?? ZERO).plus(countryTotals.overall),
-      });
+      for (const [championshipRiderId, riderTotals] of totals.riders) {
+        const info = riderInfo.get(championshipRiderId);
+        if (!info) continue;
+        const existing = riderAcc.get(info.riderId);
+        riderAcc.set(info.riderId, {
+          riderId: info.riderId,
+          name: info.fullName,
+          iso2: info.iso2,
+          countryName: info.countryName,
+          total: (existing?.total ?? ZERO).plus(riderTotals.overall),
+        });
+      }
+
+      for (const [championshipCountryId, countryTotals] of totals.countries) {
+        const info = countryInfo.get(championshipCountryId);
+        if (!info) continue;
+        const existing = countryAcc.get(info.countryId);
+        countryAcc.set(info.countryId, {
+          countryId: info.countryId,
+          name: info.name,
+          iso2: info.iso2,
+          total: (existing?.total ?? ZERO).plus(countryTotals.overall),
+        });
+      }
     }
   }
 
-  const individualStandings = calculateStandings(
-    [...riderAcc.values()].map((rider) => ({ key: rider.riderId, total: rider.total })),
-  );
-  const countryStandings = calculateStandings(
-    [...countryAcc.values()].map((country) => ({ key: country.countryId, total: country.total })),
-  );
+  const individual: Record<SeriesRankingDiscipline, readonly SeriesRankingRow[]> = {
+    ALL: [],
+    LANCE: [],
+    SWORD: [],
+  };
+  const country: Record<SeriesRankingDiscipline, readonly SeriesRankingRow[]> = {
+    ALL: [],
+    LANCE: [],
+    SWORD: [],
+  };
 
-  return {
-    individual: individualStandings.map((standing) => {
+  for (const discipline of DISCIPLINE_FILTERS) {
+    const riderAcc = riderAccByDiscipline.get(discipline)!;
+    const countryAcc = countryAccByDiscipline.get(discipline)!;
+
+    const individualStandings = calculateStandings(
+      [...riderAcc.values()].map((rider) => ({ key: rider.riderId, total: rider.total })),
+    );
+    const countryStandings = calculateStandings(
+      [...countryAcc.values()].map((country) => ({ key: country.countryId, total: country.total })),
+    );
+
+    individual[discipline] = individualStandings.map((standing) => {
       const info = riderAcc.get(standing.key)!;
       return {
         key: standing.key,
@@ -311,8 +351,8 @@ export async function computeSeriesRankings(
         iso2: info.iso2,
         countryName: info.countryName,
       };
-    }),
-    country: countryStandings.map((standing) => {
+    });
+    country[discipline] = countryStandings.map((standing) => {
       const info = countryAcc.get(standing.key)!;
       return {
         key: standing.key,
@@ -321,7 +361,8 @@ export async function computeSeriesRankings(
         name: info.name,
         iso2: info.iso2,
       };
-    }),
-    championships: championshipRows,
-  };
+    });
+  }
+
+  return { individual, country, championships: championshipRows };
 }

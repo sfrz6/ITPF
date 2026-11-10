@@ -155,9 +155,9 @@ suite("qualification series rankings", () => {
     // anything.
     expect(expectedJordanTotal).toBeGreaterThan(expectedOmanTotal);
 
-    expect(rankings!.country).toHaveLength(2);
-    const jordanCountryRow = rankings!.country.find((row) => row.iso2 === "JO")!;
-    const omanCountryRow = rankings!.country.find((row) => row.iso2 === "OM")!;
+    expect(rankings!.country.ALL).toHaveLength(2);
+    const jordanCountryRow = rankings!.country.ALL.find((row) => row.iso2 === "JO")!;
+    const omanCountryRow = rankings!.country.ALL.find((row) => row.iso2 === "OM")!;
     expect(Number(jordanCountryRow.total)).toBeCloseTo(expectedJordanTotal, 2);
     expect(Number(omanCountryRow.total)).toBeCloseTo(expectedOmanTotal, 2);
     expect(jordanCountryRow.rank).toBe(1);
@@ -168,9 +168,9 @@ suite("qualification series rankings", () => {
     // single rider accumulates points across both legs. What must still hold
     // is that every Jordanian rider (who always scored more per rider than
     // any Omani rider, in both legs) outranks every Omani rider.
-    expect(rankings!.individual.length).toBeGreaterThan(0);
-    const jordanRiderRows = rankings!.individual.filter((row) => row.countryName === "Jordan");
-    const omanRiderRows = rankings!.individual.filter((row) => row.countryName === "Oman");
+    expect(rankings!.individual.ALL.length).toBeGreaterThan(0);
+    const jordanRiderRows = rankings!.individual.ALL.filter((row) => row.countryName === "Jordan");
+    const omanRiderRows = rankings!.individual.ALL.filter((row) => row.countryName === "Oman");
     expect(jordanRiderRows.length).toBeGreaterThan(0);
     expect(omanRiderRows.length).toBeGreaterThan(0);
     const lowestJordanTotal = Math.min(...jordanRiderRows.map((row) => Number(row.total)));
@@ -182,6 +182,110 @@ suite("qualification series rankings", () => {
     expect(Math.max(...jordanRiderRows.map((row) => row.rank))).toBeLessThan(
       Math.min(...omanRiderRows.map((row) => row.rank)),
     );
+  });
+
+  it("splits rankings by discipline so a Lance total and a Sword total never bleed into each other", async () => {
+    // Jordan wins Lance decisively but loses Sword; Oman is the mirror
+    // image. If discipline filtering is broken (e.g. it silently falls back
+    // to "ALL" or mixes up the runs), the LANCE and SWORD leaderboards would
+    // either match each other or match the combined ALL leaderboard — none
+    // of which is true here by construction.
+    const templateId = await createTemplate("Mixed discipline", [
+      { dayNumber: 1, eventType: "INDIVIDUAL_LANCE", runs: 1 },
+      { dayNumber: 1, eventType: "INDIVIDUAL_SWORD", runs: 1 },
+    ]);
+    const fixture = await createChampionshipFixture({ actor, templateId, isoCodes: ["JO", "OM"] });
+    const [lanceRunId, swordRunId] = await listRunIds(fixture.championshipId);
+
+    const {
+      getRunEntryOrderState,
+      confirmCountryEntryOrder,
+      startRun,
+      getRunScoringState,
+      saveRunScores,
+      confirmRun,
+    } = await import("@/server/services/runs");
+    const { getRunContext, listChampionshipCountries } = await import("@/server/services/championships");
+
+    async function scoreAndConfirm(runId: string, jordanPoints: number, omanPoints: number) {
+      const entryState = await getRunEntryOrderState(runId, "en");
+      for (const country of entryState!.countries) {
+        await db.transaction((tx) =>
+          confirmCountryEntryOrder(tx, actor, {
+            runId,
+            championshipCountryId: country.championshipCountryId,
+            decision: "NO_CHANGE",
+          }),
+        );
+      }
+
+      let context = (await getRunContext(runId))!;
+      await db.transaction((tx) => startRun(tx, actor, runId, context.version));
+
+      const pointsByCountry = new Map(
+        (await listChampionshipCountries(fixture.championshipId, "en")).map((country) => [
+          country.iso2,
+          country.iso2 === "JO" ? jordanPoints : omanPoints,
+        ]),
+      );
+
+      const state = await getRunScoringState(runId, "en");
+      const units: { runScoringUnitId: string; timeSeconds: string }[] = [];
+      const scores: { runScoreId: string; targets: number[] }[] = [];
+      for (const country of state!.countries) {
+        const points = pointsByCountry.get(country.iso2) ?? 0;
+        for (const unit of country.units) {
+          units.push({ runScoringUnitId: unit.runScoringUnitId, timeSeconds: "6.00" });
+          for (const rider of unit.riders) {
+            scores.push({ runScoreId: rider.runScoreId, targets: rider.targets.map(() => points) });
+          }
+        }
+      }
+
+      context = (await getRunContext(runId))!;
+      await db.transaction((tx) =>
+        saveRunScores(tx, actor, { runId, expectedVersion: context.version, payload: { units, scores } }),
+      );
+
+      context = (await getRunContext(runId))!;
+      await db.transaction((tx) => confirmRun(tx, actor, { runId, expectedVersion: context.version }));
+    }
+
+    await scoreAndConfirm(lanceRunId!, 6, 0);
+    await scoreAndConfirm(swordRunId!, 0, 6);
+
+    const { championships } = await import("@/db/schema");
+    await db
+      .update(championships)
+      .set({ isPublished: true })
+      .where(eq(championships.id, fixture.championshipId));
+
+    const { qualificationSeries } = await import("@/db/schema");
+    const { replaceSeriesChampionships, computeSeriesRankings } = await import(
+      "@/server/services/series"
+    );
+    const [series] = await db
+      .insert(qualificationSeries)
+      .values({ name: "Mixed discipline series", slug: "mixed-discipline", createdByUserId: actor.userId })
+      .returning({ id: qualificationSeries.id });
+    await db.transaction((tx) => replaceSeriesChampionships(tx, series!.id, [fixture.championshipId]));
+
+    const rankings = await computeSeriesRankings(series!.id, "en");
+    expect(rankings).not.toBeNull();
+
+    const topOf = (rows: readonly { countryName?: string; rank: number }[]) =>
+      rows.find((row) => row.rank === 1)!.countryName;
+
+    expect(topOf(rankings!.individual.LANCE)).toBe("Jordan");
+    expect(topOf(rankings!.individual.SWORD)).toBe("Oman");
+    // Jordan's Lance win (6) and Sword loss (0) tie Oman's Sword win (6) and
+    // Lance loss (0) exactly, so the combined ALL ranking must come out tied
+    // — proof the two filtered totals really are disjoint halves of ALL,
+    // not overlapping or double counted.
+    const jordanAll = rankings!.individual.ALL.find((row) => row.countryName === "Jordan")!;
+    const omanAll = rankings!.individual.ALL.find((row) => row.countryName === "Oman")!;
+    expect(jordanAll.total).toBe(omanAll.total);
+    expect(jordanAll.rank).toBe(omanAll.rank);
   });
 
   it("refuses to add an unpublished championship to a series", async () => {

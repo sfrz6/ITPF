@@ -71,14 +71,14 @@ export default async function SeriesRankingsPdfPage({
         <h2 className="text-[10pt] font-bold uppercase tracking-wide">
           {t("publicResults.countryStandings")}
         </h2>
-        <SeriesRankingsPdfTable rows={rankings.country} isCountry t={t} />
+        <SeriesRankingsPdfTable rows={rankings.country.ALL} isCountry t={t} />
       </section>
 
       <section className="mb-4 space-y-2 print-avoid-break">
         <h2 className="text-[10pt] font-bold uppercase tracking-wide">
           {t("publicResults.individualStandings")}
         </h2>
-        <SeriesRankingsPdfTable rows={rankings.individual} isCountry={false} t={t} />
+        <SeriesRankingsPdfTable rows={rankings.individual.ALL} isCountry={false} t={t} />
       </section>
 
       <footer className="mt-6 flex items-end justify-between gap-8 border-t border-black pt-2 text-[9pt]">
