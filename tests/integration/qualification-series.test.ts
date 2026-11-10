@@ -193,9 +193,10 @@ suite("qualification series rankings", () => {
     const templateId = await createTemplate("Mixed discipline", [
       { dayNumber: 1, eventType: "INDIVIDUAL_LANCE", runs: 1 },
       { dayNumber: 1, eventType: "INDIVIDUAL_SWORD", runs: 1 },
+      { dayNumber: 1, eventType: "RINGS_AND_PEG_LANCE", runs: 1 },
     ]);
     const fixture = await createChampionshipFixture({ actor, templateId, isoCodes: ["JO", "OM"] });
-    const [lanceRunId, swordRunId] = await listRunIds(fixture.championshipId);
+    const [lanceRunId, swordRunId, hangingRunId] = await listRunIds(fixture.championshipId);
 
     const {
       getRunEntryOrderState,
@@ -253,6 +254,10 @@ suite("qualification series rankings", () => {
 
     await scoreAndConfirm(lanceRunId!, 6, 0);
     await scoreAndConfirm(swordRunId!, 0, 6);
+    // Rings and peg restricts its ring targets to 0 or 6 only (no partial
+    // credit), so the award must stay within that set for every target this
+    // helper assigns uniformly across the run's three targets.
+    await scoreAndConfirm(hangingRunId!, 0, 6);
 
     const { championships } = await import("@/db/schema");
     await db
@@ -278,14 +283,32 @@ suite("qualification series rankings", () => {
 
     expect(topOf(rankings!.individual.LANCE)).toBe("Jordan");
     expect(topOf(rankings!.individual.SWORD)).toBe("Oman");
-    // Jordan's Lance win (6) and Sword loss (0) tie Oman's Sword win (6) and
-    // Lance loss (0) exactly, so the combined ALL ranking must come out tied
-    // — proof the two filtered totals really are disjoint halves of ALL,
-    // not overlapping or double counted.
-    const jordanAll = rankings!.individual.ALL.find((row) => row.countryName === "Jordan")!;
-    const omanAll = rankings!.individual.ALL.find((row) => row.countryName === "Oman")!;
-    expect(jordanAll.total).toBe(omanAll.total);
-    expect(jordanAll.rank).toBe(omanAll.rank);
+    // Rings and peg lance is ridden with a lance, but it must land in its
+    // own "HANGING" group rather than being folded into LANCE the way
+    // `getEventTypeDefinition(...).discipline` would — Oman wins it
+    // decisively (6 vs 0) while Jordan still wins LANCE outright, so if the
+    // grouping leaked this run into LANCE, Jordan's LANCE total would be
+    // inflated past the plain Individual Lance score asserted below.
+    expect(topOf(rankings!.individual.HANGING)).toBe("Oman");
+
+    const jordanLance = rankings!.individual.LANCE.find((row) => row.countryName === "Jordan")!;
+    expect(Number(jordanLance.total)).toBeCloseTo(6, 2);
+    const omanLance = rankings!.individual.LANCE.find((row) => row.countryName === "Oman")!;
+    expect(Number(omanLance.total)).toBeCloseTo(0, 2);
+
+    // The real invariant: ALL is always exactly the sum of its three
+    // disjoint parts, for every competitor, not just the ones singled out
+    // above — this would fail if any event were double counted or dropped.
+    for (const countryName of ["Jordan", "Oman"]) {
+      const all = rankings!.individual.ALL.find((row) => row.countryName === countryName)!;
+      const lance = rankings!.individual.LANCE.find((row) => row.countryName === countryName)!;
+      const sword = rankings!.individual.SWORD.find((row) => row.countryName === countryName)!;
+      const hanging = rankings!.individual.HANGING.find((row) => row.countryName === countryName)!;
+      expect(Number(all.total)).toBeCloseTo(
+        Number(lance.total) + Number(sword.total) + Number(hanging.total),
+        2,
+      );
+    }
   });
 
   it("refuses to add an unpublished championship to a series", async () => {

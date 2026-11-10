@@ -3,7 +3,7 @@ import { getDb, type Executor } from "@/db";
 import { championships, qualificationSeries, qualificationSeriesChampionships } from "@/db/schema";
 import { aggregateChampionship, type ConfirmedRun } from "@/domain/results";
 import { formatPoints, ZERO, type Decimal } from "@/domain/scoring/decimal";
-import { getEventTypeDefinition } from "@/domain/scoring/event-types";
+import type { EventTypeKey } from "@/domain/scoring/event-types";
 import { calculateStandings } from "@/domain/scoring/standings";
 import { DomainError } from "@/server/actions/result";
 import { shortenPersonName } from "@/components/common/formatting";
@@ -197,10 +197,30 @@ export interface SeriesRankingChampionship {
   readonly startDate: string;
 }
 
-/** "ALL" sums every event; "LANCE"/"SWORD" sum only that discipline's events. */
-export type SeriesRankingDiscipline = "ALL" | "LANCE" | "SWORD";
+/**
+ * "ALL" sums every event; "LANCE"/"SWORD"/"HANGING" sum only that group's
+ * events. This is a three-way partition of every event type, not the
+ * weapon-type split `getEventTypeDefinition(...).discipline` draws: rings
+ * and peg, and lemons and peg, are "LANCE"/"SWORD" there (the weapon they're
+ * ridden with), but here they form their own "HANGING" group instead of
+ * being folded into Lance/Sword, per the published rankings' own grouping.
+ */
+export type SeriesRankingDiscipline = "ALL" | "LANCE" | "SWORD" | "HANGING";
 
-const DISCIPLINE_FILTERS: readonly SeriesRankingDiscipline[] = ["ALL", "LANCE", "SWORD"];
+const DISCIPLINE_FILTERS: readonly SeriesRankingDiscipline[] = ["ALL", "LANCE", "SWORD", "HANGING"];
+
+const EVENT_TYPE_GROUP: Record<EventTypeKey, Exclude<SeriesRankingDiscipline, "ALL">> = {
+  INDIVIDUAL_LANCE: "LANCE",
+  PAIR_LANCE: "LANCE",
+  TEAM_LANCE: "LANCE",
+  RELAY_LANCE: "LANCE",
+  INDIVIDUAL_SWORD: "SWORD",
+  PAIR_SWORD: "SWORD",
+  TEAM_SWORD: "SWORD",
+  RELAY_SWORD: "SWORD",
+  RINGS_AND_PEG_LANCE: "HANGING",
+  LEMON_AND_PEG_SWORD: "HANGING",
+};
 
 export interface SeriesRankings {
   readonly individual: Readonly<Record<SeriesRankingDiscipline, readonly SeriesRankingRow[]>>;
@@ -224,7 +244,7 @@ interface CountryAccumulator {
 }
 
 function matchesDiscipline(run: ConfirmedRun, discipline: SeriesRankingDiscipline): boolean {
-  return discipline === "ALL" || getEventTypeDefinition(run.eventType).discipline === discipline;
+  return discipline === "ALL" || EVENT_TYPE_GROUP[run.eventType] === discipline;
 }
 
 /**
@@ -323,11 +343,13 @@ export async function computeSeriesRankings(
     ALL: [],
     LANCE: [],
     SWORD: [],
+    HANGING: [],
   };
   const country: Record<SeriesRankingDiscipline, readonly SeriesRankingRow[]> = {
     ALL: [],
     LANCE: [],
     SWORD: [],
+    HANGING: [],
   };
 
   for (const discipline of DISCIPLINE_FILTERS) {

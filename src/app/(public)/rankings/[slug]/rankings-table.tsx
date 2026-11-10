@@ -38,6 +38,7 @@ export function RankingsTable({
     { value: "ALL", label: t("rankings.allEvents") },
     { value: "LANCE", label: t("rankings.lance") },
     { value: "SWORD", label: t("rankings.sword") },
+    { value: "HANGING", label: t("rankings.hangingTargets") },
   ];
 
   const rows = (subject === "INDIVIDUAL" ? individual : country)[discipline];
