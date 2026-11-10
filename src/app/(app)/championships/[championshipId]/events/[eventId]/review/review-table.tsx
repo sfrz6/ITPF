@@ -3,7 +3,7 @@ import { getEventTypeDefinition, type EventTypeKey } from "@/domain/scoring/even
 import { scoreRun, type RunScoringInput } from "@/domain/scoring/engine";
 import { formatPoints } from "@/domain/scoring/decimal";
 import { Badge, Card, CardContent, CardHeader, CardTitle } from "@/components/ui/surfaces";
-import { Table, TBody, Td, TdNum, THead, Th, Tr } from "@/components/ui/table";
+import { Table, TBody, Td, TdNum, TFoot, THead, Th, Tr } from "@/components/ui/table";
 import { CountryFlag } from "@/components/common/country-flag";
 import { formatPegSize, formatTime, riderDisplayName } from "@/components/common/formatting";
 import { targetLabels } from "@/components/common/target-labels";
@@ -76,6 +76,9 @@ export function ReviewTable({
               result.units.map((unit) => [`${unit.championshipCountryId}:${unit.unitIndex}`, unit]),
             ),
             ridersById: new Map(result.riders.map((rider) => [rider.championshipRiderId, rider])),
+            countriesById: new Map(
+              result.countries.map((country) => [country.championshipCountryId, country]),
+            ),
           },
         ];
       }),
@@ -261,6 +264,33 @@ export function ReviewTable({
                     }),
                   )}
                 </TBody>
+                <TFoot>
+                  <Tr>
+                    <Td />
+                    {runs.map((run) => {
+                      const countryResult = computedByRun
+                        .get(run.runId)
+                        ?.countriesById.get(countryMeta.championshipCountryId);
+                      return (
+                        <React.Fragment key={run.runId}>
+                          <Td className="border-s border-border">{t("common.total")}</Td>
+                          {headings.map((_, index) => (
+                            <TdNum key={index} className="text-center">
+                              {index === 0 && countryResult
+                                ? formatPoints(countryResult.riderPointsTotal)
+                                : ""}
+                            </TdNum>
+                          ))}
+                          <Td />
+                          <Td />
+                          <TdNum className="text-center">
+                            {countryResult ? formatPoints(countryResult.total) : ""}
+                          </TdNum>
+                        </React.Fragment>
+                      );
+                    })}
+                  </Tr>
+                </TFoot>
               </Table>
             </CardContent>
             <div className="flex flex-wrap gap-2 border-t border-border px-3 py-2">
