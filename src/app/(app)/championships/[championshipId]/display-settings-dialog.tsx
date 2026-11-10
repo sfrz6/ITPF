@@ -35,6 +35,7 @@ const LAYOUT_LABEL_KEY: Record<DisplayLayout, MessageKey> = {
   topRiders: "display.topRiders",
   fullCountries: "display.countryRanking",
   fullRiders: "display.individualRanking",
+  overall: "display.overallStandings",
 };
 
 export function DisplaySettingsDialog({

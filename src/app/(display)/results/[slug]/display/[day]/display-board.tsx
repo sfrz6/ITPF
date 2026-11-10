@@ -18,6 +18,12 @@ import {
 const TOP_FIVE_COUNT = 5;
 /** Two columns of five, so a "full list" page always reads as two even rows. */
 const FULL_PAGE_SIZE = 10;
+/** The Overall layout's athlete column: one name per row (not two side by
+ * side), so it shows fewer at a time than the two-column full-screen list. */
+const OVERALL_RIDER_PAGE_SIZE = 10;
+/** The Overall layout's two country columns never page — ten is already
+ * more countries than a single championship typically fields. */
+const OVERALL_COUNTRY_COUNT = 10;
 /** How long a full-list page stays up before advancing to the next slice of names. */
 const SUBPAGE_ROTATE_MS = 8_000;
 /** How often fresh results are pulled in, so a just-confirmed run shows up quickly. */
@@ -28,6 +34,8 @@ interface LocaleData {
   readonly organizer: string | null;
   readonly individualRows: readonly StandingRow[];
   readonly countryRows: readonly StandingRow[];
+  /** Cumulative across every day so far, not just this one. */
+  readonly overallCountryRows: readonly StandingRow[];
 }
 
 const ROW_SIZE = {
@@ -46,6 +54,22 @@ const ROW_SIZE = {
     flag: "h-11 w-16",
     name: "text-3xl",
     total: "text-3xl",
+  },
+  // The Overall layout's three columns share a third of the screen each, so
+  // every row size in it is scaled down from the full-width phases above.
+  overallRider: {
+    li: "gap-x-3 px-4 py-2.5",
+    rank: "w-9 text-xl",
+    flag: "h-8 w-12",
+    name: "text-xl",
+    total: "text-xl",
+  },
+  overallCountry: {
+    li: "gap-x-3 px-4 py-2.5",
+    rank: "w-9 text-xl",
+    flag: "h-8 w-12",
+    name: "text-xl",
+    total: "text-xl",
   },
 } as const;
 
@@ -70,15 +94,15 @@ function RankedList({
 }) {
   const s = ROW_SIZE[size];
   return (
-    <ol className="grid min-h-0 w-full auto-rows-max grid-cols-[auto_auto_1fr_auto] gap-y-3 overflow-hidden">
+    <ol className="grid min-h-0 w-full min-w-0 auto-rows-max grid-cols-[auto_auto_1fr_auto] gap-y-3 overflow-hidden">
       {rows.map((row) => (
         <li
           key={row.key}
-          className={`col-span-full grid grid-cols-subgrid items-center rounded-xl border border-black/10 bg-white/90 shadow-sm ${s.li}`}
+          className={`col-span-full grid grid-cols-subgrid items-center rounded-xl border border-black/10 bg-white/70 shadow-sm ${s.li}`}
         >
           <span className={`text-end font-bold text-neutral-400 ${s.rank}`}>{row.rank}</span>
           <CountryFlag iso2={row.iso2} className={`rounded-sm ${s.flag}`} />
-          <span className={`min-w-0 font-semibold text-neutral-900 ${s.name}`}>{row.name}</span>
+          <span className={`min-w-0 font-bold text-neutral-900 ${s.name}`}>{row.name}</span>
           <span className={`numeric justify-self-end font-bold text-neutral-900 ${s.total}`}>
             {row.total}
           </span>
@@ -151,6 +175,102 @@ function FullListPhase({
 }
 
 /**
+ * Three columns sharing the screen at once rather than taking turns: that
+ * day's athlete standings, that day's country standings, and — set apart
+ * with its own lighter background so it's never mistaken for the day's own
+ * number — the country standings cumulative across every day so far.
+ */
+function OverallColumn({
+  title,
+  tone,
+  watermarkSrc,
+  children,
+}: {
+  title: string;
+  tone: "dark" | "light";
+  /** Shown faintly behind this column's own rows — the overall/cumulative
+   * column only, so it reads as the "big picture" column at a glance. */
+  watermarkSrc?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={`relative flex h-full min-w-0 flex-col overflow-hidden px-4 py-5 ${
+        tone === "dark" ? "bg-blue-950" : "bg-sky-100"
+      }`}
+    >
+      {watermarkSrc ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={watermarkSrc}
+          alt=""
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-0 m-auto h-[70%] w-[70%] select-none object-contain opacity-35"
+        />
+      ) : null}
+      <h2
+        className={`relative z-10 mb-4 shrink-0 text-center text-lg font-bold uppercase tracking-[0.15em] ${
+          tone === "dark" ? "text-white" : "text-blue-950"
+        }`}
+      >
+        {title}
+      </h2>
+      <div className="relative z-10 min-h-0 flex-1 overflow-hidden">{children}</div>
+    </div>
+  );
+}
+
+function OverallPhase({
+  athleteTitle,
+  countryTitle,
+  overallTitle,
+  athletePage,
+  athleteTotalPages,
+  athleteCurrentPage,
+  countryRows,
+  overallCountryRows,
+  overallWatermarkSrc,
+}: {
+  athleteTitle: string;
+  countryTitle: string;
+  overallTitle: string;
+  athletePage: readonly StandingRow[];
+  athleteTotalPages: number;
+  athleteCurrentPage: number;
+  countryRows: readonly StandingRow[];
+  overallCountryRows: readonly StandingRow[];
+  overallWatermarkSrc: string;
+}) {
+  return (
+    <div className="grid h-full w-full min-w-0 grid-cols-3 gap-px bg-black/10">
+      <OverallColumn title={athleteTitle} tone="dark">
+        <RankedList rows={athletePage} size="overallRider" />
+        {athleteTotalPages > 1 ? (
+          <div className="mt-3 flex items-center justify-center gap-2" aria-hidden>
+            {Array.from({ length: athleteTotalPages }).map((_, index) => (
+              <span
+                key={index}
+                className={`h-2 w-2 rounded-full ${
+                  index === athleteCurrentPage ? "bg-white" : "bg-white/30"
+                }`}
+              />
+            ))}
+          </div>
+        ) : null}
+      </OverallColumn>
+
+      <OverallColumn title={countryTitle} tone="dark">
+        <RankedList rows={countryRows.slice(0, OVERALL_COUNTRY_COUNT)} size="overallCountry" />
+      </OverallColumn>
+
+      <OverallColumn title={overallTitle} tone="light" watermarkSrc={overallWatermarkSrc}>
+        <RankedList rows={overallCountryRows.slice(0, OVERALL_COUNTRY_COUNT)} size="overallCountry" />
+      </OverallColumn>
+    </div>
+  );
+}
+
+/**
  * The live results board, built to sit full screen on a venue TV for one
  * championship day. It cycles through configured phases — each one a
  * layout (Top 5 Countries, Top 5 Riders, full Country standings, full
@@ -197,9 +317,14 @@ export function DisplayBoard({
   const countryCount = byLocale[DEFAULT_LOCALE].countryRows.length;
   const riderPageCount = Math.max(1, Math.ceil(riderCount / FULL_PAGE_SIZE));
   const countryPageCount = Math.max(1, Math.ceil(countryCount / FULL_PAGE_SIZE));
+  // The Overall layout's own athlete column pages through a different
+  // slice size than the full-screen rider list, so it gets its own
+  // independent page count and rotation rather than sharing `riderPage`.
+  const overallRiderPageCount = Math.max(1, Math.ceil(riderCount / OVERALL_RIDER_PAGE_SIZE));
 
   const [riderPage, setRiderPage] = React.useState(0);
   const [countryPage, setCountryPage] = React.useState(0);
+  const [overallRiderPage, setOverallRiderPage] = React.useState(0);
 
   React.useEffect(() => {
     if (riderPageCount <= 1) return;
@@ -219,18 +344,30 @@ export function DisplayBoard({
     return () => clearInterval(id);
   }, [countryPageCount]);
 
+  React.useEffect(() => {
+    if (overallRiderPageCount <= 1) return;
+    const id = setInterval(
+      () => setOverallRiderPage((page) => (page + 1) % overallRiderPageCount),
+      SUBPAGE_ROTATE_MS,
+    );
+    return () => clearInterval(id);
+  }, [overallRiderPageCount]);
+
   // A refresh can shrink the row count (a correction removes a competitor),
   // which could otherwise strand the current page index past the new last
   // page; clamped here at read time rather than re-synced with an effect, so
   // there is no frame where an out of range page is looked up.
   const safeRiderPage = riderPage < riderPageCount ? riderPage : 0;
   const safeCountryPage = countryPage < countryPageCount ? countryPage : 0;
+  const safeOverallRiderPage = overallRiderPage < overallRiderPageCount ? overallRiderPage : 0;
 
   const hasDataForPhase = React.useCallback(
     (phase: DisplayPhase) =>
       phase.layout === "topCountries" || phase.layout === "fullCountries"
         ? countryCount > 0
-        : riderCount > 0,
+        : phase.layout === "overall"
+          ? riderCount > 0 && countryCount > 0
+          : riderCount > 0,
     [countryCount, riderCount],
   );
 
@@ -293,6 +430,7 @@ export function DisplayBoard({
 
   const riderPageStart = safeRiderPage * FULL_PAGE_SIZE;
   const countryPageStart = safeCountryPage * FULL_PAGE_SIZE;
+  const overallRiderPageStart = safeOverallRiderPage * OVERALL_RIDER_PAGE_SIZE;
 
   return (
     <div dir={dir} className="relative flex h-dvh flex-col overflow-hidden bg-white text-neutral-900">
@@ -369,6 +507,21 @@ export function DisplayBoard({
             page={current.individualRows.slice(riderPageStart, riderPageStart + FULL_PAGE_SIZE)}
             totalPages={riderPageCount}
             currentPage={safeRiderPage}
+          />
+        ) : currentPhase?.layout === "overall" ? (
+          <OverallPhase
+            athleteTitle={t("display.dayIndividualRanking", { day: dayNumber })}
+            countryTitle={t("display.dayCountryRanking", { day: dayNumber })}
+            overallTitle={t("display.overallStandings")}
+            athletePage={current.individualRows.slice(
+              overallRiderPageStart,
+              overallRiderPageStart + OVERALL_RIDER_PAGE_SIZE,
+            )}
+            athleteTotalPages={overallRiderPageCount}
+            athleteCurrentPage={safeOverallRiderPage}
+            countryRows={current.countryRows}
+            overallCountryRows={current.overallCountryRows}
+            overallWatermarkSrc={watermarkSrc}
           />
         ) : (
           <div className="flex h-full items-center justify-center">

@@ -7,7 +7,13 @@ import { LOCALES, isLocale, type Locale } from "@/lib/i18n/config";
  * layout with a single language setting, since an operator may want both
  * languages to take turns on the same screen rather than picking just one.
  */
-export const DISPLAY_LAYOUTS = ["topCountries", "topRiders", "fullCountries", "fullRiders"] as const;
+export const DISPLAY_LAYOUTS = [
+  "topCountries",
+  "topRiders",
+  "fullCountries",
+  "fullRiders",
+  "overall",
+] as const;
 
 export type DisplayLayout = (typeof DISPLAY_LAYOUTS)[number];
 

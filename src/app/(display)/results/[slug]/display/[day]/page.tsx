@@ -58,6 +58,12 @@ export default async function ChampionshipDisplayPage({
               sets.find((set) => set.scope === scope && set.subject === "INDIVIDUAL")?.rows ?? [],
             countryRows:
               sets.find((set) => set.scope === scope && set.subject === "COUNTRY")?.rows ?? [],
+            // Cumulative across every day so far, regardless of which day's
+            // board this is — the "Overall" layout shows this beside that
+            // day's own country scores so the two numbers are never confused
+            // with each other.
+            overallCountryRows:
+              sets.find((set) => set.scope === "OVERALL" && set.subject === "COUNTRY")?.rows ?? [],
           },
         ] as const;
       }),
@@ -69,6 +75,7 @@ export default async function ChampionshipDisplayPage({
       organizer: string | null;
       individualRows: readonly StandingRow[];
       countryRows: readonly StandingRow[];
+      overallCountryRows: readonly StandingRow[];
     }
   >;
 
