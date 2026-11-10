@@ -15,6 +15,7 @@ import {
   runScoreTargets,
   runScores,
   runScoringUnits,
+  users,
 } from "@/db/schema";
 import {
   buildScoringUnits,
@@ -24,6 +25,7 @@ import {
 } from "@/domain/entry-order";
 import {
   allowedTargetPoints,
+  eventNeedsReview,
   getEventTypeDefinition,
   RIDERS_PER_COUNTRY_PER_RUN,
   type EventTypeDefinition,
@@ -1550,4 +1552,187 @@ export async function loadRunScoringUnits(
       targets: rider.targets.map((value) => (value === null ? null : value)),
     })),
   }));
+}
+
+/** A run's scoring country, with that same run's own entry-order decision — never another run's. */
+export interface EventReviewCountry extends RunScoringCountry {
+  readonly decision: "NO_CHANGE" | "CHANGED" | null;
+}
+
+export interface EventReviewRun {
+  readonly runId: string;
+  readonly runNumber: number;
+  readonly pegSizeCm: string;
+  readonly timeLimitSeconds: string;
+  readonly status: RunStatus;
+  readonly version: number;
+  readonly countries: readonly EventReviewCountry[];
+}
+
+export interface EventReviewState {
+  readonly eventId: string;
+  readonly championshipId: string;
+  readonly dayNumber: number;
+  readonly competitionDate: string;
+  readonly eventType: EventTypeKey;
+  readonly reviewedAt: Date | null;
+  readonly reviewedByName: string | null;
+  readonly allRunsConfirmed: boolean;
+  /** Every other confirmed run of the day, excluding this event's own, so "pts so far today" never counts this event twice. */
+  readonly countryPointsSoFar: ReadonlyMap<string, string>;
+  /** Every run's own actual scoring state and entry-order decision — never borrowed from another run, so a mid-event substitution shows up exactly where it happened. */
+  readonly runs: readonly EventReviewRun[];
+}
+
+/**
+ * Everything the event-level review page needs: every run's own actual
+ * recorded scores and entry-order decision, kept run by run rather than
+ * assumed to be the same lineup throughout the event — a country can swap a
+ * rider in between an event's runs (an injury, say), and the review page has
+ * to show exactly who rode each run, not just the first one's lineup.
+ */
+export async function getEventReviewState(
+  eventId: string,
+  locale: Locale,
+): Promise<EventReviewState | null> {
+  const db = getDb();
+
+  const [reviewRow] = await db
+    .select({ reviewedAt: championshipEvents.reviewedAt, reviewedByName: users.name })
+    .from(championshipEvents)
+    .leftJoin(users, eq(users.id, championshipEvents.reviewedByUserId))
+    .where(eq(championshipEvents.id, eventId))
+    .limit(1);
+
+  const runRows = await db
+    .select({
+      id: championshipRuns.id,
+      runNumber: championshipRuns.runNumber,
+      pegSizeCm: championshipRuns.pegSizeCm,
+      timeLimitSeconds: championshipRuns.timeLimitSeconds,
+      status: championshipRuns.status,
+      version: championshipRuns.version,
+    })
+    .from(championshipRuns)
+    .where(eq(championshipRuns.championshipEventId, eventId))
+    .orderBy(asc(championshipRuns.runNumber));
+  if (runRows.length === 0) return null;
+
+  const runs = await Promise.all(
+    runRows.map(async (run): Promise<EventReviewRun> => {
+      const [scoring, entryOrder] = await Promise.all([
+        getRunScoringState(run.id, locale),
+        getRunEntryOrderState(run.id, locale),
+      ]);
+      const decisionByCountry = new Map(
+        (entryOrder?.countries ?? []).map((country) => [
+          country.championshipCountryId,
+          country.decision,
+        ]),
+      );
+      return {
+        runId: run.id,
+        runNumber: run.runNumber,
+        pegSizeCm: run.pegSizeCm,
+        timeLimitSeconds: run.timeLimitSeconds,
+        status: run.status,
+        version: run.version,
+        countries: (scoring?.countries ?? []).map((country) => ({
+          ...country,
+          decision: decisionByCountry.get(country.championshipCountryId) ?? null,
+        })),
+      };
+    }),
+  );
+
+  const firstRun = await getRunContext(runRows[0]!.id);
+  if (!firstRun) return null;
+
+  // Every other confirmed run of the day — excluding this event's own, even
+  // once confirmed — so the "pts so far today" shown while reviewing is what
+  // the country/rider had walking into this event, not after it.
+  const day = firstRun.dayNumber as DayNumber;
+  const confirmedRunsToday = await loadChampionshipConfirmedRuns(firstRun.championshipId, day);
+  const otherEventRuns = confirmedRunsToday.filter((run) => run.championshipEventId !== eventId);
+  const totalsBeforeThisEvent = aggregateChampionship(otherEventRuns);
+
+  const countryPointsSoFar = new Map<string, string>();
+  for (const [championshipCountryId, totals] of totalsBeforeThisEvent.countries) {
+    const value = totals.byDay.get(day);
+    if (value) countryPointsSoFar.set(championshipCountryId, formatPoints(value));
+  }
+
+  return {
+    eventId,
+    championshipId: firstRun.championshipId,
+    dayNumber: firstRun.dayNumber,
+    competitionDate: firstRun.competitionDate,
+    eventType: firstRun.eventType,
+    reviewedAt: reviewRow?.reviewedAt ?? null,
+    reviewedByName: reviewRow?.reviewedByName ?? null,
+    allRunsConfirmed: runs.length > 0 && runs.every((run) => run.status === "CONFIRMED"),
+    countryPointsSoFar,
+    runs,
+  };
+}
+
+/**
+ * Marks an event reviewed: officials have cross-checked every one of its
+ * confirmed runs against the paper round sheets.
+ *
+ * This never touches run data itself — any mistake found during the review
+ * is fixed through the ordinary `correctConfirmedRun` flow first, each
+ * correction kept as its own revision. This just records that the pass
+ * happened, separately from any individual run's own confirmation, so the
+ * public results page (which already updates as each run is confirmed) is
+ * never gated on it.
+ */
+export async function reviewEvent(
+  tx: Executor,
+  actor: Principal,
+  eventId: string,
+): Promise<{ championshipId: string }> {
+  const [event] = await tx
+    .select({
+      id: championshipEvents.id,
+      eventType: championshipEvents.eventType,
+      reviewedAt: championshipEvents.reviewedAt,
+      championshipId: championshipDays.championshipId,
+    })
+    .from(championshipEvents)
+    .innerJoin(championshipDays, eq(championshipDays.id, championshipEvents.championshipDayId))
+    .where(eq(championshipEvents.id, eventId))
+    .limit(1);
+  if (!event) throw new DomainError("This event was not found.", "NOT_FOUND");
+  if (!eventNeedsReview(event.eventType as EventTypeKey)) {
+    throw new DomainError("This event type does not go through a review.", "VALIDATION");
+  }
+  if (event.reviewedAt) {
+    throw new DomainError("This event has already been reviewed.", "CONFLICT");
+  }
+
+  const runs = await tx
+    .select({ status: championshipRuns.status })
+    .from(championshipRuns)
+    .where(eq(championshipRuns.championshipEventId, eventId));
+  if (runs.length === 0 || runs.some((runRow) => runRow.status !== "CONFIRMED")) {
+    throw new DomainError(
+      "Every run in this event must be confirmed before it can be reviewed.",
+      "VALIDATION",
+    );
+  }
+
+  await tx
+    .update(championshipEvents)
+    .set({ reviewedAt: new Date(), reviewedByUserId: actor.userId })
+    .where(eq(championshipEvents.id, eventId));
+
+  await recordAudit(tx, actor, {
+    action: "EVENT_REVIEWED",
+    entityType: "championship_event",
+    entityId: eventId,
+    championshipId: event.championshipId,
+  });
+
+  return { championshipId: event.championshipId };
 }

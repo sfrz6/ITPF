@@ -167,7 +167,17 @@ function dayOf(dayNumber: number, statuses: readonly ChampionshipRunDetail["stat
     dayNumber,
     competitionDate: "2026-01-01",
     displaySettings: DEFAULT_DISPLAY_SETTINGS,
-    events: [{ id: `event-${dayNumber}`, eventType: "INDIVIDUAL_LANCE", orderIndex: 1, runs: statuses.map(run) }],
+    events: [
+      {
+        id: `event-${dayNumber}`,
+        eventType: "INDIVIDUAL_LANCE",
+        orderIndex: 1,
+        needsReview: false,
+        reviewedAt: null,
+        reviewedByName: null,
+        runs: statuses.map(run),
+      },
+    ],
   };
 }
 

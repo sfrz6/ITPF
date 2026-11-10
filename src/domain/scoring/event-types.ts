@@ -211,6 +211,20 @@ export function penaltyAttributionOf(ruleType: ScoringRuleType): PenaltyAttribut
 }
 
 /**
+ * Whether this event type gets a between-events review page before the
+ * schedule moves on to the next one.
+ *
+ * Individual and rings/lemons-and-peg events are scored and confirmed one
+ * rider at a time with no shared lineup to cross-check, so the per-run
+ * confirmation is already the whole story. Pair, team and relay events ride
+ * as a country unit, which is exactly what officials cross-check against the
+ * paper round sheet after the event finishes, so those get the extra page.
+ */
+export function eventNeedsReview(key: EventTypeKey): boolean {
+  return penaltyAttributionOf(getEventTypeDefinition(key).ruleType) === "COUNTRY";
+}
+
+/**
  * Highest score a scoring unit can reach in one run. This is also the penalty
  * cap: the workbook caps the time penalty at exactly the unit's maximum score
  * (6 individual, 12 pair, 24 team and relay, 18 rings/lemons and peg).

@@ -9,8 +9,9 @@ import {
   championships,
   countries,
   riders,
+  users,
 } from "@/db/schema";
-import type { EventTypeKey } from "@/domain/scoring/event-types";
+import { eventNeedsReview, type EventTypeKey } from "@/domain/scoring/event-types";
 import { normalizeDisplaySettings, type DisplaySettings } from "@/domain/display/settings";
 import type { Locale } from "@/lib/i18n/config";
 
@@ -108,6 +109,9 @@ export interface ChampionshipEventDetail {
   readonly id: string;
   readonly eventType: EventTypeKey;
   readonly orderIndex: number;
+  readonly needsReview: boolean;
+  readonly reviewedAt: string | null;
+  readonly reviewedByName: string | null;
   readonly runs: readonly ChampionshipRunDetail[];
 }
 
@@ -161,6 +165,8 @@ export async function getChampionshipDetail(
       eventId: championshipEvents.id,
       eventType: championshipEvents.eventType,
       orderIndex: championshipEvents.orderIndex,
+      reviewedAt: championshipEvents.reviewedAt,
+      reviewedByName: users.name,
       runId: championshipRuns.id,
       runNumber: championshipRuns.runNumber,
       pegSizeCm: championshipRuns.pegSizeCm,
@@ -170,6 +176,7 @@ export async function getChampionshipDetail(
     })
     .from(championshipDays)
     .leftJoin(championshipEvents, eq(championshipEvents.championshipDayId, championshipDays.id))
+    .leftJoin(users, eq(users.id, championshipEvents.reviewedByUserId))
     .leftJoin(championshipRuns, eq(championshipRuns.championshipEventId, championshipEvents.id))
     .where(eq(championshipDays.championshipId, championshipId))
     .orderBy(
@@ -203,6 +210,9 @@ export async function getChampionshipDetail(
         id: entry.eventId,
         eventType: entry.eventType as EventTypeKey,
         orderIndex: entry.orderIndex ?? 0,
+        needsReview: eventNeedsReview(entry.eventType as EventTypeKey),
+        reviewedAt: entry.reviewedAt ? entry.reviewedAt.toISOString() : null,
+        reviewedByName: entry.reviewedByName ?? null,
         runs: [],
       };
       day.events.set(entry.eventId, event);

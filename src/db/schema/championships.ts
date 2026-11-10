@@ -115,6 +115,17 @@ export const championshipEvents = pgTable(
       .references(() => championshipDays.id, { onDelete: "cascade" }),
     eventType: eventTypeEnum("event_type").notNull(),
     orderIndex: integer("order_index").notNull(),
+    /**
+     * When officials finished cross-checking this event's confirmed runs
+     * against the paper round sheets. Null until that review happens, even
+     * once every run in the event is individually confirmed — the two are
+     * deliberately separate so results keep updating live as each run is
+     * confirmed, and this only reflects the paper cross-check.
+     */
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    reviewedByUserId: uuid("reviewed_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
   },
   (table) => [
     uniqueIndex("championship_events_order_idx").on(table.championshipDayId, table.orderIndex),

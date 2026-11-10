@@ -1,18 +1,9 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarDays, ChevronRight, MonitorPlay } from "lucide-react";
 import { requirePageUser } from "@/lib/auth/page-guards";
 import { hasPermission } from "@/domain/permissions";
-import { getTranslator } from "@/lib/i18n/server";
 import { getChampionshipDetail } from "@/server/services/championships";
-import { getEventTypeDefinition } from "@/domain/scoring/event-types";
-import { Badge, Card, CardContent, CardHeader, CardTitle, EmptyState } from "@/components/ui/surfaces";
-import { Button } from "@/components/ui/button";
-import { formatCompetitionDate, formatPegSize, formatTime } from "@/components/common/formatting";
-import { eventLabel, runStatusLabel, runStatusTone } from "@/components/common/labels";
 import { ChampionshipSettings } from "./championship-settings";
-import { DisplaySettingsDialog } from "./display-settings-dialog";
-import { ResetEventButton } from "./reset-event-button";
+import { ScheduleDays } from "./schedule-days";
 
 export default async function ChampionshipSchedulePage({
   params,
@@ -21,13 +12,13 @@ export default async function ChampionshipSchedulePage({
 }) {
   const principal = await requirePageUser();
   const { championshipId } = await params;
-  const { locale, t } = await getTranslator();
 
   const championship = await getChampionshipDetail(championshipId);
   if (!championship) notFound();
 
   const canEdit = hasPermission(principal, "EDIT_CHAMPIONSHIP");
   const canPublish = hasPermission(principal, "MANAGE_PUBLIC_RESULTS");
+  const canReview = hasPermission(principal, "CONFIRM_RUNS");
 
   return (
     <div className="space-y-5">
@@ -51,108 +42,33 @@ export default async function ChampionshipSchedulePage({
         />
       ) : null}
 
-      {championship.days.every((day) => day.events.length === 0) ? (
-        <EmptyState icon={<CalendarDays />} title={t("results.noData")} />
-      ) : (
-        <div className="space-y-5">
-          {championship.days.map((day) => (
-            <Card key={day.id}>
-              <CardHeader>
-                <div>
-                  <CardTitle>{t("championships.daysOf", { day: day.dayNumber })}</CardTitle>
-                  <p className="mt-0.5 text-xs text-muted">
-                    {formatCompetitionDate(day.competitionDate, locale)}
-                  </p>
-                </div>
-                <span className="flex items-center gap-2">
-                  <Badge tone="outline">
-                    {t("championships.eventsCount", { count: day.events.length })}
-                  </Badge>
-                  {championship.isPublished ? (
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link
-                        href={`/results/${championship.slug}/display/${day.dayNumber}`}
-                        target="_blank"
-                      >
-                        <MonitorPlay aria-hidden />
-                        {t("championships.openDisplay")}
-                      </Link>
-                    </Button>
-                  ) : null}
-                  {championship.isPublished && canEdit ? (
-                    <DisplaySettingsDialog
-                      championshipDayId={day.id}
-                      dayNumber={day.dayNumber}
-                      settings={day.displaySettings}
-                    />
-                  ) : null}
-                </span>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {day.events.length === 0 ? (
-                  <p className="text-sm text-muted">{t("templates.noEventsOnDay")}</p>
-                ) : (
-                  day.events.map((event) => {
-                    const definition = getEventTypeDefinition(event.eventType);
-                    const label = eventLabel(event.eventType, t);
-                    const hasSomethingToReset = event.runs.some(
-                      (runItem) => runItem.status !== "ENTRY_ORDER_PENDING",
-                    );
-                    return (
-                      <div
-                        key={event.id}
-                        className="rounded-md border border-border bg-surface-sunken"
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
-                          <h3 className="text-sm font-medium">{label}</h3>
-                          <span className="flex items-center gap-2">
-                            <span className="text-xs text-muted">
-                              {t("championships.runsCount", { count: event.runs.length })} ·{" "}
-                              {definition.ridersPerScoringUnit > 1
-                                ? `${definition.ridersPerScoringUnit} ${t("common.rider")}`
-                                : t("common.rider")}
-                            </span>
-                            {principal.isAdmin && hasSomethingToReset ? (
-                              <ResetEventButton eventId={event.id} eventLabel={label} />
-                            ) : null}
-                          </span>
-                        </div>
-                        <ul className="divide-hairline border-t border-border">
-                          {event.runs.map((runItem) => (
-                            <li key={runItem.id}>
-                              <Link
-                                href={`/championships/${championship.id}/runs/${runItem.id}`}
-                                className="flex items-center gap-3 bg-surface-raised px-3 py-2.5 transition-colors hover:bg-surface-sunken"
-                              >
-                                <span className="min-w-0 flex-1">
-                                  <span className="block text-sm">
-                                    {t("templates.runNumber", { number: runItem.runNumber })}
-                                  </span>
-                                  <span className="numeric block text-xs text-muted">
-                                    {formatPegSize(runItem.pegSizeCm)} {t("common.centimetres")} ·{" "}
-                                    {formatTime(runItem.timeLimitSeconds)} {t("common.seconds")}
-                                  </span>
-                                </span>
-                                <Badge tone={runStatusTone(runItem.status)}>
-                                  {runStatusLabel(runItem.status, t)}
-                                </Badge>
-                                <ChevronRight
-                                  className="size-4 shrink-0 text-subtle rtl:rotate-180"
-                                  aria-hidden
-                                />
-                              </Link>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    );
-                  })
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+      <ScheduleDays
+        days={championship.days.map((day) => ({
+          id: day.id,
+          dayNumber: day.dayNumber,
+          competitionDate: day.competitionDate,
+          displaySettings: day.displaySettings,
+          events: day.events.map((event) => ({
+            id: event.id,
+            eventType: event.eventType,
+            needsReview: event.needsReview,
+            reviewedAt: event.reviewedAt,
+            runs: event.runs.map((runItem) => ({
+              id: runItem.id,
+              runNumber: runItem.runNumber,
+              pegSizeCm: runItem.pegSizeCm,
+              timeLimitSeconds: runItem.timeLimitSeconds,
+              status: runItem.status,
+            })),
+          })),
+        }))}
+        championshipId={championship.id}
+        championshipSlug={championship.slug}
+        isPublished={championship.isPublished}
+        canEdit={canEdit}
+        canReview={canReview}
+        isAdmin={principal.isAdmin}
+      />
     </div>
   );
 }

@@ -11,6 +11,7 @@ import {
   correctConfirmedRun,
   listEventRunIds,
   resetEvent,
+  reviewEvent,
   saveRunScores,
   startRun,
   type RunScorePayload,
@@ -231,6 +232,23 @@ export async function resetEventAction(input: unknown): Promise<ActionResult<und
     );
 
     await Promise.all(runIds.map((runId) => revalidateRun(runId)));
+    return ok();
+  });
+}
+
+const reviewEventSchema = z.object({ eventId: z.uuid() });
+
+export async function reviewEventAction(input: unknown): Promise<ActionResult<undefined>> {
+  return guard(async () => {
+    const actor = await requirePermission("CONFIRM_RUNS");
+    const parsed = reviewEventSchema.safeParse(input);
+    if (!parsed.success) throw new DomainError("Invalid request.", "VALIDATION");
+
+    const { championshipId } = await getDb().transaction((tx) =>
+      reviewEvent(tx, actor, parsed.data.eventId),
+    );
+
+    revalidatePath(`/championships/${championshipId}`);
     return ok();
   });
 }
