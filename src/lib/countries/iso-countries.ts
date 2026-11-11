@@ -135,7 +135,7 @@ export const SEED_COUNTRIES: readonly SeedCountry[] = [
   { iso2: "RS", iso3: "SRB", nameEn: "Serbia", nameAr: "صربيا" },
   { iso2: "RU", iso3: "RUS", nameEn: "Russia", nameAr: "روسيا" },
   { iso2: "RW", iso3: "RWA", nameEn: "Rwanda", nameAr: "رواندا" },
-  { iso2: "SA", iso3: "SAU", nameEn: "Saudi Arabia", nameAr: "المملكة العربية السعودية" },
+  { iso2: "SA", iso3: "SAU", nameEn: "Saudi Arabia", nameAr: "السعودية" },
   { iso2: "SC", iso3: "SYC", nameEn: "Seychelles", nameAr: "سيشل" },
   { iso2: "SD", iso3: "SDN", nameEn: "Sudan", nameAr: "السودان" },
   { iso2: "SE", iso3: "SWE", nameEn: "Sweden", nameAr: "السويد" },

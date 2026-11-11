@@ -72,18 +72,18 @@ const ROW_SIZE = {
     // heavier, pure-black mark rather than the muted gray used elsewhere.
     rank: "w-12 text-3xl",
     rankColor: "text-black",
-    flag: "h-8 w-12",
-    name: "text-2xl",
-    total: "text-2xl",
+    flag: "h-9 w-14",
+    name: "text-3xl",
+    total: "text-3xl",
     weight: "font-extrabold",
   },
   overallCountry: {
     li: "gap-x-3 px-4 py-2",
     rank: "w-12 text-3xl",
     rankColor: "text-black",
-    flag: "h-8 w-12",
-    name: "text-2xl",
-    total: "text-2xl",
+    flag: "h-9 w-14",
+    name: "text-3xl",
+    total: "text-3xl",
     weight: "font-extrabold",
   },
 } as const;
@@ -228,7 +228,7 @@ function OverallColumn({
           the title reads like a real header without pushing the rows
           beneath it down any further than they already sat. */}
       <h2
-        className={`relative z-10 mb-5 shrink-0 whitespace-nowrap text-center text-2xl font-extrabold uppercase leading-none tracking-[0.02em] ${
+        className={`relative z-10 mb-4 shrink-0 whitespace-nowrap text-center text-3xl font-extrabold uppercase leading-none tracking-[0.02em] ${
           tone === "dark" ? "text-white" : "text-blue-950"
         }`}
       >
@@ -329,6 +329,19 @@ export function DisplayBoard({
     return () => clearInterval(id);
   }, [router]);
 
+  // `displaySettings` is a brand new object every time `router.refresh()`
+  // re-fetches the page (every `REFRESH_MS`, to pick up a just-confirmed
+  // run), even when nothing an operator actually configured has changed.
+  // This string is equal by value across those refreshes, unlike the object
+  // itself, so anything keyed on it — rather than on `displaySettings`
+  // directly — only re-runs when the configured phases, durations, or pause
+  // genuinely change, not on every routine data poll.
+  const settingsSignature = JSON.stringify({
+    phases: displaySettings.phases.map(phaseId),
+    durationsSeconds: displaySettings.durationsSeconds,
+    pausedOnPhase: displaySettings.pausedOnPhase,
+  });
+
   // Row counts are the same regardless of language — only the text differs —
   // so pagination math is computed once and the matching slice is read from
   // whichever language the current phase names.
@@ -396,6 +409,10 @@ export function DisplayBoard({
   // still advances sensibly through whatever remains instead of resetting.
   // A pause pins the board to one phase — as long as it actually has data,
   // so pausing never leaves the board stuck on a blank screen.
+  // Keyed on the settings *content signature*, not the `displaySettings`
+  // object itself — it is a brand new object every routine data refresh,
+  // which would otherwise recompute this (and everything downstream of it)
+  // even though nothing an operator configured actually changed.
   const phases = React.useMemo(() => {
     if (displaySettings.pausedOnPhase) {
       const paused = displaySettings.phases.find(
@@ -404,13 +421,32 @@ export function DisplayBoard({
       if (paused && hasDataForPhase(paused)) return [paused];
     }
     return displaySettings.phases.filter(hasDataForPhase);
-  }, [displaySettings, hasDataForPhase]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settingsSignature, hasDataForPhase]);
 
   const [phaseIndex, setPhaseIndex] = React.useState(0);
 
+  // An operator saving new display settings (a different phase list, pause,
+  // or duration) should restart the rotation from the first configured phase
+  // right away, on this board's own next refresh — but a routine data
+  // refresh (a run just confirmed, same settings) must never do this, or
+  // the board would snap back to phase one every `REFRESH_MS` and never
+  // reach a later phase at all. Tracked in state (not a ref) and adjusted
+  // directly during render — the documented way to reset state in response
+  // to a changed value — rather than in an effect.
+  const [previousSignature, setPreviousSignature] = React.useState(settingsSignature);
+  if (previousSignature !== settingsSignature) {
+    setPreviousSignature(settingsSignature);
+    setPhaseIndex(0);
+  }
+
   // Re-armed with the *current* phase's own duration every time the phase
   // changes, rather than one fixed interval, since each phase can have its
-  // own configured length.
+  // own configured length. Keyed on the settings *signature*, not the
+  // `displaySettings` object itself, for the same reason `phases` is above —
+  // otherwise this would reset to a fresh, full-length timeout on every
+  // routine data refresh and a phase configured longer than `REFRESH_MS`
+  // would never actually finish counting down.
   React.useEffect(() => {
     if (phases.length <= 1) return;
     const phase = phases[phaseIndex % phases.length]!;
@@ -419,10 +455,27 @@ export function DisplayBoard({
       durationMsFor(displaySettings, phase),
     );
     return () => clearTimeout(id);
-  }, [phases, phaseIndex, displaySettings]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phases, phaseIndex, settingsSignature]);
 
   const safePhaseIndex = phaseIndex < phases.length ? phaseIndex : 0;
   const currentPhase: DisplayPhase | null = phases[safePhaseIndex] ?? null;
+
+  // Each phase's own sub-pagination (which page of names a Full List phase
+  // or the Overall layout's rider column is showing) always restarts from
+  // the first page when the board moves to a different phase — including a
+  // same-layout, different-language phase like Overall English handing off
+  // to Overall Arabic — rather than continuing wherever the previous phase
+  // happened to leave it. Adjusted during render, same as the phase-index
+  // reset above, rather than in an effect.
+  const currentPhaseId = currentPhase ? phaseId(currentPhase) : null;
+  const [previousPhaseId, setPreviousPhaseId] = React.useState(currentPhaseId);
+  if (previousPhaseId !== currentPhaseId) {
+    setPreviousPhaseId(currentPhaseId);
+    setRiderPage(0);
+    setCountryPage(0);
+    setOverallRiderPage(0);
+  }
 
   // The board's language follows the *current phase*, not a single
   // page-wide setting — so an Arabic "Top 5 Countries" phase and an English
