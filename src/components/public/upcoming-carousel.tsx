@@ -163,7 +163,7 @@ export function UpcomingCarousel({
               <div className="flex gap-2 border-t border-border p-3">
                 <Link
                   href={`/results/${championship.slug}/participants`}
-                  className="flex-1 rounded-md border border-border-strong px-3 py-2 text-center text-sm font-medium text-foreground hover:bg-surface-sunken"
+                  className="flex-1 rounded-md bg-accent px-3 py-2 text-center text-sm font-medium text-accent-foreground hover:opacity-90"
                 >
                   {t("publicResults.participatingCountries")}
                 </Link>

@@ -4,9 +4,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Award, ChevronRight, Flag, Trophy, Users } from "lucide-react";
-import { championshipDisplayName } from "@/components/common/formatting";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/surfaces";
 import { getTranslator } from "@/lib/i18n/server";
 import { listChampionships, type ChampionshipSummary } from "@/server/services/championships";
 import { addDays, CHAMPIONSHIP_DAYS } from "@/server/services/championship-setup";
@@ -14,6 +12,7 @@ import { listPublishedSeries } from "@/server/services/series";
 import { currentPrincipalOrNull } from "@/lib/auth/authorize";
 import { UpcomingCarousel } from "@/components/public/upcoming-carousel";
 import { LatestResultCard } from "@/components/public/latest-result-card";
+import { TopRankingCard } from "@/components/public/top-ranking-card";
 
 /**
  * Standings change only when an official confirms a run, and this page is
@@ -145,9 +144,9 @@ export default async function PublicLandingPage() {
                   </Link>
                 </Button>
                 <Button
-                  variant="outline"
+                  variant="accent"
                   size="sm"
-                  className="rounded-full border-white/25 text-white hover:bg-white/10 sm:h-11 sm:px-6 sm:text-base"
+                  className="rounded-full sm:h-11 sm:px-6 sm:text-base"
                   asChild
                 >
                   <a href="https://itpf.net" target="_blank" rel="noopener noreferrer">
@@ -210,21 +209,7 @@ export default async function PublicLandingPage() {
           <ul className="space-y-3">
             {series.map((item) => (
               <li key={item.id}>
-                <Link href={`/rankings/${item.slug}`} className="block">
-                  <Card className="flex items-center gap-3 p-4 transition-colors hover:border-border-strong">
-                    <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-subtle">
-                      <Award className="size-5 text-accent" aria-hidden />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-semibold text-foreground">
-                        {championshipDisplayName(item.name, item.nameAr, locale)}
-                      </p>
-                      <p className="text-xs text-muted">
-                        {t("series.championshipsCount", { count: item.championshipCount })}
-                      </p>
-                    </div>
-                  </Card>
-                </Link>
+                <TopRankingCard series={item} locale={locale} />
               </li>
             ))}
           </ul>

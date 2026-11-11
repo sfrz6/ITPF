@@ -525,8 +525,8 @@ export const en = {
     // relying on `text-balance` to land on this exact split, so the
     // headline wraps identically at every breakpoint instead of drifting
     // to a different line break on a narrower phone.
-    titleLine1: "International Tent Pegging",
-    titleLine2: "Federation",
+    titleLine1: "International Tent",
+    titleLine2: "Pegging Federation",
     subtitle: "Official results and international championships.",
     heroPrimary: "Explore championships",
     aboutUs: "About us",
