@@ -8,10 +8,12 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/form-controls";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/surfaces";
+import { LogoField, type LogoValue } from "@/components/common/logo-field";
 import { useI18n } from "@/lib/i18n/client";
 import {
   setChampionshipPublishedAction,
   updateChampionshipAction,
+  updateChampionshipLogoAction,
 } from "@/server/actions/championships";
 
 export interface ChampionshipSettingsData {
@@ -26,6 +28,23 @@ export interface ChampionshipSettingsData {
   readonly status: "DRAFT" | "ACTIVE" | "COMPLETED";
   readonly isPublished: boolean;
   readonly slug: string;
+  readonly hasChampionshipLogo: boolean;
+}
+
+/**
+ * Stands in for the existing logo until it's actually touched: the preview
+ * points straight at the real image endpoint, but carries no real image
+ * bytes, since those never need to leave the server unless the official
+ * replaces them. `logoTouched` is what actually gates whether `save` sends a
+ * logo update at all — this placeholder must never be submitted as-is.
+ */
+function existingLogoValue(championship: ChampionshipSettingsData): LogoValue | null {
+  if (!championship.hasChampionshipLogo) return null;
+  return {
+    data: "",
+    contentType: "image/png",
+    previewUrl: `/api/championships/${championship.id}/logo/championship`,
+  };
 }
 
 export function ChampionshipSettings({
@@ -51,6 +70,8 @@ export function ChampionshipSettings({
     organizerAr: championship.organizerAr ?? "",
     status: championship.status,
   });
+  const [logo, setLogo] = React.useState<LogoValue | null>(() => existingLogoValue(championship));
+  const [logoTouched, setLogoTouched] = React.useState(false);
 
   function save(event: React.FormEvent) {
     event.preventDefault();
@@ -70,6 +91,22 @@ export function ChampionshipSettings({
         toast.error(result.error);
         return;
       }
+
+      // Only sent when the official actually touched the logo field: this
+      // keeps a plain text edit from ever re-sending (or clearing) a logo
+      // the official never meant to change.
+      if (logoTouched) {
+        const logoResult = await updateChampionshipLogoAction({
+          championshipId: championship.id,
+          championshipLogo: logo ? { data: logo.data, contentType: logo.contentType } : null,
+        });
+        if (!logoResult.ok) {
+          toast.error(logoResult.error);
+          return;
+        }
+        setLogoTouched(false);
+      }
+
       setEditing(false);
       toast.success(t("championships.updatedSuccess"));
       router.refresh();
@@ -192,6 +229,18 @@ export function ChampionshipSettings({
                 maxLength={160}
               />
             </Field>
+            <div className="sm:col-span-2">
+              <LogoField
+                id="ch-logo"
+                label={t("championships.championshipLogo")}
+                value={logo}
+                onChange={(value) => {
+                  setLogo(value);
+                  setLogoTouched(true);
+                }}
+                t={t}
+              />
+            </div>
             <Field label={t("common.status")} htmlFor="ch-status">
               <Select
                 id="ch-status"

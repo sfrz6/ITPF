@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ItpfLogo } from "@/components/common/itpf-logo";
 import { LocaleSwitcher, ThemeToggle } from "@/components/layout/toolbar";
+import { PublicBottomNav } from "@/components/layout/public-bottom-nav";
 import { PublicMobileNav } from "@/components/layout/public-mobile-nav";
 import { getTranslator } from "@/lib/i18n/server";
 
@@ -30,6 +31,18 @@ export default async function PublicLayout({ children }: { children: React.React
 
   return (
     <div className="flex min-h-dvh flex-col">
+      {/*
+       * Visually hidden until it receives keyboard focus, so a keyboard or
+       * screen reader visitor can jump straight past the header's five nav
+       * links and two toolbar controls on every single page, rather than
+       * tabbing through all of them first.
+       */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:start-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground"
+      >
+        {t("nav.skipToContent")}
+      </a>
       <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur">
         <div className="mx-auto flex w-full max-w-5xl items-center gap-3 px-4 py-3 sm:px-6">
           <Link href="/" className="flex min-w-0 items-center gap-2.5 rounded-md">
@@ -70,13 +83,31 @@ export default async function PublicLayout({ children }: { children: React.React
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6">{children}</main>
+      <main id="main-content" className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6">
+        {children}
+      </main>
 
-      <footer className="border-t border-border py-5">
-        <p className="mx-auto w-full max-w-5xl px-4 text-center text-xs text-muted sm:px-6">
-          {t("common.federation")}
-        </p>
+      {/*
+       * The fixed bottom tab bar below `md` sits on top of whatever
+       * scrolls to the very end of the page, so the footer needs extra
+       * bottom padding (its own height plus the device's safe area) to
+       * clear it rather than being hidden underneath it.
+       */}
+      <footer className="border-t border-border pt-5 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-5">
+        <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-1 px-4 text-center text-xs text-muted sm:px-6">
+          <p>{t("common.federation")}</p>
+          <a
+            href="https://itpf.net"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium underline-offset-4 hover:text-foreground hover:underline"
+          >
+            {t("landing.aboutUs")}
+          </a>
+        </div>
       </footer>
+
+      <PublicBottomNav />
     </div>
   );
 }

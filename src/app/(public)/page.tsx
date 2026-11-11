@@ -4,15 +4,16 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Award, ChevronRight, Flag, Trophy, Users } from "lucide-react";
-import { championshipDisplayName, formatCompetitionDate } from "@/components/common/formatting";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/surfaces";
+import { championshipDisplayName } from "@/components/common/formatting";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/surfaces";
 import { getTranslator } from "@/lib/i18n/server";
-import type { Locale } from "@/lib/i18n/config";
-import type { Translator } from "@/lib/i18n";
 import { listChampionships, type ChampionshipSummary } from "@/server/services/championships";
 import { addDays, CHAMPIONSHIP_DAYS } from "@/server/services/championship-setup";
+import { listPublishedSeries } from "@/server/services/series";
 import { currentPrincipalOrNull } from "@/lib/auth/authorize";
+import { UpcomingCarousel } from "@/components/public/upcoming-carousel";
+import { LatestResultCard } from "@/components/public/latest-result-card";
 
 /**
  * Standings change only when an official confirms a run, and this page is
@@ -27,60 +28,12 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-/**
- * Shared by the "Latest results" and "Upcoming championships" sections: a
- * light tint of the primary color rather than a plain bordered card, so the
- * landing page's boxes the same solid color and white text as the hero's
- * "Explore" button, rather than a wall of identical white cards. Dark mode
- * keeps the existing neutral card look untouched.
- */
-const TINTED_CARD =
-  "border-transparent bg-primary hover:bg-primary-hover dark:border-border dark:bg-surface-raised dark:hover:bg-surface-raised";
-const TINTED_TITLE = "text-primary-foreground dark:text-foreground";
-const TINTED_TEXT = "text-primary-foreground/80 dark:text-muted";
-/** A ghost button's default text color is invisible against a solid card, so it needs its own light/dark pair here. */
-const TINTED_GHOST_BUTTON =
-  "text-primary-foreground hover:bg-white/15 dark:text-foreground dark:hover:bg-surface-sunken";
-
-function ChampionshipCard({
-  championship,
-  locale,
-  t,
-}: {
-  championship: ChampionshipSummary;
-  locale: Locale;
-  t: Translator;
-}) {
-  return (
-    <Card className={`h-full transition-colors ${TINTED_CARD}`}>
-      <CardHeader className="flex-col items-start gap-1">
-        <CardTitle className={`text-base ${TINTED_TITLE}`}>
-          {championshipDisplayName(championship.name, championship.nameAr, locale)}
-        </CardTitle>
-        <p className={`text-sm ${TINTED_TEXT}`}>
-          {formatCompetitionDate(championship.startDate, locale)} ·{" "}
-          <bdi>
-            {championshipDisplayName(championship.location, championship.locationAr, locale)}
-          </bdi>
-        </p>
-      </CardHeader>
-      <CardContent className="flex flex-wrap gap-2">
-        <Button variant="secondary" size="sm" asChild>
-          <Link href={`/results/${championship.slug}`}>
-            {t("publicResults.viewResults")}
-            <ChevronRight className="rtl:rotate-180" aria-hidden />
-          </Link>
-        </Button>
-        <Button variant="ghost" size="sm" className={TINTED_GHOST_BUTTON} asChild>
-          <Link href={`/results/${championship.slug}/participants`}>
-            <Users aria-hidden />
-            {t("publicResults.participatingCountries")}
-          </Link>
-        </Button>
-      </CardContent>
-    </Card>
-  );
-}
+const QUICK_LINKS = [
+  { href: "/results/riders", labelKey: "publicRiders.title", icon: Users },
+  { href: "/results/countries", labelKey: "landing.exploreCountries", icon: Flag },
+  { href: "/rankings", labelKey: "landing.exploreRankings", icon: Award },
+  { href: "/results", labelKey: "landing.exploreResults", icon: Trophy },
+] as const;
 
 export default async function PublicLandingPage() {
   // The admin subdomain is just a friendlier front door into the same app:
@@ -93,7 +46,10 @@ export default async function PublicLandingPage() {
   }
 
   const { locale, t } = await getTranslator();
-  const championships = await listChampionships({ publishedOnly: true });
+  const [championships, series] = await Promise.all([
+    listChampionships({ publishedOnly: true }),
+    listPublishedSeries(),
+  ]);
 
   // Dates are plain "YYYY-MM-DD" strings, which compare correctly against
   // another ISO date string without parsing into a `Date` that could shift
@@ -108,136 +64,167 @@ export default async function PublicLandingPage() {
   const upcoming = championships
     .filter((c) => c.startDate > todayIso)
     .sort((a, b) => a.startDate.localeCompare(b.startDate))
-    .slice(0, 3);
-  const latest = championships.filter((c) => todayIso > endDateOf(c)).slice(0, 3);
+    .slice(0, 4);
+
+  // Live first (a visitor who opens this during an event should see it
+  // before anything still to come), then upcoming in date order. A
+  // championship already in `live` is, by construction, not in `upcoming`
+  // too (the date ranges that define each are mutually exclusive), so this
+  // never shows the same event twice.
+  const carouselChampionships = [
+    ...live.map((c) => ({ ...c, isLive: true })),
+    ...upcoming.map((c) => ({ ...c, isLive: false })),
+  ];
+
+  // Each latest-result card carries its own top-3 country standings, so it
+  // takes real vertical room. One is enough when the carousel above it
+  // already anchors the page, but with no live or upcoming championship to
+  // show there, "latest results" becomes the page's own headline content and
+  // gets a second one.
+  const latest = championships
+    .filter((c) => todayIso > endDateOf(c))
+    .sort((a, b) => b.startDate.localeCompare(a.startDate))
+    .slice(0, carouselChampionships.length === 0 ? 2 : 1);
 
   return (
-    <div className="space-y-14">
-      {/* Minimal hero: the federation mark behind, two actions in front. Kept
-          this spare deliberately — everything else lives one scroll away. */}
-      <section className="relative overflow-hidden rounded-xl border border-border bg-surface-raised px-6 pt-24 pb-8 text-center sm:pt-32 sm:pb-16">
-        <Image
-          src="/brand/itpf-horse-light.png"
-          alt=""
-          aria-hidden
-          width={263}
-          height={323}
-          priority
-          className="pointer-events-none absolute left-1/2 top-1/2 h-[200px] w-auto -translate-x-1/2 -translate-y-1/2 opacity-25 select-none sm:h-[260px] dark:hidden"
-        />
-        <Image
-          src="/brand/itpf-horse-dark.png"
-          alt=""
-          aria-hidden
-          width={263}
-          height={303}
-          priority
-          className="pointer-events-none absolute left-1/2 top-1/2 hidden h-[200px] w-auto -translate-x-1/2 -translate-y-1/2 opacity-25 select-none sm:h-[260px] dark:block"
-        />
-        <div className="relative space-y-4">
-          <h1 className="text-balance text-lg font-bold tracking-tight text-foreground sm:text-xl">
-            {t("landing.title")}
-          </h1>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <Button variant="outline" size="lg" asChild>
-              <a href="https://itpf.net" target="_blank" rel="noopener noreferrer">
-                {t("landing.aboutUs")}
-              </a>
-            </Button>
-            <Button variant="primary" size="lg" asChild>
-              <a href="#explore">
-                {t("landing.explore")}
-                <ChevronRight className="rtl:rotate-180" aria-hidden />
-              </a>
-            </Button>
+    <div className="space-y-10">
+      {/*
+       * A single full-bleed photo at every width (not a different crop per
+       * breakpoint): the empty space on its physical right holds the title
+       * and subtitle, in the same right-anchored column at every size and
+       * regardless of locale (see the physical, not logical, classes below).
+       *
+       * Edge to edge on a phone (cancels `<main>`'s own top and side padding
+       * with negative margins, and drops the rounded corners/border that
+       * would otherwise frame it, so the photo starts right under the
+       * header with no gap) — from `sm` up it sits back inside the normal
+       * contained, bordered card like every other section.
+       */}
+      <section className="relative -mx-4 -mt-6 overflow-hidden bg-ink-950 sm:mx-0 sm:mt-0 sm:rounded-2xl sm:border sm:border-border">
+        <div className="relative aspect-[3/2] max-h-[26rem] w-full sm:aspect-[16/7] lg:aspect-[21/8]">
+          <Image
+            src="/brand/hero-tent-pegging.webp"
+            alt=""
+            aria-hidden
+            fill
+            priority
+            sizes="(min-width: 1024px) 976px, (min-width: 640px) calc(100vw - 48px), 100vw"
+            className="object-cover object-[30%_35%] sm:object-[0%_50%]"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-ink-950/50 to-ink-950/85" />
+          <div className="absolute inset-0 flex items-end justify-end p-5 text-right rtl:justify-start sm:items-center sm:p-8 lg:p-14">
+            <div className="max-w-[78%] pb-7 sm:max-w-sm sm:pb-0 lg:max-w-md">
+              {/* The gold accent bar flags the headline the way the
+                  federation's own gold ramp already flags a podium rank —
+                  reusing that same semantic token rather than a one-off
+                  color. */}
+              <div className="relative pr-4">
+                <h1 className="text-balance text-xl font-bold tracking-tight text-white drop-shadow-sm sm:text-2xl lg:text-4xl">
+                  {t("landing.title")}
+                </h1>
+                <span aria-hidden className="absolute inset-y-0 right-0 w-1 rounded-full bg-accent" />
+              </div>
+              <p className="mt-2 text-xs text-white/80 drop-shadow-sm sm:mt-3 sm:text-sm lg:text-lg">
+                {t("landing.subtitle")}
+              </p>
+              <div className="mt-4 flex flex-wrap justify-end gap-2 rtl:justify-start sm:gap-2.5">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  className="rounded-full sm:h-11 sm:px-6 sm:text-base sm:[&_svg]:size-5"
+                  asChild
+                >
+                  <Link href="/results">
+                    {t("landing.heroPrimary")}
+                    <ChevronRight className="rtl:rotate-180" aria-hidden />
+                  </Link>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full border-white/25 text-white hover:bg-white/10 sm:h-11 sm:px-6 sm:text-base"
+                  asChild
+                >
+                  <a href="https://itpf.net" target="_blank" rel="noopener noreferrer">
+                    {t("landing.aboutUs")}
+                  </a>
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {live.length > 0 ? (
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold text-foreground">{t("landing.liveChampionships")}</h2>
-          <ul className="grid gap-4 sm:grid-cols-3">
-            {live.map((championship) => (
-              <li key={championship.id}>
-                <ChampionshipCard championship={championship} locale={locale} t={t} />
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
+      <UpcomingCarousel championships={carouselChampionships} locale={locale} />
 
-      {upcoming.length > 0 ? (
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold text-foreground">
-            {t("landing.upcomingChampionships")}
-          </h2>
-          <ul className="grid gap-4 sm:grid-cols-3">
-            {upcoming.map((championship) => (
-              <li key={championship.id}>
-                <ChampionshipCard championship={championship} locale={locale} t={t} />
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
+      <section className="grid grid-cols-4 gap-2 sm:gap-3">
+        {QUICK_LINKS.map(({ href, labelKey, icon: Icon }) => (
+          <Link
+            key={href}
+            href={href}
+            className="flex flex-col items-center gap-2 rounded-xl border border-border bg-surface-raised px-2 py-4 text-center transition-colors hover:border-border-strong"
+          >
+            <Icon className="size-6 text-accent" aria-hidden />
+            <span className="text-xs font-medium text-foreground">{t(labelKey)}</span>
+          </Link>
+        ))}
+      </section>
 
       {latest.length > 0 ? (
         <section className="space-y-4">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="text-lg font-semibold text-foreground">{t("landing.latestResults")}</h2>
-            <Link href="/results" className="text-sm font-medium text-primary hover:underline">
-              {t("landing.allResults")}
+            <Link
+              href="/results"
+              className="rounded-full border border-border-strong px-3 py-1 text-xs font-medium text-foreground hover:bg-surface-sunken"
+            >
+              {t("common.viewAll")}
             </Link>
           </div>
-          <ul className="grid gap-4 sm:grid-cols-3">
+          <ul className="space-y-3">
             {latest.map((championship) => (
               <li key={championship.id}>
-                <ChampionshipCard championship={championship} locale={locale} t={t} />
+                <LatestResultCard championship={championship} locale={locale} />
               </li>
             ))}
           </ul>
         </section>
       ) : null}
 
-      <section id="explore" className="scroll-mt-20 space-y-4">
-        <h2 className="text-lg font-semibold text-foreground">{t("landing.explore")}</h2>
-        <ul className="grid gap-4 sm:grid-cols-3">
-          <li>
-            <Link href="/results" className="block h-full">
-              <Card className={`h-full transition-colors ${TINTED_CARD}`}>
-                <CardContent className="space-y-2 pt-4">
-                  <Trophy className="size-5 text-accent" aria-hidden />
-                  <p className={`font-semibold ${TINTED_TITLE}`}>{t("landing.exploreResults")}</p>
-                  <p className={`text-sm ${TINTED_TEXT}`}>{t("landing.exploreResultsHint")}</p>
-                </CardContent>
-              </Card>
+      {series.length > 0 ? (
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-lg font-semibold text-foreground">{t("landing.topRankings")}</h2>
+            <Link
+              href="/rankings"
+              className="rounded-full border border-border-strong px-3 py-1 text-xs font-medium text-foreground hover:bg-surface-sunken"
+            >
+              {t("common.viewAll")}
             </Link>
-          </li>
-          <li>
-            <Link href="/rankings" className="block h-full">
-              <Card className={`h-full transition-colors ${TINTED_CARD}`}>
-                <CardContent className="space-y-2 pt-4">
-                  <Award className="size-5 text-accent" aria-hidden />
-                  <p className={`font-semibold ${TINTED_TITLE}`}>{t("landing.exploreRankings")}</p>
-                  <p className={`text-sm ${TINTED_TEXT}`}>{t("landing.exploreRankingsHint")}</p>
-                </CardContent>
-              </Card>
-            </Link>
-          </li>
-          <li>
-            <Link href="/results/countries" className="block h-full">
-              <Card className={`h-full transition-colors ${TINTED_CARD}`}>
-                <CardContent className="space-y-2 pt-4">
-                  <Flag className="size-5 text-accent" aria-hidden />
-                  <p className={`font-semibold ${TINTED_TITLE}`}>{t("landing.exploreCountries")}</p>
-                  <p className={`text-sm ${TINTED_TEXT}`}>{t("landing.exploreCountriesHint")}</p>
-                </CardContent>
-              </Card>
-            </Link>
-          </li>
-        </ul>
-      </section>
+          </div>
+          <ul className="space-y-3">
+            {series.map((item) => (
+              <li key={item.id}>
+                <Link href={`/rankings/${item.slug}`} className="block">
+                  <Card className="flex items-center gap-3 p-4 transition-colors hover:border-border-strong">
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-subtle">
+                      <Award className="size-5 text-accent" aria-hidden />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold text-foreground">
+                        {championshipDisplayName(item.name, item.nameAr, locale)}
+                      </p>
+                      <p className="text-xs text-muted">
+                        {t("series.championshipsCount", { count: item.championshipCount })}
+                      </p>
+                    </div>
+                  </Card>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </div>
   );
 }

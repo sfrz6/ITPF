@@ -11,9 +11,10 @@ const nextConfig: NextConfig = {
   output: "standalone",
   experimental: {
     // Creating a championship can carry two base64-encoded logo images
-    // (up to 2 MB raw each) alongside the rest of the form, well past the
-    // 1 MB default for a Server Action's request body.
-    serverActions: { bodySizeLimit: "8mb" },
+    // (up to 10 MB raw each, about a third larger once base64-encoded)
+    // alongside the rest of the form, well past the 1 MB default for a
+    // Server Action's request body.
+    serverActions: { bodySizeLimit: "30mb" },
   },
   async headers() {
     return [

@@ -21,7 +21,7 @@ export async function generateMetadata({
   const country = await getPublicCountryByIso2(iso2, locale);
   if (!country) return { title: "Athletes" };
   return {
-    title: `${country.name} — Athletes`,
+    title: `${country.name}: Athletes`,
     description: `Combined athlete results for ${country.name}.`,
     robots: { index: true, follow: true },
   };

@@ -3,6 +3,7 @@
 import * as React from "react";
 import { CountryFlag } from "@/components/common/country-flag";
 import { ItpfLogo } from "@/components/common/itpf-logo";
+import { RankBadge } from "@/components/common/rank-badge";
 import { EmptyState } from "@/components/ui/surfaces";
 import { Table, TBody, Td, TdNum, THead, Th, ThNum, TableWrapper, Tr } from "@/components/ui/table";
 import { StandingsToggle, type ToggleOption } from "@/components/results/standings-table";
@@ -91,7 +92,9 @@ export function RankingsTable({
                 <TBody>
                   {rows.map((row) => (
                     <Tr key={row.key} className={row.rank <= 3 ? "font-medium" : undefined}>
-                      <TdNum className="w-14 text-center text-muted">{row.rank}</TdNum>
+                      <TdNum className="w-14 text-center">
+                        <RankBadge rank={row.rank} className="mx-auto" />
+                      </TdNum>
                       <Td>
                         <span className="flex items-center gap-2">
                           <CountryFlag iso2={row.iso2} className="shrink-0" />

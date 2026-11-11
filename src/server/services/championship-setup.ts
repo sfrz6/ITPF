@@ -38,8 +38,49 @@ export function validateLogo(logo: LogoInput | null | undefined, label: string):
     throw new DomainError(`${label} must be a PNG, JPEG, WebP or SVG image.`, "VALIDATION");
   }
   if (logo.data.length > MAX_LOGO_BYTES) {
-    throw new DomainError(`${label} must be at most 2 MB.`, "VALIDATION");
+    throw new DomainError(`${label} must be at most 10 MB.`, "VALIDATION");
   }
+}
+
+/**
+ * Replaces or clears a championship's own logo after creation (the organizer
+ * logo has no equivalent edit path yet — only the championship's own mark was
+ * asked for). `logo: null` clears it back to the federation's own fallback
+ * mark, the same `null` + `null` pair `createChampionshipFromTemplate` writes
+ * when none was uploaded at creation time.
+ */
+export async function updateChampionshipLogo(
+  tx: Executor,
+  actor: Principal,
+  championshipId: string,
+  logo: LogoInput | null,
+): Promise<void> {
+  validateLogo(logo, "The championship logo");
+
+  const [existing] = await tx
+    .select({ id: championships.id, hadLogo: championships.championshipLogoContentType })
+    .from(championships)
+    .where(eq(championships.id, championshipId))
+    .limit(1);
+  if (!existing) throw new DomainError("Championship not found.", "NOT_FOUND");
+
+  await tx
+    .update(championships)
+    .set({
+      championshipLogo: logo?.data ?? null,
+      championshipLogoContentType: logo?.contentType ?? null,
+      updatedAt: new Date(),
+    })
+    .where(eq(championships.id, championshipId));
+
+  await recordAudit(tx, actor, {
+    action: "CHAMPIONSHIP_UPDATED",
+    entityType: "championship",
+    entityId: championshipId,
+    championshipId,
+    before: { hasChampionshipLogo: existing.hadLogo !== null },
+    after: { hasChampionshipLogo: logo !== null },
+  });
 }
 
 export interface SquadInput {

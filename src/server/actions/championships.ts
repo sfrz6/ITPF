@@ -15,6 +15,7 @@ import {
   deleteChampionship,
   reorderChampionshipCountries,
   replaceSquad,
+  updateChampionshipLogo,
   type LogoInput,
   type SquadInput,
 } from "@/server/services/championship-setup";
@@ -26,7 +27,7 @@ import { DomainError, ok, run, type ActionResult } from "./result";
  * applied once the data is back to raw bytes. */
 const logoSchema = z
   .object({
-    data: z.string().max(3_000_000),
+    data: z.string().max(14_000_000),
     contentType: z.enum(ALLOWED_LOGO_CONTENT_TYPES),
   })
   .nullable()
@@ -191,6 +192,41 @@ export async function updateChampionshipAction(
         },
       });
     });
+
+    revalidatePath(`/championships/${parsed.data.championshipId}`);
+    revalidatePath("/championships");
+    revalidatePath("/");
+    return ok();
+  });
+}
+
+const updateLogoSchema = z.object({
+  championshipId: z.uuid(),
+  championshipLogo: logoSchema,
+});
+
+/** `championshipLogo: null` (not omitted) clears the logo back to the federation's own fallback mark. */
+export async function updateChampionshipLogoAction(
+  input: unknown,
+): Promise<ActionResult<undefined>> {
+  return run(async () => {
+    const actor = await requirePermission("EDIT_CHAMPIONSHIP");
+    const parsed = updateLogoSchema.safeParse(input);
+    if (!parsed.success) {
+      throw new DomainError(
+        parsed.error.issues[0]?.message ?? "The logo is not valid.",
+        "VALIDATION",
+      );
+    }
+
+    await getDb().transaction((tx) =>
+      updateChampionshipLogo(
+        tx,
+        actor,
+        parsed.data.championshipId,
+        decodeLogo(parsed.data.championshipLogo),
+      ),
+    );
 
     revalidatePath(`/championships/${parsed.data.championshipId}`);
     revalidatePath("/championships");

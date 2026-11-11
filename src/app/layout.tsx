@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Providers } from "@/components/layout/providers";
 import { getLocale } from "@/lib/i18n/server";
 import { directionOf } from "@/lib/i18n/config";
+import { cairo } from "@/lib/fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -34,7 +35,7 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();
   return (
-    <html lang={locale} dir={directionOf(locale)} suppressHydrationWarning>
+    <html lang={locale} dir={directionOf(locale)} className={cairo.variable} suppressHydrationWarning>
       <body className="min-h-dvh bg-background text-foreground antialiased">
         <Providers locale={locale}>{children}</Providers>
       </body>

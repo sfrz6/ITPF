@@ -4,6 +4,7 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/cn";
 import { CountryFlag } from "@/components/common/country-flag";
+import { RankBadge } from "@/components/common/rank-badge";
 import { Badge, EmptyState } from "@/components/ui/surfaces";
 import { Table, TBody, Td, TdNum, THead, Th, ThNum, TableWrapper, Tr } from "@/components/ui/table";
 import { useI18n } from "@/lib/i18n/client";
@@ -209,8 +210,8 @@ export function StandingsTable({
             const isPodium = row.rank <= 3;
             return (
               <Tr key={row.key} className={cn(isPodium && "font-medium")}>
-                <TdNum className={cn(STICKY_START, "w-14 text-center text-muted")}>
-                  {row.rank}
+                <TdNum className={cn(STICKY_START, "w-14 text-center")}>
+                  <RankBadge rank={row.rank} className="mx-auto" />
                 </TdNum>
                 <Td className={cn(STICKY_NAME, "min-w-40 border-e border-border")}>
                   <span className="flex items-center gap-2">
@@ -258,6 +259,12 @@ export interface ToggleOption<T extends string> {
  * Small segmented control used for the subject and scope choices. It is a
  * radio group rather than a tab library so the whole table stays in one
  * accessible document order.
+ *
+ * Follows the standard ARIA radiogroup keyboard pattern: arrow keys move the
+ * selection (wrapping at the ends) instead of Tab, and only the selected
+ * option sits in the tab order (a roving `tabIndex`), so a keyboard user
+ * passes through the whole group in a single Tab stop, as a native radio
+ * group would behave.
  */
 export function StandingsToggle<T extends string>({
   label,
@@ -270,19 +277,55 @@ export function StandingsToggle<T extends string>({
   options: readonly ToggleOption<T>[];
   onChange: (value: T) => void;
 }) {
+  const buttonRefs = React.useRef<Array<HTMLButtonElement | null>>([]);
+
+  const moveTo = (index: number) => {
+    const option = options[(index + options.length) % options.length]!;
+    onChange(option.value);
+    buttonRefs.current[(index + options.length) % options.length]?.focus();
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent, currentIndex: number) => {
+    switch (event.key) {
+      case "ArrowRight":
+      case "ArrowDown":
+        event.preventDefault();
+        moveTo(currentIndex + 1);
+        break;
+      case "ArrowLeft":
+      case "ArrowUp":
+        event.preventDefault();
+        moveTo(currentIndex - 1);
+        break;
+      case "Home":
+        event.preventDefault();
+        moveTo(0);
+        break;
+      case "End":
+        event.preventDefault();
+        moveTo(options.length - 1);
+        break;
+    }
+  };
+
   return (
     <div
       role="radiogroup"
       aria-label={label}
       className="inline-flex overflow-hidden rounded-md border border-border-strong"
     >
-      {options.map((option) => (
+      {options.map((option, index) => (
         <button
           key={option.value}
+          ref={(el) => {
+            buttonRefs.current[index] = el;
+          }}
           type="button"
           role="radio"
           aria-checked={option.value === value}
+          tabIndex={option.value === value ? 0 : -1}
           onClick={() => onChange(option.value)}
+          onKeyDown={(event) => handleKeyDown(event, index)}
           className={cn(
             // Taller than usual below the sm breakpoint, where this is most
             // likely a visitor's phone and finger sized touch targets matter

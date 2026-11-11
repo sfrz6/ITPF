@@ -12,16 +12,39 @@ import { setLocaleAction } from "@/server/actions/preferences";
 /**
  * Cycles light, dark and system.
  *
- * `useTheme` reports no theme until the provider has read the stored
- * preference, which is after hydration, so both the server and the first client
- * render fall back to "system" and the markup matches.
+ * The server always renders the "system" icon and label, since it has no
+ * access to the visitor's stored preference. `next-themes` can resolve the
+ * real theme synchronously on the client even before this component's first
+ * commit, so reading `theme` unconditionally would render something other
+ * than "system" on that very first paint and fail hydration. Holding the
+ * display at "system" until after mount (the effect below runs post-hydration,
+ * never during it) keeps that first client render byte-for-byte identical to
+ * the server's, then updates to the real theme a frame later.
  */
+const noopSubscribe = () => () => {};
+
+/**
+ * True only once the component has committed on the client. Modeled as an
+ * external store (always "false", forever, on the server; always "true" on
+ * the client) rather than a `useState` flipped from an effect, which the
+ * `react-hooks/set-state-in-effect` rule flags as the cascading-render
+ * anti-pattern it's meant to catch.
+ */
+function useHasMounted(): boolean {
+  return React.useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false,
+  );
+}
+
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
   const { t } = useI18n();
+  const mounted = useHasMounted();
 
   const order = ["light", "dark", "system"] as const;
-  const current = (theme ?? "system") as (typeof order)[number];
+  const current = (mounted ? (theme ?? "system") : "system") as (typeof order)[number];
   const next = order[(order.indexOf(current) + 1) % order.length]!;
   const Icon = current === "light" ? Sun : current === "dark" ? Moon : Monitor;
   const label =

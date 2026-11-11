@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge, Card, CardContent, CardHeader, CardTitle, EmptyState, PageHeader } from "@/components/ui/surfaces";
 import { getTranslator } from "@/lib/i18n/server";
 import { listChampionships } from "@/server/services/championships";
+import { addDays, CHAMPIONSHIP_DAYS } from "@/server/services/championship-setup";
 import { AutoRefresh } from "./auto-refresh";
 
 /**
@@ -31,6 +32,7 @@ export const revalidate = 30;
 export default async function PublicResultsIndexPage() {
   const { locale, t } = await getTranslator();
   const championships = await listChampionships({ publishedOnly: true });
+  const todayIso = new Date().toISOString().slice(0, 10);
 
   return (
     <>
@@ -46,7 +48,10 @@ export default async function PublicResultsIndexPage() {
         <EmptyState icon={<Trophy />} title={t("publicResults.noChampionships")} />
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2">
-          {championships.map((championship) => (
+          {championships.map((championship) => {
+            const endDate = addDays(championship.startDate, CHAMPIONSHIP_DAYS - 1);
+            const isLive = championship.startDate <= todayIso && todayIso <= endDate;
+            return (
             <li key={championship.id}>
               <Card className="flex h-full flex-col">
                 <CardHeader className="items-start gap-3">
@@ -59,9 +64,24 @@ export default async function PublicResultsIndexPage() {
                     />
                   ) : null}
                   <span className="flex min-w-0 flex-1 flex-col gap-1">
-                    <CardTitle className="text-base">
-                      {championshipDisplayName(championship.name, championship.nameAr, locale)}
-                    </CardTitle>
+                    <span className="flex flex-wrap items-center gap-2">
+                      <CardTitle className="text-base">
+                        {championshipDisplayName(championship.name, championship.nameAr, locale)}
+                      </CardTitle>
+                      {isLive ? (
+                        <Badge tone="success" className="shrink-0">
+                          <span
+                            className="size-1.5 rounded-full bg-success motion-safe:animate-pulse"
+                            aria-hidden
+                          />
+                          {t("publicResults.statusLive")}
+                        </Badge>
+                      ) : championship.status === "COMPLETED" ? (
+                        <Badge tone="neutral" className="shrink-0">
+                          {t("championships.statusCompleted")}
+                        </Badge>
+                      ) : null}
+                    </span>
                     {/*
                       `bdi` isolates the location as one atomic run so Arabic's
                       bidi reordering doesn't tear it apart mid-phrase when the
@@ -81,10 +101,18 @@ export default async function PublicResultsIndexPage() {
                   </span>
                 </CardHeader>
                 <CardContent className="mt-auto space-y-3">
-                  <p className="flex flex-wrap items-center gap-2 text-xs text-muted">
-                    <Badge tone="success">{t("runs.statusConfirmed")}</Badge>
+                  <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
                     <span className="numeric">
-                      {t("publicResults.confirmedRuns", { count: championship.confirmedRuns })}
+                      {championship.confirmedRuns > 0
+                        ? t("publicResults.roundsProgress", {
+                            confirmed: championship.confirmedRuns,
+                            total: championship.totalRuns,
+                          })
+                        : t("publicResults.confirmedRuns", { count: 0 })}
+                    </span>
+                    <span aria-hidden>·</span>
+                    <span className="numeric">
+                      {t("publicResults.countriesCount", { count: championship.countryCount })}
                     </span>
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -109,7 +137,8 @@ export default async function PublicResultsIndexPage() {
                 </CardContent>
               </Card>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
     </>

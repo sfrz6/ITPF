@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { EmptyState } from "@/components/ui/surfaces";
+import { RankBadge } from "@/components/common/rank-badge";
 import { Table, TBody, Td, TdNum, THead, Th, ThNum, TableWrapper, Tr } from "@/components/ui/table";
 import { StandingsToggle, type ToggleOption } from "@/components/results/standings-table";
 import { useI18n } from "@/lib/i18n/client";
@@ -54,7 +55,9 @@ export function CountryRiderTable({
             <TBody>
               {activeRows.map((row) => (
                 <Tr key={row.riderId} className={row.rank <= 3 ? "font-medium" : undefined}>
-                  <TdNum className="w-14 text-center text-muted">{row.rank}</TdNum>
+                  <TdNum className="w-14 text-center">
+                    <RankBadge rank={row.rank} className="mx-auto" />
+                  </TdNum>
                   <Td>{row.name}</Td>
                   <TdNum className="font-semibold">{row.total}</TdNum>
                 </Tr>

@@ -36,6 +36,12 @@
   --color-gold-900: #4d402e;
   --color-gold-950: #2b2216;
 
+  /* Podium accents only: second and third place on a leaderboard. Not part
+     of the semantic light/dark pairs above, since a silver or bronze mark
+     reads the same restrained way in both themes. */
+  --color-silver: #b9c2ca;
+  --color-bronze: #c3813f;
+
   --color-ink-50: #f6f8f9;
   --color-ink-100: #ecf0f2;
   --color-ink-200: #d6dee3;
@@ -49,8 +55,8 @@
   --color-ink-950: #060d12;
 
   --font-sans:
-    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Arabic",
-    "Helvetica Neue", Arial, sans-serif;
+    var(--font-cairo), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans Arabic", "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, "Cascadia Mono", "Segoe UI Mono", "Roboto Mono", monospace;
 
   --radius-sm: 0.1875rem;

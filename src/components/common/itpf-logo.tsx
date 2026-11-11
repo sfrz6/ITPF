@@ -33,7 +33,7 @@ export function ItpfLogo({
         className="h-auto w-full dark:hidden"
       />
       <Image
-        src="/brand/itpf-logo-dark-v2.png"
+        src="/brand/itpf-logo-dark-v2.webp"
         alt=""
         width={511}
         height={430}

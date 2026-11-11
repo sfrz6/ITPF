@@ -36,6 +36,7 @@ export default async function ChampionshipSchedulePage({
             status: championship.status,
             isPublished: championship.isPublished,
             slug: championship.slug,
+            hasChampionshipLogo: championship.hasChampionshipLogo,
           }}
           canEdit={canEdit}
           canPublish={canPublish}

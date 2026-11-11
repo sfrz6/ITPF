@@ -53,9 +53,10 @@ export function Tr({ className, ...props }: React.ComponentProps<"tr">) {
   return <tr className={cn("border-t border-border first:border-t-0", className)} {...props} />;
 }
 
-export function Th({ className, ...props }: React.ComponentProps<"th">) {
+export function Th({ className, scope = "col", ...props }: React.ComponentProps<"th">) {
   return (
     <th
+      scope={scope}
       className={cn(
         "px-3 py-2 text-start align-middle text-xs font-semibold uppercase tracking-wide text-muted",
         className,
