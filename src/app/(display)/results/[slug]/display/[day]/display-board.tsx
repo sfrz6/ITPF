@@ -123,16 +123,7 @@ function RankedList({
         >
           <span className={`${s.rankAlign} ${s.rankColor} ${s.weight} ${s.rank}`}>{row.rank}</span>
           <CountryFlag iso2={row.iso2} className={`rounded-sm ${s.flag}`} />
-          {/* Extra vertical padding plus a taller line-height than the
-              font-size utility's own default: Arabic glyphs with descenders
-              (e.g. "ى") sit low enough in Cairo's metrics that a tightly
-              fit single-line box clips them against its own `truncate`
-              overflow, cutting the bottom off a name read right-to-left. */}
-          <span
-            className={`min-w-0 truncate py-1 leading-[1.4] text-neutral-900 ${s.weight} ${s.name}`}
-          >
-            {row.name}
-          </span>
+          <span className={`min-w-0 truncate text-neutral-900 ${s.weight} ${s.name}`}>{row.name}</span>
           <span className={`numeric justify-self-end text-neutral-900 ${s.weight} ${s.total}`}>
             {row.total}
           </span>
