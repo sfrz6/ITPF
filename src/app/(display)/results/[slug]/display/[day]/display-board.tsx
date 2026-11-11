@@ -123,7 +123,16 @@ function RankedList({
         >
           <span className={`${s.rankAlign} ${s.rankColor} ${s.weight} ${s.rank}`}>{row.rank}</span>
           <CountryFlag iso2={row.iso2} className={`rounded-sm ${s.flag}`} />
-          <span className={`min-w-0 truncate text-neutral-900 ${s.weight} ${s.name}`}>{row.name}</span>
+          {/* Extra vertical padding plus a taller line-height than the
+              font-size utility's own default: Arabic glyphs with descenders
+              (e.g. "ى") sit low enough in Cairo's metrics that a tightly
+              fit single-line box clips them against its own `truncate`
+              overflow, cutting the bottom off a name read right-to-left. */}
+          <span
+            className={`min-w-0 truncate py-1 leading-[1.4] text-neutral-900 ${s.weight} ${s.name}`}
+          >
+            {row.name}
+          </span>
           <span className={`numeric justify-self-end text-neutral-900 ${s.weight} ${s.total}`}>
             {row.total}
           </span>
@@ -161,12 +170,12 @@ function TopFivePhase({ title, rows }: { title: string; rows: readonly StandingR
  */
 function QrPhase({ title, svg }: { title: string; svg: string }) {
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-10 px-8">
+    <div className="flex h-full w-full flex-col items-center gap-8 px-8 pt-16">
       <h2 className="w-full max-w-4xl text-center text-5xl font-bold tracking-tight text-blue-950">
         {title}
       </h2>
       <div
-        className="w-full max-w-[28rem] [&_svg]:h-auto [&_svg]:w-full"
+        className="w-full max-w-[38rem] [&_svg]:h-auto [&_svg]:w-full"
         dangerouslySetInnerHTML={{ __html: svg }}
       />
     </div>
@@ -389,33 +398,6 @@ export function DisplayBoard({
   const [countryPage, setCountryPage] = React.useState(0);
   const [overallRiderPage, setOverallRiderPage] = React.useState(0);
 
-  React.useEffect(() => {
-    if (riderPageCount <= 1) return;
-    const id = setInterval(
-      () => setRiderPage((page) => (page + 1) % riderPageCount),
-      SUBPAGE_ROTATE_MS,
-    );
-    return () => clearInterval(id);
-  }, [riderPageCount]);
-
-  React.useEffect(() => {
-    if (countryPageCount <= 1) return;
-    const id = setInterval(
-      () => setCountryPage((page) => (page + 1) % countryPageCount),
-      SUBPAGE_ROTATE_MS,
-    );
-    return () => clearInterval(id);
-  }, [countryPageCount]);
-
-  React.useEffect(() => {
-    if (overallRiderPageCount <= 1) return;
-    const id = setInterval(
-      () => setOverallRiderPage((page) => (page + 1) % overallRiderPageCount),
-      SUBPAGE_ROTATE_MS,
-    );
-    return () => clearInterval(id);
-  }, [overallRiderPageCount]);
-
   // A refresh can shrink the row count (a correction removes a competitor),
   // which could otherwise strand the current page index past the new last
   // page; clamped here at read time rather than re-synced with an effect, so
@@ -509,6 +491,45 @@ export function DisplayBoard({
     setCountryPage(0);
     setOverallRiderPage(0);
   }
+
+  // Each interval only runs while its own phase is the one actually on
+  // screen — not continuously in the background regardless of what's
+  // showing — and `currentPhaseId` (not just the layout) is in its
+  // dependencies so a same-layout language handoff (Overall English to
+  // Overall Arabic) restarts it from a fresh `SUBPAGE_ROTATE_MS`, in step
+  // with the page-index reset above. Otherwise a background interval that
+  // kept ticking the whole time some other phase was showing could fire
+  // moments after this phase actually became visible, flipping past its
+  // first page almost immediately instead of holding it for the full time.
+  const isFullRidersActive = currentPhase?.layout === "fullRiders";
+  React.useEffect(() => {
+    if (!isFullRidersActive || riderPageCount <= 1) return;
+    const id = setInterval(
+      () => setRiderPage((page) => (page + 1) % riderPageCount),
+      SUBPAGE_ROTATE_MS,
+    );
+    return () => clearInterval(id);
+  }, [isFullRidersActive, riderPageCount, currentPhaseId]);
+
+  const isFullCountriesActive = currentPhase?.layout === "fullCountries";
+  React.useEffect(() => {
+    if (!isFullCountriesActive || countryPageCount <= 1) return;
+    const id = setInterval(
+      () => setCountryPage((page) => (page + 1) % countryPageCount),
+      SUBPAGE_ROTATE_MS,
+    );
+    return () => clearInterval(id);
+  }, [isFullCountriesActive, countryPageCount, currentPhaseId]);
+
+  const isOverallActive = currentPhase?.layout === "overall";
+  React.useEffect(() => {
+    if (!isOverallActive || overallRiderPageCount <= 1) return;
+    const id = setInterval(
+      () => setOverallRiderPage((page) => (page + 1) % overallRiderPageCount),
+      SUBPAGE_ROTATE_MS,
+    );
+    return () => clearInterval(id);
+  }, [isOverallActive, overallRiderPageCount, currentPhaseId]);
 
   // The board's language follows the *current phase*, not a single
   // page-wide setting — so an Arabic "Top 5 Countries" phase and an English
