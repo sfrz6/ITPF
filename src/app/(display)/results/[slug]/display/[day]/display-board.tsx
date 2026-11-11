@@ -44,6 +44,7 @@ const ROW_SIZE = {
   topFive: {
     li: "gap-x-8 px-9 py-7",
     rank: "w-20 text-6xl",
+    rankAlign: "text-end",
     rankColor: "text-neutral-400",
     flag: "h-16 w-24",
     name: "text-6xl",
@@ -53,6 +54,7 @@ const ROW_SIZE = {
   full: {
     li: "gap-x-5 px-6 py-5",
     rank: "w-12 text-3xl",
+    rankAlign: "text-end",
     rankColor: "text-neutral-400",
     flag: "h-11 w-16",
     name: "text-3xl",
@@ -68,9 +70,12 @@ const ROW_SIZE = {
   // width, where a bolder weight matters most.
   overallRider: {
     li: "gap-x-3 px-4 py-2",
-    // Wider than the name/total text so the rank stands out as its own
-    // heavier, pure-black mark rather than the muted gray used elsewhere.
-    rank: "w-12 text-3xl",
+    // Left-aligned and narrower than the other sizes' rank column, per this
+    // one column's own request — it sits flush against the cell's own start
+    // edge instead of right-aligned in a wider box, which also pulls the
+    // flag and name in closer behind it.
+    rank: "w-9 text-3xl",
+    rankAlign: "text-start",
     rankColor: "text-black",
     flag: "h-9 w-14",
     name: "text-3xl",
@@ -80,6 +85,7 @@ const ROW_SIZE = {
   overallCountry: {
     li: "gap-x-3 px-4 py-2",
     rank: "w-12 text-3xl",
+    rankAlign: "text-end",
     rankColor: "text-black",
     flag: "h-9 w-14",
     name: "text-3xl",
@@ -115,7 +121,7 @@ function RankedList({
           key={row.key}
           className={`col-span-full grid grid-cols-subgrid items-center rounded-xl border border-black/10 bg-white/70 shadow-sm ${s.li}`}
         >
-          <span className={`text-end ${s.rankColor} ${s.weight} ${s.rank}`}>{row.rank}</span>
+          <span className={`${s.rankAlign} ${s.rankColor} ${s.weight} ${s.rank}`}>{row.rank}</span>
           <CountryFlag iso2={row.iso2} className={`rounded-sm ${s.flag}`} />
           <span className={`min-w-0 truncate text-neutral-900 ${s.weight} ${s.name}`}>{row.name}</span>
           <span className={`numeric justify-self-end text-neutral-900 ${s.weight} ${s.total}`}>
