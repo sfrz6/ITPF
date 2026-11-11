@@ -5,7 +5,12 @@ import { buildStandingsData, type StandingRow } from "@/components/results/stand
 import { getChampionshipBySlug, getChampionshipDetail } from "@/server/services/championships";
 import { loadChampionshipResults } from "@/server/services/results";
 import { scopeForDay, type DayNumber } from "@/domain/results";
+import { generateQrSvg } from "@/lib/qr";
 import { DisplayBoard } from "./display-board";
+
+/** Every championship's board points at the same results homepage — there is
+ * no per-championship destination to encode. */
+const QR_TARGET_URL = "https://itpf.app";
 
 export const metadata = { title: "Live results" };
 
@@ -38,6 +43,7 @@ export default async function ChampionshipDisplayPage({
   if (!dayDetail) notFound();
 
   const scope = scopeForDay(day);
+  const qrSvg = await generateQrSvg(QR_TARGET_URL);
 
   // A schedulable phase names its own language (Top 5 Countries can rotate
   // through an Arabic instance and an English instance back to back), so
@@ -87,6 +93,7 @@ export default async function ChampionshipDisplayPage({
       hasChampionshipLogo={championship.hasChampionshipLogo}
       byLocale={byLocale}
       displaySettings={dayDetail.displaySettings}
+      qrSvg={qrSvg}
     />
   );
 }

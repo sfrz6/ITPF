@@ -612,5 +612,7 @@ export const ar: Dictionary = {
     dayCountryRanking: "ترتيب المنتخبات — اليوم {day}",
     dayIndividualRanking: "ترتيب المتسابقين — اليوم {day}",
     waitingForResults: "بانتظار تأكيد أول جولة...",
+    qrCode: "رمز الاستجابة السريع",
+    qrPrompt: "امسح رمز الاستجابة السريع لمتابعة النتائج",
   },
 };

@@ -13,6 +13,7 @@ export const DISPLAY_LAYOUTS = [
   "fullCountries",
   "fullRiders",
   "overall",
+  "qr",
 ] as const;
 
 export type DisplayLayout = (typeof DISPLAY_LAYOUTS)[number];

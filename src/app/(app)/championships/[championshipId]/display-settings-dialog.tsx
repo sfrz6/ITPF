@@ -36,6 +36,7 @@ const LAYOUT_LABEL_KEY: Record<DisplayLayout, MessageKey> = {
   fullCountries: "display.countryRanking",
   fullRiders: "display.individualRanking",
   overall: "display.overallStandings",
+  qr: "display.qrCode",
 };
 
 export function DisplaySettingsDialog({

@@ -615,6 +615,8 @@ export const en = {
     dayCountryRanking: "Day {day} National Team Standings",
     dayIndividualRanking: "Day {day} Athlete Standings",
     waitingForResults: "Waiting for the first confirmed run...",
+    qrCode: "QR Code",
+    qrPrompt: "Scan The QR Code to see the results",
   },
 } as const;
 

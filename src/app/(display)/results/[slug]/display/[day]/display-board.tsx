@@ -147,6 +147,26 @@ function TopFivePhase({ title, rows }: { title: string; rows: readonly StandingR
   );
 }
 
+/**
+ * A fixed-content phase: the QR itself never changes (every championship
+ * points at the same results homepage), so unlike every other phase here it
+ * ignores the championship's own data entirely — it's always available
+ * regardless of whether any run has been confirmed yet.
+ */
+function QrPhase({ title, svg }: { title: string; svg: string }) {
+  return (
+    <div className="flex h-full w-full flex-col items-center justify-center gap-10 px-8">
+      <h2 className="w-full max-w-4xl text-center text-5xl font-bold tracking-tight text-blue-950">
+        {title}
+      </h2>
+      <div
+        className="w-full max-w-[28rem] [&_svg]:h-auto [&_svg]:w-full"
+        dangerouslySetInnerHTML={{ __html: svg }}
+      />
+    </div>
+  );
+}
+
 /** Every competitor, two columns of five, paging through more names a slice at a time. */
 function FullListPhase({
   title,
@@ -311,6 +331,7 @@ export function DisplayBoard({
   hasChampionshipLogo,
   byLocale,
   displaySettings,
+  qrSvg,
 }: {
   championshipId: string;
   dayNumber: DayNumber;
@@ -318,6 +339,10 @@ export function DisplayBoard({
   hasChampionshipLogo: boolean;
   byLocale: Record<Locale, LocaleData>;
   displaySettings: DisplaySettings;
+  /** Pre-rendered server-side (see `generateQrSvg`) rather than generated on
+   * the client — the content is fixed, so there's no reason to ship the `qrcode`
+   * library itself down to the board's own JS bundle. */
+  qrSvg: string;
 }) {
   const router = useRouter();
   const [started, setStarted] = React.useState(false);
@@ -395,11 +420,13 @@ export function DisplayBoard({
 
   const hasDataForPhase = React.useCallback(
     (phase: DisplayPhase) =>
-      phase.layout === "topCountries" || phase.layout === "fullCountries"
-        ? countryCount > 0
-        : phase.layout === "overall"
-          ? riderCount > 0 && countryCount > 0
-          : riderCount > 0,
+      phase.layout === "qr"
+        ? true
+        : phase.layout === "topCountries" || phase.layout === "fullCountries"
+          ? countryCount > 0
+          : phase.layout === "overall"
+            ? riderCount > 0 && countryCount > 0
+            : riderCount > 0,
     [countryCount, riderCount],
   );
 
@@ -595,6 +622,8 @@ export function DisplayBoard({
             overallCountryRows={current.overallCountryRows}
             overallWatermarkSrc={watermarkSrc}
           />
+        ) : currentPhase?.layout === "qr" ? (
+          <QrPhase title={t("display.qrPrompt")} svg={qrSvg} />
         ) : (
           <div className="flex h-full items-center justify-center">
             <p className="text-2xl text-neutral-500">{t("display.waitingForResults")}</p>
