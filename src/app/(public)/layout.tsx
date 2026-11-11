@@ -56,7 +56,7 @@ export default async function PublicLayout({ children }: { children: React.React
               </span>
             </span>
           </Link>
-          <nav className="ms-auto hidden items-center gap-5 text-sm font-medium text-muted md:flex">
+          <nav className="hidden items-center gap-5 text-sm font-medium text-muted md:flex">
             <Link href="/" className="hover:text-foreground">
               {t("nav.home")}
             </Link>
@@ -73,11 +73,14 @@ export default async function PublicLayout({ children }: { children: React.React
               {t("publicRiders.title")}
             </Link>
           </nav>
-          <div className="hidden shrink-0 items-center gap-1 md:flex">
+          {/* Always visible, not just from `md` up: a visitor on a phone gets
+              the language and theme controls right in the header instead of
+              having to open the drawer for them. */}
+          <div className="ms-auto flex shrink-0 items-center gap-1">
             <LocaleSwitcher />
             <ThemeToggle />
           </div>
-          <div className="ms-auto shrink-0 md:hidden">
+          <div className="shrink-0 md:hidden">
             <PublicMobileNav />
           </div>
         </div>

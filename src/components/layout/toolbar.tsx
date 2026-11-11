@@ -2,12 +2,20 @@
 
 import * as React from "react";
 import { useTheme } from "next-themes";
-import { Languages, Monitor, Moon, Sun } from "lucide-react";
+import { Globe, Monitor, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/form-controls";
 import { useI18n } from "@/lib/i18n/client";
-import { LOCALES, LOCALE_LABELS } from "@/lib/i18n/config";
+import { LOCALES, type Locale } from "@/lib/i18n/config";
 import { setLocaleAction } from "@/server/actions/preferences";
+
+/**
+ * Short form for this one compact header control only — everywhere else
+ * that lists a language (the display board's own language picker, for one)
+ * keeps `LOCALE_LABELS`'s full name, which reads better outside a cramped
+ * header chip.
+ */
+const SHORT_LOCALE_LABELS: Record<Locale, string> = { en: "En", ar: "AR" };
 
 /**
  * Cycles light, dark and system.
@@ -75,7 +83,7 @@ export function LocaleSwitcher({ className }: { className?: string }) {
     <label className={className}>
       <span className="sr-only">{t("common.language")}</span>
       <span className="relative inline-flex items-center">
-        <Languages className="pointer-events-none absolute start-2.5 size-3.5 text-muted" aria-hidden />
+        <Globe className="pointer-events-none absolute start-2.5 size-3.5 text-muted" aria-hidden />
         <Select
           value={locale}
           disabled={pending}
@@ -86,11 +94,11 @@ export function LocaleSwitcher({ className }: { className?: string }) {
               await setLocaleAction(formData);
             });
           }}
-          className="h-8 w-auto ps-8 pe-8 text-xs"
+          className="h-8 w-auto ps-8 pe-7 text-xs"
         >
           {LOCALES.map((value) => (
             <option key={value} value={value}>
-              {LOCALE_LABELS[value]}
+              {SHORT_LOCALE_LABELS[value]}
             </option>
           ))}
         </Select>

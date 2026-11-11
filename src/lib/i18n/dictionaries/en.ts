@@ -521,6 +521,12 @@ export const en = {
   },
   landing: {
     title: "International Tent Pegging Federation",
+    // The hero's own two-line break: kept as separate strings rather than
+    // relying on `text-balance` to land on this exact split, so the
+    // headline wraps identically at every breakpoint instead of drifting
+    // to a different line break on a narrower phone.
+    titleLine1: "International Tent Pegging",
+    titleLine2: "Federation",
     subtitle: "Official results and international championships.",
     heroPrimary: "Explore championships",
     aboutUs: "About us",

@@ -132,10 +132,10 @@ export function UpcomingCarousel({
                     <img
                       src={`/api/championships/${championship.id}/logo/championship`}
                       alt=""
-                      className="size-16 object-contain"
+                      className="size-24 object-contain"
                     />
                   ) : (
-                    <ItpfLogo width={64} />
+                    <ItpfLogo width={96} />
                   )}
                 </div>
 

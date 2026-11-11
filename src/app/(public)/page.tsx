@@ -112,15 +112,20 @@ export default async function PublicLandingPage() {
             className="object-cover object-[30%_35%] sm:object-[0%_50%]"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-ink-950/50 to-ink-950/85" />
-          <div className="absolute inset-0 flex items-end justify-end p-5 text-right rtl:justify-start sm:items-center sm:p-8 lg:p-14">
-            <div className="max-w-[78%] pb-7 sm:max-w-sm sm:pb-0 lg:max-w-md">
+          <div className="absolute inset-0 flex items-center justify-end p-5 text-right rtl:justify-start sm:p-8 lg:p-14">
+            <div className="max-w-[80%] sm:max-w-sm lg:max-w-md">
               {/* The gold accent bar flags the headline the way the
                   federation's own gold ramp already flags a podium rank —
                   reusing that same semantic token rather than a one-off
-                  color. */}
+                  color. Both lines are their own strings (not one string
+                  left to `text-balance`), so the break falls in the same
+                  place at every breakpoint instead of drifting on a
+                  narrower phone. */}
               <div className="relative pr-4">
-                <h1 className="text-balance text-xl font-bold tracking-tight text-white drop-shadow-sm sm:text-2xl lg:text-4xl">
-                  {t("landing.title")}
+                <h1 className="text-xl font-bold tracking-tight text-white drop-shadow-sm sm:text-2xl lg:text-4xl">
+                  {t("landing.titleLine1")}
+                  <br />
+                  {t("landing.titleLine2")}
                 </h1>
                 <span aria-hidden className="absolute inset-y-0 right-0 w-1 rounded-full bg-accent" />
               </div>

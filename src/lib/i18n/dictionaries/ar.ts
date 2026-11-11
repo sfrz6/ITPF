@@ -522,6 +522,8 @@ export const ar: Dictionary = {
   },
   landing: {
     title: "الاتحاد الدولي لالتقاط الأوتاد",
+    titleLine1: "الاتحاد الدولي",
+    titleLine2: "لالتقاط الأوتاد",
     subtitle: "النتائج الرسمية والبطولات الدولية.",
     heroPrimary: "استكشف البطولات",
     aboutUs: "عن الاتحاد",

@@ -3,9 +3,8 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { Award, X } from "lucide-react";
+import { Award, Flag, Home, Trophy, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { LocaleSwitcher, ThemeToggle } from "@/components/layout/toolbar";
 import { useI18n } from "@/lib/i18n/client";
 
 /**
@@ -22,10 +21,9 @@ import { useI18n } from "@/lib/i18n/client";
  * instead of the full viewport (visible on a real phone, not in a desktop
  * browser's viewport emulation, which doesn't reproduce the bug).
  *
- * Rankings is the only destination here that isn't already one tap away on
- * the bottom tab bar (Home, Championships, Teams and Athletes all are), so
- * the drawer stays short: that one link, plus the language and theme
- * controls the bottom bar has no room for.
+ * Lists every public destination, the same set the header's own nav links to
+ * from `md` up — language and theme live in the header itself now (visible
+ * at every width), not in here.
  */
 export function MobileNavDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useI18n();
@@ -100,22 +98,25 @@ export function MobileNavDrawer({ open, onClose }: { open: boolean; onClose: () 
         </div>
 
         <ul className="space-y-1">
-          <li>
-            <Link
-              href="/rankings"
-              onClick={onClose}
-              className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-foreground transition-colors [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted hover:bg-surface-sunken"
-            >
-              <Award aria-hidden />
-              {t("rankings.title")}
-            </Link>
-          </li>
+          {[
+            { href: "/", label: t("nav.home"), icon: <Home aria-hidden /> },
+            { href: "/results", label: t("nav.publicResults"), icon: <Trophy aria-hidden /> },
+            { href: "/rankings", label: t("rankings.title"), icon: <Award aria-hidden /> },
+            { href: "/results/countries", label: t("publicCountries.title"), icon: <Flag aria-hidden /> },
+            { href: "/results/riders", label: t("publicRiders.title"), icon: <Users aria-hidden /> },
+          ].map((item) => (
+            <li key={item.href}>
+              <Link
+                href={item.href}
+                onClick={onClose}
+                className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-foreground transition-colors [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted hover:bg-surface-sunken"
+              >
+                {item.icon}
+                {item.label}
+              </Link>
+            </li>
+          ))}
         </ul>
-
-        <div className="mt-auto flex items-center justify-between gap-2 border-t border-border pt-3">
-          <LocaleSwitcher />
-          <ThemeToggle />
-        </div>
       </nav>
     </div>,
     document.body,
