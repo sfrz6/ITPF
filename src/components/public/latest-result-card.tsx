@@ -46,16 +46,25 @@ export async function LatestResultCard({
   const availability = pdfAvailability(detail?.days ?? []);
 
   return (
-    <Card className="p-4">
-      <div className="space-y-1">
+    <Card className="overflow-hidden p-4">
+      {/* Dark mode's own tokens already give the rest of the card this same
+          dark-navy-with-light-text look, so only light mode needs the
+          override here, reset back to the plain tokens under `dark:`. The
+          negative margin bleeds the fill to the card's own edges (and its
+          rounded top corners), rather than sitting inset within the card's
+          padding like an ordinary block. */}
+      <div className="-m-4 mb-0 space-y-1 rounded-t-lg bg-primary p-4 text-primary-foreground dark:m-0 dark:rounded-none dark:bg-transparent dark:p-0 dark:text-inherit">
         <Badge tone="success" className="w-fit">
           <CircleCheck className="size-3" aria-hidden />
           {t("runs.statusConfirmed")}
         </Badge>
-        <Link href={`/results/${championship.slug}`} className="block font-semibold text-foreground hover:underline">
+        <Link
+          href={`/results/${championship.slug}`}
+          className="block font-semibold text-primary-foreground hover:underline dark:text-foreground"
+        >
           {championshipDisplayName(championship.name, championship.nameAr, locale)}
         </Link>
-        <p className="text-xs text-muted">
+        <p className="text-xs text-primary-foreground/70 dark:text-muted">
           {formatCompetitionDate(championship.startDate, locale)} ·{" "}
           <bdi>
             {championshipDisplayName(championship.location, championship.locationAr, locale)}

@@ -166,10 +166,16 @@ export default async function PublicLandingPage() {
           <Link
             key={href}
             href={href}
-            className="flex flex-col items-center gap-2 rounded-xl border border-border bg-surface-raised px-2 py-4 text-center transition-colors hover:border-border-strong"
+            // Dark mode's own `surface-raised`/`foreground` pair already
+            // reads as a dark navy tile with light text, which is the look
+            // asked for — only light mode needed an explicit override to
+            // match it, reset back to the plain tokens under `dark:`.
+            className="flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-primary px-2 py-4 text-center transition-colors hover:border-white/20 dark:border-border dark:bg-surface-raised dark:hover:border-border-strong"
           >
             <Icon className="size-6 text-accent" aria-hidden />
-            <span className="text-xs font-medium text-foreground">{t(labelKey)}</span>
+            <span className="text-xs font-medium text-primary-foreground dark:text-foreground">
+              {t(labelKey)}
+            </span>
           </Link>
         ))}
       </section>

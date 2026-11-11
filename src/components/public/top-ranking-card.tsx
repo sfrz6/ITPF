@@ -41,15 +41,18 @@ export async function TopRankingCard({
   ];
 
   return (
-    <Card className="p-4">
-      <div className="space-y-1">
+    <Card className="overflow-hidden p-4">
+      {/* See `LatestResultCard` for why this is light-mode only: dark
+          mode's own tokens already give the rest of the card this same
+          dark-navy-with-light-text look. */}
+      <div className="-m-4 mb-0 space-y-1 rounded-t-lg bg-primary p-4 text-primary-foreground dark:m-0 dark:rounded-none dark:bg-transparent dark:p-0 dark:text-inherit">
         <Link
           href={`/rankings/${series.slug}`}
-          className="block font-semibold text-foreground hover:underline"
+          className="block font-semibold text-primary-foreground hover:underline dark:text-foreground"
         >
           {championshipDisplayName(series.name, series.nameAr, locale)}
         </Link>
-        <p className="text-xs text-muted">
+        <p className="text-xs text-primary-foreground/70 dark:text-muted">
           {t("series.championshipsCount", { count: series.championshipCount })}
         </p>
       </div>
