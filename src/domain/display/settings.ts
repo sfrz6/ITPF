@@ -1,4 +1,4 @@
-import { LOCALES, isLocale, type Locale } from "@/lib/i18n/config";
+import { isLocale, type Locale } from "@/lib/i18n/config";
 
 /**
  * The TV display board cycles through phases. Each phase is one layout shown
@@ -38,9 +38,17 @@ export function parsePhaseId(id: string): DisplayPhase | null {
   return { layout, language };
 }
 
+/**
+ * Arabic before English for each layout — the operator-facing settings list
+ * and the rotation's own default order both come from this, independent of
+ * `LOCALES`' own order (which drives the site-wide language switcher and
+ * other locale iteration, unrelated to which phase plays first here).
+ */
+const PHASE_LANGUAGE_ORDER: readonly Locale[] = ["ar", "en"];
+
 /** Every layout crossed with every language, in a fixed, predictable order. */
 export const ALL_PHASES: readonly DisplayPhase[] = DISPLAY_LAYOUTS.flatMap((layout) =>
-  LOCALES.map((language) => ({ layout, language })),
+  PHASE_LANGUAGE_ORDER.map((language) => ({ layout, language })),
 );
 
 export const DEFAULT_PHASE_DURATION_SECONDS = 9;
