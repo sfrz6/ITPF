@@ -44,32 +44,47 @@ const ROW_SIZE = {
   topFive: {
     li: "gap-x-8 px-9 py-7",
     rank: "w-20 text-6xl",
+    rankColor: "text-neutral-400",
     flag: "h-16 w-24",
     name: "text-6xl",
     total: "text-6xl",
+    weight: "font-bold",
   },
   full: {
     li: "gap-x-5 px-6 py-5",
     rank: "w-12 text-3xl",
+    rankColor: "text-neutral-400",
     flag: "h-11 w-16",
     name: "text-3xl",
     total: "text-3xl",
+    weight: "font-bold",
   },
   // The Overall layout's three columns share a third of the screen each, so
   // every row size in it is scaled down from the full-width phases above.
+  // Bumped a size up from the other rows here (and the row's own vertical
+  // padding trimmed to match) so the name and total read larger without
+  // growing the row itself, with a heavier weight than the other sizes —
+  // this is the one phase read from across a venue in the smallest column
+  // width, where a bolder weight matters most.
   overallRider: {
-    li: "gap-x-3 px-4 py-2.5",
-    rank: "w-9 text-xl",
+    li: "gap-x-3 px-4 py-2",
+    // Wider than the name/total text so the rank stands out as its own
+    // heavier, pure-black mark rather than the muted gray used elsewhere.
+    rank: "w-12 text-3xl",
+    rankColor: "text-black",
     flag: "h-8 w-12",
-    name: "text-xl",
-    total: "text-xl",
+    name: "text-2xl",
+    total: "text-2xl",
+    weight: "font-extrabold",
   },
   overallCountry: {
-    li: "gap-x-3 px-4 py-2.5",
-    rank: "w-9 text-xl",
+    li: "gap-x-3 px-4 py-2",
+    rank: "w-12 text-3xl",
+    rankColor: "text-black",
     flag: "h-8 w-12",
-    name: "text-xl",
-    total: "text-xl",
+    name: "text-2xl",
+    total: "text-2xl",
+    weight: "font-extrabold",
   },
 } as const;
 
@@ -100,10 +115,10 @@ function RankedList({
           key={row.key}
           className={`col-span-full grid grid-cols-subgrid items-center rounded-xl border border-black/10 bg-white/70 shadow-sm ${s.li}`}
         >
-          <span className={`text-end font-bold text-neutral-400 ${s.rank}`}>{row.rank}</span>
+          <span className={`text-end ${s.rankColor} ${s.weight} ${s.rank}`}>{row.rank}</span>
           <CountryFlag iso2={row.iso2} className={`rounded-sm ${s.flag}`} />
-          <span className={`min-w-0 font-bold text-neutral-900 ${s.name}`}>{row.name}</span>
-          <span className={`numeric justify-self-end font-bold text-neutral-900 ${s.total}`}>
+          <span className={`min-w-0 truncate text-neutral-900 ${s.weight} ${s.name}`}>{row.name}</span>
+          <span className={`numeric justify-self-end text-neutral-900 ${s.weight} ${s.total}`}>
             {row.total}
           </span>
         </li>
@@ -208,8 +223,12 @@ function OverallColumn({
           className="pointer-events-none absolute inset-0 z-0 m-auto h-[70%] w-[70%] select-none object-contain opacity-35"
         />
       ) : null}
+      {/* Bigger and bolder than before, but `leading-none` plus a larger
+          margin below it claws back exactly the line-height it gained, so
+          the title reads like a real header without pushing the rows
+          beneath it down any further than they already sat. */}
       <h2
-        className={`relative z-10 mb-4 shrink-0 text-center text-lg font-bold uppercase tracking-[0.15em] ${
+        className={`relative z-10 mb-5 shrink-0 whitespace-nowrap text-center text-2xl font-extrabold uppercase leading-none tracking-[0.02em] ${
           tone === "dark" ? "text-white" : "text-blue-950"
         }`}
       >
