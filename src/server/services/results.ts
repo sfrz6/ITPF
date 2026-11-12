@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import {
   championshipCountries,
@@ -37,14 +37,17 @@ import type { Locale } from "@/lib/i18n/config";
 export async function loadConfirmedRuns(
   championshipId: string,
   dayNumber?: DayNumber,
+  options?: { readonly includePending?: boolean },
 ): Promise<readonly ConfirmedRun[]> {
   const db = getDb();
+  const includePending = options?.includePending ?? false;
 
   const rows = await db
     .select({
       runId: championshipRuns.id,
       runNumber: championshipRuns.runNumber,
       timeLimitSeconds: championshipRuns.timeLimitSeconds,
+      status: championshipRuns.status,
       championshipEventId: championshipEvents.id,
       eventType: championshipEvents.eventType,
       dayNumber: championshipDays.dayNumber,
@@ -70,7 +73,9 @@ export async function loadConfirmedRuns(
     .where(
       and(
         eq(championshipDays.championshipId, championshipId),
-        eq(championshipRuns.status, "CONFIRMED"),
+        includePending
+          ? inArray(championshipRuns.status, ["CONFIRMED", "IN_PROGRESS", "REVIEW"])
+          : eq(championshipRuns.status, "CONFIRMED"),
         dayNumber === undefined ? undefined : eq(championshipDays.dayNumber, dayNumber),
       ),
     )
@@ -113,6 +118,7 @@ export async function loadConfirmedRuns(
           dayNumber: row.dayNumber as DayNumber,
           runNumber: row.runNumber,
           timeLimitSeconds: row.timeLimitSeconds,
+          pending: row.status !== "CONFIRMED",
         },
         units: new Map(),
       };
@@ -331,7 +337,13 @@ export interface ChampionshipResults {
 }
 
 /**
- * Everything the results pages need, derived from confirmed data only.
+ * Everything the results pages need.
+ *
+ * By default this reads confirmed data only. Pass `includePending` to also
+ * fold in a run a referee has saved but not yet confirmed (see
+ * `loadConfirmedRuns`) — only the spectator-facing pages that are meant to
+ * read live do this; every other caller keeps the original confirmed-only
+ * behavior unchanged.
  *
  * Results are always recomputed from the stored scores rather than cached, so a
  * correction to a confirmed run is reflected everywhere as soon as it commits
@@ -340,9 +352,10 @@ export interface ChampionshipResults {
 export async function loadChampionshipResults(
   championshipId: string,
   locale: Locale,
+  options?: { readonly includePending?: boolean },
 ): Promise<ChampionshipResults> {
   const [runs, directory, tieBreaks] = await Promise.all([
-    loadConfirmedRuns(championshipId),
+    loadConfirmedRuns(championshipId, undefined, options),
     loadParticipantDirectory(championshipId, locale),
     loadTieBreakRounds(championshipId),
   ]);

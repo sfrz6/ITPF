@@ -124,7 +124,15 @@ function RankedList({
           <span className={`${s.rankAlign} ${s.rankColor} ${s.weight} ${s.rank}`}>{row.rank}</span>
           <CountryFlag iso2={row.iso2} className={`rounded-sm ${s.flag}`} />
           <span className={`min-w-0 truncate text-neutral-900 ${s.weight} ${s.name}`}>{row.name}</span>
-          <span className={`numeric justify-self-end text-neutral-900 ${s.weight} ${s.total}`}>
+          <span
+            className={`numeric flex items-center justify-self-end gap-2 text-neutral-900 ${s.weight} ${s.total}`}
+          >
+            {row.pending ? (
+              <span
+                className="size-2.5 shrink-0 rounded-full bg-green-500 motion-safe:animate-pulse"
+                aria-hidden
+              />
+            ) : null}
             {row.total}
           </span>
         </li>

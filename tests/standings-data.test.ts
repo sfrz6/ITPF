@@ -51,6 +51,8 @@ describe("buildStandingsData — cross-scope tie-break reuse", () => {
       ]),
       runResults: new Map(),
       daysWithResults: [1],
+      pendingRiderIds: new Set(),
+      pendingCountryIds: new Set(),
     };
 
     const tieBreaks = new Map<TieBreakKey, StoredTieBreakRound>([
@@ -110,6 +112,8 @@ describe("buildStandingsData — cross-scope tie-break reuse", () => {
       ]),
       runResults: new Map(),
       daysWithResults: [1, 2],
+      pendingRiderIds: new Set(),
+      pendingCountryIds: new Set(),
     };
 
     // Recorded for Day 1's tie (a vs b, both at 100). Country "a" has since
@@ -229,6 +233,8 @@ describe("buildStandingsData — a direct tie-break round always applies", () =>
       ]),
       runResults: new Map(),
       daysWithResults: [1],
+      pendingRiderIds: new Set(),
+      pendingCountryIds: new Set(),
     };
 
     const tieBreaks = new Map<TieBreakKey, StoredTieBreakRound>([
@@ -280,6 +286,8 @@ describe("buildStandingsData — a direct tie-break round always applies", () =>
       ]),
       runResults: new Map(),
       daysWithResults: [1],
+      pendingRiderIds: new Set(),
+      pendingCountryIds: new Set(),
     };
 
     const tieBreaks = new Map<TieBreakKey, StoredTieBreakRound>([

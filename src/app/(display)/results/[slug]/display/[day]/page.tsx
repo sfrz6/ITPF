@@ -52,7 +52,9 @@ export default async function ChampionshipDisplayPage({
   const byLocale = Object.fromEntries(
     await Promise.all(
       LOCALES.map(async (locale) => {
-        const results = await loadChampionshipResults(championship.id, locale);
+        const results = await loadChampionshipResults(championship.id, locale, {
+          includePending: true,
+        });
         const t = createTranslator(getDictionary(locale));
         const { sets } = buildStandingsData(results, t);
         return [

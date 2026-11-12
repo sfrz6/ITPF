@@ -92,6 +92,8 @@ export interface StandingRow {
   /** Country rows only: pair, team and relay faults charged to the country. */
   readonly countryFaults: string | null;
   readonly total: string;
+  /** True when this total still includes a run a referee has saved but not yet confirmed. */
+  readonly pending: boolean;
 }
 
 export interface StandingsSet {
@@ -155,6 +157,7 @@ function buildSet(
         riderPoints: null,
         countryFaults: null,
         total: formatPoints(standing.total),
+        pending: totals.pendingRiderIds.has(standing.key),
       };
     }
 
@@ -181,6 +184,7 @@ function buildSet(
       riderPoints: formatPoints(riderPoints ?? 0),
       countryFaults: formatPoints(faults ?? 0),
       total: formatPoints(standing.total),
+      pending: totals.pendingCountryIds.has(standing.key),
     };
   });
 

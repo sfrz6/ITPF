@@ -408,6 +408,7 @@ export const en = {
     overall: "Overall",
     onlyConfirmed: "Only confirmed runs are included.",
     noConfirmedRuns: "No runs have been confirmed yet.",
+    liveScore: "Live",
     tied: "Tied",
     tieBreakNeeded: "Tie-break required",
     tieBreakRound: "Tie-break round",

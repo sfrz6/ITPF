@@ -59,7 +59,18 @@ export function CountryRiderTable({
                     <RankBadge rank={row.rank} className="mx-auto" />
                   </TdNum>
                   <Td>{row.name}</Td>
-                  <TdNum className="font-semibold">{row.total}</TdNum>
+                  <TdNum className="font-semibold">
+                    <span className="inline-flex items-center justify-end gap-1.5">
+                      {row.pending ? (
+                        <span
+                          className="size-1.5 shrink-0 rounded-full bg-success motion-safe:animate-pulse"
+                          aria-hidden
+                          title={t("results.liveScore")}
+                        />
+                      ) : null}
+                      {row.total}
+                    </span>
+                  </TdNum>
                 </Tr>
               ))}
             </TBody>

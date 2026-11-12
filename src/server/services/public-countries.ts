@@ -103,6 +103,8 @@ export interface CountryRiderRankingRow {
   readonly rank: number;
   readonly name: string;
   readonly total: string;
+  /** True when this total still includes a run a referee has saved but not yet confirmed. */
+  readonly pending: boolean;
 }
 
 /**
@@ -128,12 +130,12 @@ export async function getCountryRiderResults(
 
   const riderTotalsByDiscipline = new Map<
     SeriesRankingDiscipline,
-    Map<string, { name: string; total: Decimal }>
+    Map<string, { name: string; total: Decimal; pending: boolean }>
   >(DISCIPLINE_FILTERS.map((discipline) => [discipline, new Map()]));
 
   for (const championship of championshipRows) {
     const [runs, championshipRiders] = await Promise.all([
-      loadConfirmedRuns(championship.id),
+      loadConfirmedRuns(championship.id, undefined, { includePending: true }),
       listChampionshipRiders(championship.id, locale),
     ]);
 
@@ -156,6 +158,7 @@ export async function getCountryRiderResults(
         riderTotals.set(info.riderId, {
           name: info.fullName,
           total: (existing?.total ?? ZERO).plus(totalsForRider.overall),
+          pending: (existing?.pending ?? false) || totals.pendingRiderIds.has(championshipRiderId),
         });
       }
     }
@@ -174,6 +177,7 @@ export async function getCountryRiderResults(
         rank: standing.rank,
         name: shortenPersonName(info.name),
         total: formatPoints(standing.total),
+        pending: info.pending,
       };
     });
   }
@@ -208,6 +212,8 @@ export interface CountryChampionshipHistoryEntry {
   readonly locationAr: string | null;
   /** Null only if the country has no recorded country-total yet (no confirmed runs). */
   readonly rank: number | null;
+  /** True when `rank` still includes a run a referee has saved but not yet confirmed. */
+  readonly pending: boolean;
 }
 
 /**
@@ -240,18 +246,20 @@ export async function getCountryChampionshipHistory(
   const entries: CountryChampionshipHistoryEntry[] = [];
   for (const row of championshipRows) {
     const [results, championshipCountryRecords] = await Promise.all([
-      loadChampionshipResults(row.championshipId, locale),
+      loadChampionshipResults(row.championshipId, locale, { includePending: true }),
       listChampionshipCountries(row.championshipId, locale),
     ]);
 
     const thisCountry = championshipCountryRecords.find((entry) => entry.countryId === countryId);
     let rank: number | null = null;
+    let pending = false;
     if (thisCountry) {
       const standings = buildStandings(results.totals, { scope: "OVERALL", subject: "COUNTRY" });
       rank = standings.find((standing) => standing.key === thisCountry.championshipCountryId)?.rank ?? null;
+      pending = results.totals.pendingCountryIds.has(thisCountry.championshipCountryId);
     }
 
-    entries.push({ ...row, rank });
+    entries.push({ ...row, rank, pending });
   }
 
   return entries;

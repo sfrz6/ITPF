@@ -62,12 +62,16 @@ export default async function PublicChampionshipResultsPage({
   const championship = await getChampionshipBySlug(slug);
   if (!championship) notFound();
 
-  // `loadChampionshipResults` and `getLastConfirmedRun` both read confirmed
-  // runs only, so a run still being scored never appears here. `getNextRun`
-  // only exposes the schedule (event, run number, peg size) of the run that
-  // has not started yet, never any score, so it is safe to show publicly.
+  // `loadChampionshipResults` also folds in a run a referee has saved but not
+  // yet confirmed (marked `pending` on the resulting rows), so a visitor sees
+  // a score as soon as it's entered rather than only once it's confirmed.
+  // `getLastConfirmedRun` still reads confirmed runs only — it reports which
+  // run was last *confirmed*, a different fact from the live totals above.
+  // `getNextRun` only exposes the schedule (event, run number, peg size) of
+  // the run that has not started yet, never any score, so it is safe to show
+  // publicly either way.
   const [results, lastRun, nextRun, detail] = await Promise.all([
-    loadChampionshipResults(championship.id, locale),
+    loadChampionshipResults(championship.id, locale, { includePending: true }),
     getLastConfirmedRun(championship.id),
     getNextRun(championship.id),
     getChampionshipDetail(championship.id),

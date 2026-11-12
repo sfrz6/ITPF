@@ -187,6 +187,8 @@ export interface SeriesRankingRow {
   readonly iso2: string;
   /** Only present on an individual row. */
   readonly countryName?: string;
+  /** True when this total still includes a run a referee has saved but not yet confirmed. */
+  readonly pending: boolean;
 }
 
 export interface SeriesRankingChampionship {
@@ -239,6 +241,7 @@ interface RiderAccumulator {
   readonly iso2: string;
   readonly countryName: string;
   total: Decimal;
+  pending: boolean;
 }
 
 interface CountryAccumulator {
@@ -246,6 +249,7 @@ interface CountryAccumulator {
   readonly name: string;
   readonly iso2: string;
   total: Decimal;
+  pending: boolean;
 }
 
 /** Shared with the public countries/riders pages, which group a rider's or country's confirmed runs the same way. */
@@ -306,7 +310,7 @@ export async function computeSeriesRankings(
 
   for (const championship of championshipRows) {
     const [runs, championshipRiders, championshipCountries] = await Promise.all([
-      loadConfirmedRuns(championship.id),
+      loadConfirmedRuns(championship.id, undefined, { includePending: true }),
       listChampionshipRiders(championship.id, locale),
       listChampionshipCountries(championship.id, locale),
     ]);
@@ -331,6 +335,7 @@ export async function computeSeriesRankings(
           iso2: info.iso2,
           countryName: info.countryName,
           total: (existing?.total ?? ZERO).plus(riderTotals.overall),
+          pending: (existing?.pending ?? false) || totals.pendingRiderIds.has(championshipRiderId),
         });
       }
 
@@ -343,6 +348,7 @@ export async function computeSeriesRankings(
           name: info.name,
           iso2: info.iso2,
           total: (existing?.total ?? ZERO).plus(countryTotals.overall),
+          pending: (existing?.pending ?? false) || totals.pendingCountryIds.has(championshipCountryId),
         });
       }
     }
@@ -381,6 +387,7 @@ export async function computeSeriesRankings(
         name: shortenPersonName(info.name),
         iso2: info.iso2,
         countryName: info.countryName,
+        pending: info.pending,
       };
     });
     country[discipline] = countryStandings.map((standing) => {
@@ -391,6 +398,7 @@ export async function computeSeriesRankings(
         total: formatPoints(standing.total),
         name: info.name,
         iso2: info.iso2,
+        pending: info.pending,
       };
     });
   }

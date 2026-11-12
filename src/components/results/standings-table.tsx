@@ -239,7 +239,16 @@ export function StandingsTable({
                   </span>
                 </Td>
                 <TdNum className={cn(STICKY_END, "border-s border-border font-semibold")}>
-                  {row.total}
+                  <span className="inline-flex items-center justify-end gap-1.5">
+                    {row.pending ? (
+                      <span
+                        className="size-1.5 shrink-0 rounded-full bg-success motion-safe:animate-pulse"
+                        aria-hidden
+                        title={t("results.liveScore")}
+                      />
+                    ) : null}
+                    {row.total}
+                  </span>
                 </TdNum>
               </Tr>
             );

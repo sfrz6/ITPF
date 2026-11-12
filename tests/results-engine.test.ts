@@ -52,6 +52,7 @@ const runs: ConfirmedRun[] = [
     dayNumber: 1,
     runNumber: 1,
     timeLimitSeconds: "6.40",
+    pending: false,
     units: [
       ...individualUnits(OMAN, omanRiders, [6, 4, 6, 0], [6.0, 7.4, 6.4, 6.0]),
       ...individualUnits(JORDAN, jordanRiders, [6, 6, 2, 4], [6.4, 6.4, 6.4, 6.4]),
@@ -64,6 +65,7 @@ const runs: ConfirmedRun[] = [
     dayNumber: 1,
     runNumber: 1,
     timeLimitSeconds: "7.00",
+    pending: false,
     units: [
       {
         unitIndex: 0,
@@ -110,6 +112,7 @@ const runs: ConfirmedRun[] = [
     dayNumber: 1,
     runNumber: 1,
     timeLimitSeconds: "7.00",
+    pending: false,
     units: [
       teamUnit(OMAN, omanRiders, [6, 6, 6, 6], 7.0),
       teamUnit(JORDAN, jordanRiders, [2, 2, 2, 2], 11.0), // 4 s over, -2
@@ -202,6 +205,7 @@ describe("standings from aggregated totals", () => {
         dayNumber: 1,
         runNumber: 1,
         timeLimitSeconds: "6.40",
+        pending: false,
         units: [
           ...individualUnits(OMAN, ["a", "b"], [6, 6], [6, 6]),
         ],
@@ -226,5 +230,40 @@ describe("standings from aggregated totals", () => {
     expect(withTieBreak[0]!.key).toBe("b");
     expect(withTieBreak[0]!.rank).toBe(1);
     expect(withTieBreak[1]!.rank).toBe(2);
+  });
+
+  it("folds a pending run's points into the totals and flags who it touched", () => {
+    const totals = aggregateChampionship([
+      {
+        runId: "confirmed-1",
+        championshipEventId: "ev",
+        eventType: "INDIVIDUAL_LANCE",
+        dayNumber: 1,
+        runNumber: 1,
+        timeLimitSeconds: "6.40",
+        pending: false,
+        units: individualUnits(OMAN, ["o1"], [6], [6]),
+      },
+      {
+        runId: "pending-1",
+        championshipEventId: "ev",
+        eventType: "INDIVIDUAL_LANCE",
+        dayNumber: 1,
+        runNumber: 2,
+        timeLimitSeconds: "6.40",
+        pending: true,
+        units: individualUnits(JORDAN, ["j1"], [4], [6]),
+      },
+    ]);
+
+    // Totals already include the pending run's points, not just the confirmed one's.
+    expect(totals.riders.get("o1")!.overall.toString()).toBe("6");
+    expect(totals.riders.get("j1")!.overall.toString()).toBe("4");
+
+    // Only the pending run's rider/country are flagged, not the confirmed one's.
+    expect(totals.pendingRiderIds.has("j1")).toBe(true);
+    expect(totals.pendingRiderIds.has("o1")).toBe(false);
+    expect(totals.pendingCountryIds.has(JORDAN)).toBe(true);
+    expect(totals.pendingCountryIds.has(OMAN)).toBe(false);
   });
 });

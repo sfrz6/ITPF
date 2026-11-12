@@ -409,6 +409,7 @@ export const ar: Dictionary = {
     overall: "الإجمالي",
     onlyConfirmed: "تُحتسب الجولات المعتمدة فقط.",
     noConfirmedRuns: "لم تُعتمد أي جولة بعد.",
+    liveScore: "مباشر",
     tied: "تعادل",
     tieBreakNeeded: "جولة تمايز مطلوبة",
     tieBreakRound: "جولة التمايز",

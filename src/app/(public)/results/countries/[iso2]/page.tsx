@@ -97,6 +97,13 @@ export default async function PublicCountryProfilePage({
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
+                  {entry.pending ? (
+                    <span
+                      className="size-1.5 shrink-0 rounded-full bg-success motion-safe:animate-pulse"
+                      aria-hidden
+                      title={t("results.liveScore")}
+                    />
+                  ) : null}
                   {entry.rank !== null ? (
                     entry.rank <= 3 ? (
                       <span

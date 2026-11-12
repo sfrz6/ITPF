@@ -36,7 +36,7 @@ export async function LatestResultCard({
 }) {
   const { t } = await getTranslator();
   const [results, detail] = await Promise.all([
-    loadChampionshipResults(championship.id, locale),
+    loadChampionshipResults(championship.id, locale, { includePending: true }),
     getChampionshipDetail(championship.id),
   ]);
 
@@ -87,7 +87,14 @@ export async function LatestResultCard({
               <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
                 {row.name}
               </span>
-              <span className="numeric shrink-0 text-sm font-semibold text-foreground">
+              <span className="numeric flex shrink-0 items-center gap-1.5 text-sm font-semibold text-foreground">
+                {row.pending ? (
+                  <span
+                    className="size-1.5 shrink-0 rounded-full bg-success motion-safe:animate-pulse"
+                    aria-hidden
+                    title={t("results.liveScore")}
+                  />
+                ) : null}
                 {row.total}
               </span>
             </li>

@@ -28,6 +28,13 @@ export interface ConfirmedRun {
   readonly runNumber: number;
   readonly timeLimitSeconds: Numeric;
   readonly units: readonly ScoringUnitInput[];
+  /**
+   * True for a run a referee has saved but not yet confirmed. Only ever true
+   * when the caller opted into seeing those (see `loadConfirmedRuns`) — the
+   * name stays `ConfirmedRun` since most callers still only ever see
+   * official, confirmed runs.
+   */
+  readonly pending: boolean;
 }
 
 export interface RiderTotals {
@@ -58,6 +65,9 @@ export interface ChampionshipTotals {
   readonly countries: ReadonlyMap<string, CountryTotals>;
   readonly runResults: ReadonlyMap<string, RunScoringResult>;
   readonly daysWithResults: readonly DayNumber[];
+  /** Riders/countries with at least one contribution from a `pending` run — their total can still change before a referee confirms it. */
+  readonly pendingRiderIds: ReadonlySet<string>;
+  readonly pendingCountryIds: ReadonlySet<string>;
 }
 
 const DAYS: readonly DayNumber[] = [1, 2, 3];
@@ -91,6 +101,8 @@ export function aggregateChampionship(runs: readonly ConfirmedRun[]): Championsh
   const countryRiderPointsByDay = new Map<string, Map<DayNumber, Decimal>>();
   const countryPenaltiesByDay = new Map<string, Map<DayNumber, Decimal>>();
   const daysSeen = new Set<DayNumber>();
+  const pendingRiderIds = new Set<string>();
+  const pendingCountryIds = new Set<string>();
 
   for (const run of runs) {
     const input: RunScoringInput = {
@@ -104,6 +116,10 @@ export function aggregateChampionship(runs: readonly ConfirmedRun[]): Championsh
 
     for (const rider of result.riders) {
       riderCountry.set(rider.championshipRiderId, rider.championshipCountryId);
+      if (run.pending) {
+        pendingRiderIds.add(rider.championshipRiderId);
+        pendingCountryIds.add(rider.championshipCountryId);
+      }
 
       let days = riderByDay.get(rider.championshipRiderId);
       if (!days) {
@@ -121,6 +137,7 @@ export function aggregateChampionship(runs: readonly ConfirmedRun[]): Championsh
     }
 
     for (const country of result.countries) {
+      if (run.pending) pendingCountryIds.add(country.championshipCountryId);
       let points = countryRiderPointsByDay.get(country.championshipCountryId);
       if (!points) {
         points = new Map();
@@ -187,6 +204,8 @@ export function aggregateChampionship(runs: readonly ConfirmedRun[]): Championsh
     countries,
     runResults,
     daysWithResults: DAYS.filter((day) => daysSeen.has(day)),
+    pendingRiderIds,
+    pendingCountryIds,
   };
 }
 
