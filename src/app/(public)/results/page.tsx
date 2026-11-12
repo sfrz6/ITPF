@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronRight, Trophy, Users } from "lucide-react";
-import { championshipDisplayName, formatCompetitionDate } from "@/components/common/formatting";
+import { championshipDisplayName, formatCompetitionDateRange } from "@/components/common/formatting";
 import { Button } from "@/components/ui/button";
 import { Badge, Card, CardContent, CardHeader, CardTitle, EmptyState, PageHeader } from "@/components/ui/surfaces";
 import { getTranslator } from "@/lib/i18n/server";
@@ -69,9 +69,9 @@ export default async function PublicResultsIndexPage() {
                         {championshipDisplayName(championship.name, championship.nameAr, locale)}
                       </CardTitle>
                       {isLive ? (
-                        <Badge tone="success" className="shrink-0">
+                        <Badge tone="danger" className="shrink-0">
                           <span
-                            className="size-1.5 rounded-full bg-success motion-safe:animate-pulse"
+                            className="size-1.5 rounded-full bg-danger motion-safe:animate-pulse"
                             aria-hidden
                           />
                           {t("publicResults.statusLive")}
@@ -89,7 +89,7 @@ export default async function PublicResultsIndexPage() {
                       correct) right-to-left flow.
                     */}
                     <p className="text-sm text-muted">
-                      {formatCompetitionDate(championship.startDate, locale)} ·{" "}
+                      {formatCompetitionDateRange(championship.startDate, endDate, locale)} ·{" "}
                       <bdi>
                         {championshipDisplayName(
                           championship.location,

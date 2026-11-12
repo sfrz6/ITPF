@@ -44,6 +44,34 @@ export function formatCompetitionDate(isoDate: string, locale: Locale): string {
 }
 
 /**
+ * A multi-day championship's own span, e.g. "12-14 Nov 2026" — collapsing the
+ * shared month/year the way a single date would never need to. Built on
+ * `Intl.DateTimeFormat.formatRange` rather than hand-joining two formatted
+ * strings, so a span that crosses a month or year boundary (e.g. "30 Nov - 2
+ * Dec 2026") still reads correctly without special-casing it here.
+ */
+export function formatCompetitionDateRange(
+  startIsoDate: string,
+  endIsoDate: string,
+  locale: Locale,
+): string {
+  const [startYear, startMonth, startDay] = startIsoDate.split("-").map(Number);
+  const [endYear, endMonth, endDay] = endIsoDate.split("-").map(Number);
+  if (!startYear || !startMonth || !startDay || !endYear || !endMonth || !endDay) {
+    return startIsoDate;
+  }
+  const formatter = new Intl.DateTimeFormat(intlTagOf(locale), {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+  const start = Date.UTC(startYear, startMonth - 1, startDay);
+  const end = Date.UTC(endYear, endMonth - 1, endDay);
+  return start === end ? formatter.format(start) : formatter.formatRange(start, end);
+}
+
+/**
  * A championship's Arabic name is optional, entered separately from the
  * English one (never translated automatically), so this only swaps to it on
  * an Arabic-locale page when one was actually set, falling back to the

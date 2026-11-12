@@ -71,8 +71,8 @@ export default async function PublicLandingPage() {
   // too (the date ranges that define each are mutually exclusive), so this
   // never shows the same event twice.
   const carouselChampionships = [
-    ...live.map((c) => ({ ...c, isLive: true })),
-    ...upcoming.map((c) => ({ ...c, isLive: false })),
+    ...live.map((c) => ({ ...c, endDate: endDateOf(c), isLive: true })),
+    ...upcoming.map((c) => ({ ...c, endDate: endDateOf(c), isLive: false })),
   ];
 
   // Each latest-result card carries its own top-3 country standings, so it
@@ -172,7 +172,10 @@ export default async function PublicLandingPage() {
             // match it, reset back to the plain tokens under `dark:`.
             className="flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-primary px-2 py-4 text-center transition-colors hover:border-white/20 dark:border-border dark:bg-surface-raised dark:hover:border-border-strong"
           >
-            <Icon className="size-6 text-accent" aria-hidden />
+            {/* White in light mode for contrast against the teal tile;
+                dark mode's tile is a plain dark surface, so the accent gold
+                it already had still reads fine there. */}
+            <Icon className="size-6 text-white dark:text-accent" aria-hidden />
             <span className="text-xs font-medium text-primary-foreground dark:text-foreground">
               {t(labelKey)}
             </span>

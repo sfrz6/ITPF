@@ -6,7 +6,7 @@ import { CalendarDays, MapPin } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useI18n } from "@/lib/i18n/client";
 import type { Locale } from "@/lib/i18n/config";
-import { championshipDisplayName, formatCompetitionDate } from "@/components/common/formatting";
+import { championshipDisplayName, formatCompetitionDateRange } from "@/components/common/formatting";
 import { ItpfLogo } from "@/components/common/itpf-logo";
 
 export interface CarouselChampionship {
@@ -17,6 +17,8 @@ export interface CarouselChampionship {
   readonly location: string;
   readonly locationAr: string | null;
   readonly startDate: string;
+  /** Last calendar day of the championship, for the "firstDay-lastDay month year" span shown on the card. */
+  readonly endDate: string;
   readonly hasChampionshipLogo: boolean;
   readonly isLive: boolean;
 }
@@ -114,12 +116,12 @@ export function UpcomingCarousel({
                   className={cn(
                     "absolute start-3 top-3 z-10 inline-flex w-fit items-center gap-1.5 rounded-sm px-1.5 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-wide",
                     championship.isLive
-                      ? "bg-success-subtle text-success"
+                      ? "bg-danger-subtle text-danger"
                       : "bg-surface-raised text-primary",
                   )}
                 >
                   {championship.isLive ? (
-                    <span className="size-1.5 rounded-full bg-success motion-safe:animate-pulse" aria-hidden />
+                    <span className="size-1.5 rounded-full bg-danger motion-safe:animate-pulse" aria-hidden />
                   ) : (
                     <CalendarDays className="size-3" aria-hidden />
                   )}
@@ -156,7 +158,7 @@ export function UpcomingCarousel({
                   </p>
                   <p className="flex items-center gap-1 truncate text-xs text-muted">
                     <CalendarDays className="size-3 shrink-0" aria-hidden />
-                    {formatCompetitionDate(championship.startDate, locale)}
+                    {formatCompetitionDateRange(championship.startDate, championship.endDate, locale)}
                   </p>
                 </div>
               </div>
