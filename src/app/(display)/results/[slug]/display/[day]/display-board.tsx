@@ -26,8 +26,8 @@ const OVERALL_RIDER_PAGE_SIZE = 10;
 const OVERALL_COUNTRY_COUNT = 10;
 /** How long a full-list page stays up before advancing to the next slice of names. */
 const SUBPAGE_ROTATE_MS = 8_000;
-/** How often fresh results are pulled in, so a just-confirmed run shows up quickly. */
-const REFRESH_MS = 10_000;
+/** How often fresh results are pulled in, so a just-saved or just-confirmed run shows up quickly. */
+const REFRESH_MS = 5_000;
 
 interface LocaleData {
   readonly championshipName: string;

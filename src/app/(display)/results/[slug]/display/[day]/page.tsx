@@ -16,10 +16,9 @@ export const metadata = { title: "Live results" };
 
 /**
  * Refreshed often: this page is meant to sit open on a venue TV and show a
- * run's result shortly after a referee confirms it, unlike the slower
- * cadence the read-at-your-own-pace results pages use.
+ * run's result shortly after a referee saves or confirms it.
  */
-export const revalidate = 10;
+export const revalidate = 5;
 
 function parseDayNumber(value: string): DayNumber | null {
   return value === "1" || value === "2" || value === "3" ? (Number(value) as DayNumber) : null;

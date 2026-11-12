@@ -24,12 +24,12 @@ import { AutoRefresh } from "../auto-refresh";
 import { PublicStandings } from "./public-standings";
 
 /**
- * Standings change only when an official confirms a run, and the published
- * record is read far more often than it changes. Revalidating every 30 seconds
- * means a newly confirmed run reaches the public within half a minute without
- * a rebuild, while a burst of readers is served from the cache.
+ * A score can change as soon as a referee saves it (see `loadChampionshipResults`'s
+ * `includePending`), and the published record is read far more often than it
+ * changes. Revalidating every 5 seconds keeps the public page close to live
+ * without a rebuild, while a burst of readers is still served from the cache.
  */
-export const revalidate = 30;
+export const revalidate = 5;
 
 export async function generateMetadata({
   params,
@@ -92,7 +92,7 @@ export default async function PublicChampionshipResultsPage({
       {/* Keeps the page current for a visitor who leaves it open, without a
           manual reload: see the component for how it avoids resetting their
           selected standings view. */}
-      <AutoRefresh intervalMs={15_000} />
+      <AutoRefresh intervalMs={5_000} />
 
       <Link
         href="/results"
