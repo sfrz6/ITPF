@@ -601,6 +601,7 @@ export const ar: Dictionary = {
     statChampionships: "البطولات",
     statAthletes: "المتسابقون",
     statBestFinish: "أفضل ترتيب عام",
+    statPodiums: "مرات الصعود إلى المنصة",
     statLatestChampionship: "آخر بطولة",
     overview: "نظرة عامة",
     teamTotalScore: "مجموع نقاط المنتخب",

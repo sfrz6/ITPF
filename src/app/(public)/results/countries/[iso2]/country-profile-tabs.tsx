@@ -3,15 +3,14 @@
 import * as React from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { CalendarDays, ChevronDown, Medal, Search, Trophy, Users } from "lucide-react";
+import { Award, CalendarDays, Medal, Search, Trophy, Users } from "lucide-react";
 import {
   championshipDisplayName,
   formatCompetitionDateRange,
-  formatNumericDate,
   formatOrdinal,
 } from "@/components/common/formatting";
 import { cn } from "@/lib/cn";
-import { Badge, Card } from "@/components/ui/surfaces";
+import { Card } from "@/components/ui/surfaces";
 import { Table, TBody, Td, TdNum, THead, Th, ThNum, TableWrapper, Tr } from "@/components/ui/table";
 import { StandingsToggle, type ToggleOption } from "@/components/results/standings-table";
 import { useI18n } from "@/lib/i18n/client";
@@ -59,10 +58,8 @@ function StatTile({
 }
 
 export function CountryProfileTabs({
-  countryName,
   profile,
 }: {
-  countryName: string;
   profile: CountryProfile;
 }) {
   const { t, locale } = useI18n();
@@ -70,11 +67,10 @@ export function CountryProfileTabs({
   // rather than its own separate page now that the two are merged.
   const searchParams = useSearchParams();
   const initialTab = searchParams.get("tab") === "athletes" ? "athletes" : "overview";
-  const [tab, setTab] = React.useState<"overview" | "history" | "athletes" | "results">(initialTab);
+  const [tab, setTab] = React.useState<"overview" | "athletes" | "results">(initialTab);
 
   const tabOptions: readonly { id: typeof tab; label: string }[] = [
     { id: "overview", label: t("publicCountries.tabOverview") },
-    { id: "history", label: t("publicCountries.tabHistory") },
     { id: "athletes", label: t("publicCountries.tabAthletes") },
     { id: "results", label: t("publicCountries.tabResults") },
   ];
@@ -101,8 +97,6 @@ export function CountryProfileTabs({
 
       {tab === "overview" ? (
         <OverviewTab profile={profile} locale={locale} />
-      ) : tab === "history" ? (
-        <HistoryTab countryName={countryName} profile={profile} locale={locale} />
       ) : tab === "athletes" ? (
         <AthletesTab profile={profile} />
       ) : (
@@ -114,6 +108,8 @@ export function CountryProfileTabs({
 
 function OverviewTab({ profile, locale }: { profile: CountryProfile; locale: Locale }) {
   const { t } = useI18n();
+  // Championships are already loaded most-recent-first.
+  const latest = profile.championships[0] ?? null;
   return (
     <div className="space-y-3">
       <h2 className="text-base font-bold text-foreground">{t("publicCountries.overview")}</h2>
@@ -134,132 +130,27 @@ function OverviewTab({ profile, locale }: { profile: CountryProfile; locale: Loc
           label={t("publicCountries.statBestFinish")}
         />
         <StatTile
-          icon={<CalendarDays className="size-5" aria-hidden />}
-          value={
-            profile.latestChampionshipDate
-              ? formatNumericDate(profile.latestChampionshipDate)
-              : "—"
-          }
-          label={t("publicCountries.statLatestChampionship")}
+          icon={<Award className="size-5" aria-hidden />}
+          value={profile.podiumCount}
+          label={t("publicCountries.statPodiums")}
         />
       </div>
-    </div>
-  );
-}
-
-function HistoryTab({
-  countryName,
-  profile,
-  locale,
-}: {
-  countryName: string;
-  profile: CountryProfile;
-  locale: Locale;
-}) {
-  const { t } = useI18n();
-  const [expanded, setExpanded] = React.useState<string | null>(profile.championships[0]?.championshipId ?? null);
-  const [scope, setScope] = React.useState<CountryProfileResultScope>("overall");
-
-  const scopeOptions: readonly ToggleOption<CountryProfileResultScope>[] = [
-    { value: "day1", label: t("results.day1") },
-    { value: "day2", label: t("results.day2") },
-    { value: "day3", label: t("results.day3") },
-    { value: "overall", label: t("results.overall") },
-  ];
-
-  return (
-    <div className="space-y-3">
-      <h2 className="text-base font-bold text-foreground">{t("publicCountries.championshipHistory")}</h2>
-      <ul className="space-y-3">
-        {profile.championships.map((championship) => {
-          const isExpanded = expanded === championship.championshipId;
-          return (
-            <li key={championship.championshipId}>
-              <Card className="overflow-hidden p-0">
-                <div className="flex flex-wrap items-center justify-between gap-3 p-4">
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold text-foreground">
-                      {championshipDisplayName(championship.name, championship.nameAr, locale)}
-                    </p>
-                    <p className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-muted">
-                      <span>{formatCompetitionDateRange(championship.startDate, championship.endDate, locale)}</span>
-                      <span>·</span>
-                      <bdi>{championshipDisplayName(championship.location, championship.locationAr, locale)}</bdi>
-                      <span>·</span>
-                      <span>{t("publicResults.countriesCount", { count: championship.countryCount })}</span>
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    {championship.pending ? <PendingDot label={t("results.liveScore")} /> : null}
-                    {championship.rank !== null ? (
-                      championship.rank <= 3 ? (
-                        <span
-                          className={cn(
-                            "inline-flex items-center gap-1.5 rounded-sm border px-1.5 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-wide",
-                            rankBadgeClassName(championship.rank),
-                          )}
-                        >
-                          {t("publicCountries.overallRank", { rank: formatOrdinal(championship.rank, locale) })}
-                        </span>
-                      ) : (
-                        <Badge tone="neutral">
-                          {t("publicCountries.overallRank", { rank: formatOrdinal(championship.rank, locale) })}
-                        </Badge>
-                      )
-                    ) : null}
-                    <Link
-                      href={`/results/${championship.slug}`}
-                      className="text-sm font-medium text-primary hover:underline"
-                    >
-                      {t("publicResults.viewResults")}
-                    </Link>
-                    <Link
-                      href={`/results/${championship.slug}/participants`}
-                      className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
-                    >
-                      <Users className="size-3.5" aria-hidden />
-                      {t("publicResults.participatingCountries")}
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => setExpanded(isExpanded ? null : championship.championshipId)}
-                      aria-expanded={isExpanded}
-                      aria-label={t("publicCountries.athletesInThisChampionship", { country: countryName })}
-                      className="flex size-7 shrink-0 items-center justify-center rounded-md border border-border text-muted hover:bg-surface-sunken"
-                    >
-                      <ChevronDown
-                        className={cn("size-4 transition-transform", isExpanded && "rotate-180")}
-                        aria-hidden
-                      />
-                    </button>
-                  </div>
-                </div>
-
-                {isExpanded ? (
-                  <div className="border-t border-border bg-surface-sunken p-4">
-                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                        {t("publicCountries.athletesInThisChampionship", { country: countryName })}
-                      </p>
-                      <StandingsToggle
-                        label={t("results.selectScope")}
-                        value={scope}
-                        options={scopeOptions}
-                        onChange={setScope}
-                      />
-                    </div>
-                    {championship.athletes.length === 0 ? (
-                      <p className="text-sm text-muted">{t("publicCountries.noAthletesInChampionship")}</p>
-                    ) : (
-                      <ScopedTotalTable rows={championship.athletes} scope={scope} />
-                    )}
-                  </div>
-                ) : null}
-              </Card>
-            </li>
-          );
-        })}
-      </ul>
+      {latest ? (
+        <Card className="flex items-center gap-3 p-4">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-subtle text-primary">
+            <CalendarDays className="size-5" aria-hidden />
+          </div>
+          <div className="min-w-0">
+            <div className="text-xs font-semibold text-muted">{t("publicCountries.statLatestChampionship")}</div>
+            <div className="truncate text-base font-extrabold text-foreground">
+              {championshipDisplayName(latest.name, latest.nameAr, locale)}
+            </div>
+            <div className="truncate text-xs text-muted">
+              {formatCompetitionDateRange(latest.startDate, latest.endDate, locale)}
+            </div>
+          </div>
+        </Card>
+      ) : null}
     </div>
   );
 }

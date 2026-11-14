@@ -604,6 +604,7 @@ export const en = {
     statChampionships: "Championships",
     statAthletes: "Athletes",
     statBestFinish: "Best overall finish",
+    statPodiums: "Podium finishes",
     statLatestChampionship: "Latest championship",
     overview: "Overview",
     teamTotalScore: "Team total score",

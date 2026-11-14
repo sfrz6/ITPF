@@ -79,7 +79,7 @@ export default async function PublicCountryProfilePage({
       </div>
 
       <Suspense fallback={null}>
-        <CountryProfileTabs countryName={country.name} profile={profile} />
+        <CountryProfileTabs profile={profile} />
       </Suspense>
     </div>
   );
