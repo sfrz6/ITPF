@@ -1,7 +1,7 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { championshipCountries, championships, countries } from "@/db/schema";
-import { aggregateChampionship, buildStandings } from "@/domain/results";
+import { aggregateChampionship, buildStandings, type ChampionshipTotals, type DayNumber } from "@/domain/results";
 import { calculateStandings } from "@/domain/scoring/standings";
 import { formatPoints, ZERO, type Decimal } from "@/domain/scoring/decimal";
 import { shortenPersonName } from "@/components/common/formatting";
@@ -193,15 +193,51 @@ export interface CountryProfileAthlete {
   readonly pending: boolean;
 }
 
+/** A single championship day, or the combined total across all three. */
+export type CountryProfileResultScope = "day1" | "day2" | "day3" | "overall";
+
+export interface CountryProfileScopedValue {
+  readonly rank: number;
+  readonly total: string;
+}
+
 export interface CountryProfileChampionshipAthleteRow {
   readonly riderId: string;
-  readonly rank: number;
   readonly name: string;
-  readonly lance: string;
-  readonly sword: string;
-  readonly hanging: string;
-  readonly total: string;
   readonly pending: boolean;
+  /** This country's own riders ranked against each other, separately for each day and overall. */
+  readonly byScope: Readonly<Record<CountryProfileResultScope, CountryProfileScopedValue>>;
+}
+
+/**
+ * Ranks a championship's riders against each other once per day and once
+ * overall, for the Day 1 / Day 2 / Day 3 / Overall toggle on the country
+ * profile's History and Results tabs. Scoped to the given rider keys (one
+ * country's own riders), the same way the cross-championship combined total
+ * is scoped today.
+ */
+function computeScopedStandings(
+  riderKeys: readonly string[],
+  totals: ChampionshipTotals,
+): Readonly<Record<CountryProfileResultScope, ReadonlyMap<string, CountryProfileScopedValue>>> {
+  const toMap = (standings: readonly { key: string; rank: number; total: Decimal }[]) =>
+    new Map(standings.map((s) => [s.key, { rank: s.rank, total: formatPoints(s.total) }]));
+
+  const forDay = (day: DayNumber) =>
+    toMap(
+      calculateStandings(
+        riderKeys.map((key) => ({ key, total: totals.riders.get(key)?.byDay.get(day) ?? ZERO })),
+      ),
+    );
+
+  return {
+    day1: forDay(1),
+    day2: forDay(2),
+    day3: forDay(3),
+    overall: toMap(
+      calculateStandings(riderKeys.map((key) => ({ key, total: totals.riders.get(key)?.overall ?? ZERO }))),
+    ),
+  };
 }
 
 export interface CountryProfileChampionship {
@@ -298,34 +334,28 @@ export async function getCountryProfile(countryId: string, locale: Locale): Prom
       pending = allTotals.pendingCountryIds.has(thisCountry.championshipCountryId);
     }
 
-    // This championship's own athlete breakdown, rank by this championship's
-    // combined total alone (not the cross-championship combined total),
-    // with each discipline's own contribution as its own column.
-    const disciplineTotals = new Map<SeriesRankingDiscipline, ReturnType<typeof aggregateChampionship>>();
+    // This championship's own athlete breakdown, ranked by this
+    // championship's combined total alone (not the cross-championship
+    // combined total) — once per day and once overall, for the Day 1 / Day 2
+    // / Day 3 / Overall toggle.
+    const disciplineTotals = new Map<Exclude<SeriesRankingDiscipline, "ALL">, ReturnType<typeof aggregateChampionship>>();
     for (const discipline of DISCIPLINE_FILTERS) {
+      if (discipline === "ALL") continue;
       disciplineTotals.set(discipline, aggregateChampionship(runs.filter((run) => matchesDiscipline(run, discipline))));
     }
-    const allForCountry = disciplineTotals.get("ALL")!;
-    const standingsForCountry = calculateStandings(
-      [...riderInfo.keys()].map((championshipRiderId) => ({
-        key: championshipRiderId,
-        total: allForCountry.riders.get(championshipRiderId)?.overall ?? ZERO,
-      })),
-    );
-    const athleteRows: CountryProfileChampionshipAthleteRow[] = standingsForCountry.map((standing) => {
-      const info = riderInfo.get(standing.key)!;
-      const lance = disciplineTotals.get("LANCE")!.riders.get(standing.key)?.overall ?? ZERO;
-      const sword = disciplineTotals.get("SWORD")!.riders.get(standing.key)?.overall ?? ZERO;
-      const hanging = disciplineTotals.get("HANGING")!.riders.get(standing.key)?.overall ?? ZERO;
+    const scopedStandings = computeScopedStandings([...riderInfo.keys()], allTotals);
+    const athleteRows: CountryProfileChampionshipAthleteRow[] = [...riderInfo.keys()].map((championshipRiderId) => {
+      const info = riderInfo.get(championshipRiderId)!;
       return {
         riderId: info.riderId,
-        rank: standing.rank,
         name: shortenPersonName(info.fullName),
-        lance: formatPoints(lance),
-        sword: formatPoints(sword),
-        hanging: formatPoints(hanging),
-        total: formatPoints(standing.total),
-        pending: allTotals.pendingRiderIds.has(standing.key),
+        pending: allTotals.pendingRiderIds.has(championshipRiderId),
+        byScope: {
+          day1: scopedStandings.day1.get(championshipRiderId)!,
+          day2: scopedStandings.day2.get(championshipRiderId)!,
+          day3: scopedStandings.day3.get(championshipRiderId)!,
+          overall: scopedStandings.overall.get(championshipRiderId)!,
+        },
       };
     });
 
@@ -347,7 +377,7 @@ export async function getCountryProfile(countryId: string, locale: Locale): Prom
 
     // Fold this championship's riders into the cross-championship accumulator.
     for (const [championshipRiderId, info] of riderInfo) {
-      const riderTotal = allForCountry.riders.get(championshipRiderId);
+      const riderTotal = allTotals.riders.get(championshipRiderId);
       if (!riderTotal) continue;
       const existing = riderAcc.get(info.riderId);
       const lance = disciplineTotals.get("LANCE")!.riders.get(championshipRiderId)?.overall ?? ZERO;

@@ -6,8 +6,8 @@ import { useSearchParams } from "next/navigation";
 import { CalendarDays, ChevronDown, Medal, Search, Trophy, Users } from "lucide-react";
 import {
   championshipDisplayName,
-  formatCompetitionDate,
   formatCompetitionDateRange,
+  formatNumericDate,
   formatOrdinal,
 } from "@/components/common/formatting";
 import { cn } from "@/lib/cn";
@@ -16,7 +16,7 @@ import { Table, TBody, Td, TdNum, THead, Th, ThNum, TableWrapper, Tr } from "@/c
 import { StandingsToggle, type ToggleOption } from "@/components/results/standings-table";
 import { useI18n } from "@/lib/i18n/client";
 import type { Locale } from "@/lib/i18n/config";
-import type { CountryProfile } from "@/server/services/public-countries";
+import type { CountryProfile, CountryProfileResultScope } from "@/server/services/public-countries";
 import type { SeriesRankingDiscipline } from "@/server/services/series";
 
 function rankBadgeClassName(rank: number): string {
@@ -57,12 +57,6 @@ function StatTile({
     </Card>
   );
 }
-
-const DISCIPLINE_COLUMN_KEY = {
-  LANCE: "lance",
-  SWORD: "sword",
-  HANGING: "hanging",
-} as const;
 
 export function CountryProfileTabs({
   countryName,
@@ -143,7 +137,7 @@ function OverviewTab({ profile, locale }: { profile: CountryProfile; locale: Loc
           icon={<CalendarDays className="size-5" aria-hidden />}
           value={
             profile.latestChampionshipDate
-              ? formatCompetitionDate(profile.latestChampionshipDate, locale)
+              ? formatNumericDate(profile.latestChampionshipDate)
               : "—"
           }
           label={t("publicCountries.statLatestChampionship")}
@@ -164,13 +158,13 @@ function HistoryTab({
 }) {
   const { t } = useI18n();
   const [expanded, setExpanded] = React.useState<string | null>(profile.championships[0]?.championshipId ?? null);
-  const [discipline, setDiscipline] = React.useState<SeriesRankingDiscipline>("ALL");
+  const [scope, setScope] = React.useState<CountryProfileResultScope>("overall");
 
-  const disciplineOptions: readonly ToggleOption<SeriesRankingDiscipline>[] = [
-    { value: "ALL", label: t("rankings.allEvents") },
-    { value: "LANCE", label: t("rankings.lance") },
-    { value: "SWORD", label: t("rankings.sword") },
-    { value: "HANGING", label: t("rankings.hangingTargets") },
+  const scopeOptions: readonly ToggleOption<CountryProfileResultScope>[] = [
+    { value: "day1", label: t("results.day1") },
+    { value: "day2", label: t("results.day2") },
+    { value: "day3", label: t("results.day3") },
+    { value: "overall", label: t("results.overall") },
   ];
 
   return (
@@ -248,16 +242,16 @@ function HistoryTab({
                         {t("publicCountries.athletesInThisChampionship", { country: countryName })}
                       </p>
                       <StandingsToggle
-                        label={t("rankings.selectDiscipline")}
-                        value={discipline}
-                        options={disciplineOptions}
-                        onChange={setDiscipline}
+                        label={t("results.selectScope")}
+                        value={scope}
+                        options={scopeOptions}
+                        onChange={setScope}
                       />
                     </div>
                     {championship.athletes.length === 0 ? (
                       <p className="text-sm text-muted">{t("publicCountries.noAthletesInChampionship")}</p>
                     ) : (
-                      <DisciplineTable rows={championship.athletes} discipline={discipline} />
+                      <ScopedTotalTable rows={championship.athletes} scope={scope} />
                     )}
                   </div>
                 ) : null}
@@ -270,15 +264,16 @@ function HistoryTab({
   );
 }
 
-function DisciplineTable({
+/** Rank/athlete/total only — the rider's total and rank both reflect the selected day or the championship overall. */
+function ScopedTotalTable({
   rows,
-  discipline,
+  scope,
 }: {
   rows: CountryProfile["championships"][number]["athletes"];
-  discipline: SeriesRankingDiscipline;
+  scope: CountryProfileResultScope;
 }) {
   const { t } = useI18n();
-  const emphasize = discipline !== "ALL" ? DISCIPLINE_COLUMN_KEY[discipline] : null;
+  const sorted = [...rows].sort((a, b) => a.byScope[scope].rank - b.byScope[scope].rank);
   return (
     <TableWrapper className="bg-surface-raised">
       <Table>
@@ -286,28 +281,25 @@ function DisciplineTable({
           <Tr>
             <ThNum className="w-12">{t("common.rank")}</ThNum>
             <Th>{t("common.athlete")}</Th>
-            <ThNum className={cn(emphasize === "lance" && "text-primary")}>{t("rankings.lance")}</ThNum>
-            <ThNum className={cn(emphasize === "sword" && "text-primary")}>{t("rankings.sword")}</ThNum>
-            <ThNum className={cn(emphasize === "hanging" && "text-primary")}>{t("rankings.hangingTargets")}</ThNum>
             <ThNum>{t("common.total")}</ThNum>
           </Tr>
         </THead>
         <TBody>
-          {rows.map((row) => (
-            <Tr key={row.riderId} className={row.rank <= 3 ? "font-medium" : undefined}>
-              <TdNum>{row.rank}</TdNum>
-              <Td className="font-medium">{row.name}</Td>
-              <TdNum className={cn(emphasize === "lance" && "font-bold text-primary")}>{row.lance}</TdNum>
-              <TdNum className={cn(emphasize === "sword" && "font-bold text-primary")}>{row.sword}</TdNum>
-              <TdNum className={cn(emphasize === "hanging" && "font-bold text-primary")}>{row.hanging}</TdNum>
-              <TdNum className="font-semibold">
-                <span className="inline-flex items-center justify-end gap-1.5">
-                  {row.pending ? <PendingDot label={t("results.liveScore")} /> : null}
-                  {row.total}
-                </span>
-              </TdNum>
-            </Tr>
-          ))}
+          {sorted.map((row) => {
+            const value = row.byScope[scope];
+            return (
+              <Tr key={row.riderId} className={value.rank <= 3 ? "font-medium" : undefined}>
+                <TdNum>{value.rank}</TdNum>
+                <Td className="font-medium">{row.name}</Td>
+                <TdNum className="font-semibold">
+                  <span className="inline-flex items-center justify-end gap-1.5">
+                    {row.pending ? <PendingDot label={t("results.liveScore")} /> : null}
+                    {value.total}
+                  </span>
+                </TdNum>
+              </Tr>
+            );
+          })}
         </TBody>
       </Table>
     </TableWrapper>
@@ -365,7 +357,6 @@ function AthletesTab({ profile }: { profile: CountryProfile }) {
               <Tr>
                 <ThNum className="w-12">{t("common.rank")}</ThNum>
                 <Th>{t("common.athlete")}</Th>
-                <Th>{t("publicCountries.disciplinesColumn")}</Th>
                 <ThNum>{t("publicCountries.champsColumn")}</ThNum>
                 <ThNum>{t("common.total")}</ThNum>
               </Tr>
@@ -375,19 +366,6 @@ function AthletesTab({ profile }: { profile: CountryProfile }) {
                 <Tr key={athlete.riderId} className={athlete.rank <= 3 ? "font-medium" : undefined}>
                   <TdNum>{athlete.rank}</TdNum>
                   <Td className="font-medium">{athlete.name}</Td>
-                  <Td>
-                    <span className="flex gap-1">
-                      {athlete.hasLance ? (
-                        <Badge tone="primary" className="px-1.5 py-0">{t("rankings.lance")}</Badge>
-                      ) : null}
-                      {athlete.hasSword ? (
-                        <Badge tone="primary" className="px-1.5 py-0">{t("rankings.sword")}</Badge>
-                      ) : null}
-                      {athlete.hasHanging ? (
-                        <Badge tone="primary" className="px-1.5 py-0">{t("rankings.hangingTargets")}</Badge>
-                      ) : null}
-                    </span>
-                  </Td>
                   <TdNum className="text-muted">{athlete.championshipCount}</TdNum>
                   <TdNum className="font-semibold">
                     <span className="inline-flex items-center justify-end gap-1.5">
@@ -408,14 +386,14 @@ function AthletesTab({ profile }: { profile: CountryProfile }) {
 function ResultsTab({ profile, locale }: { profile: CountryProfile; locale: Locale }) {
   const { t } = useI18n();
   const [selected, setSelected] = React.useState<string | null>(profile.championships[0]?.championshipId ?? null);
-  const [discipline, setDiscipline] = React.useState<SeriesRankingDiscipline>("ALL");
+  const [scope, setScope] = React.useState<CountryProfileResultScope>("overall");
   const active = profile.championships.find((c) => c.championshipId === selected) ?? profile.championships[0];
 
-  const disciplineOptions: readonly ToggleOption<SeriesRankingDiscipline>[] = [
-    { value: "ALL", label: t("rankings.allEvents") },
-    { value: "LANCE", label: t("rankings.lance") },
-    { value: "SWORD", label: t("rankings.sword") },
-    { value: "HANGING", label: t("rankings.hangingTargets") },
+  const scopeOptions: readonly ToggleOption<CountryProfileResultScope>[] = [
+    { value: "day1", label: t("results.day1") },
+    { value: "day2", label: t("results.day2") },
+    { value: "day3", label: t("results.day3") },
+    { value: "overall", label: t("results.overall") },
   ];
 
   if (!active) return null;
@@ -463,16 +441,16 @@ function ResultsTab({ profile, locale }: { profile: CountryProfile; locale: Loca
         </Card>
 
         <StandingsToggle
-          label={t("rankings.selectDiscipline")}
-          value={discipline}
-          options={disciplineOptions}
-          onChange={setDiscipline}
+          label={t("results.selectScope")}
+          value={scope}
+          options={scopeOptions}
+          onChange={setScope}
         />
 
         {active.athletes.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted">{t("publicCountries.noAthletesInChampionship")}</p>
         ) : (
-          <DisciplineTable rows={active.athletes} discipline={discipline} />
+          <ScopedTotalTable rows={active.athletes} scope={scope} />
         )}
 
         <Link

@@ -44,6 +44,18 @@ export function formatCompetitionDate(isoDate: string, locale: Locale): string {
 }
 
 /**
+ * A calendar date as plain "DD-MM-YYYY", e.g. "10-12-2025" — built from the
+ * ISO string's own parts (not `Intl.DateTimeFormat`) so it always renders in
+ * the same numeral style regardless of locale, for a compact stat tile where
+ * a month name would take more room than the space allows.
+ */
+export function formatNumericDate(isoDate: string): string {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  if (!year || !month || !day) return isoDate;
+  return `${String(day).padStart(2, "0")}-${String(month).padStart(2, "0")}-${year}`;
+}
+
+/**
  * A multi-day championship's own span, e.g. "12-14 Nov 2026" — collapsing the
  * shared month/year the way a single date would never need to. Built on
  * `Intl.DateTimeFormat.formatRange` rather than hand-joining two formatted

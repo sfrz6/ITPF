@@ -64,7 +64,12 @@ export default async function PublicCountryProfilePage({
               "linear-gradient(90deg, rgba(6,13,18,0.92) 0%, rgba(6,13,18,0.65) 45%, rgba(6,13,18,0.1) 80%)",
           }}
         />
-        <div className="relative flex flex-wrap items-end gap-4 px-6 py-8 sm:px-8">
+        {/* Forced `dir="ltr"` keeps the flag and name pinned to the banner's
+            physical left edge in both locales — the gradient above always
+            fades dark-to-light left-to-right, so an Arabic-locale flip to
+            `flex-row-reverse` would push this content onto the photo's
+            brighter, lower-contrast side. */}
+        <div className="relative flex flex-wrap items-end gap-4 px-6 py-8 sm:px-8" dir="ltr">
           <CountryFlag iso2={country.iso2} name={country.name} size="lg" className="h-12 w-16 shrink-0" />
           <div className="min-w-0">
             <h1 className="text-2xl font-extrabold text-white sm:text-3xl">{country.name}</h1>
