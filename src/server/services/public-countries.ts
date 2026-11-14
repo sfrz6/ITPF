@@ -5,6 +5,7 @@ import { aggregateChampionship, buildStandings } from "@/domain/results";
 import { calculateStandings } from "@/domain/scoring/standings";
 import { formatPoints, ZERO, type Decimal } from "@/domain/scoring/decimal";
 import { shortenPersonName } from "@/components/common/formatting";
+import { addDays, CHAMPIONSHIP_DAYS } from "./championship-setup";
 import type { Locale } from "@/lib/i18n/config";
 import { listChampionshipCountries, listChampionshipRiders } from "./championships";
 import { loadChampionshipResults, loadConfirmedRuns } from "./results";
@@ -98,92 +99,6 @@ export async function listCountriesWithPublishedRiders(
   return rows.filter((row) => row.riderCount > 0);
 }
 
-export interface CountryRiderRankingRow {
-  readonly riderId: string;
-  readonly rank: number;
-  readonly name: string;
-  readonly total: string;
-  /** True when this total still includes a run a referee has saved but not yet confirmed. */
-  readonly pending: boolean;
-}
-
-/**
- * One country's own riders, ranked by their combined points across every
- * published championship this country has taken part in — the same
- * discipline grouping (`matchesDiscipline`) and accumulation approach as
- * `computeSeriesRankings`, just scoped to one country's own roster instead
- * of a hand-picked series, and ranked only against each other rather than
- * every rider in the system. Computed for every discipline bucket in one
- * pass (each championship's confirmed runs are only loaded once) rather
- * than making the caller ask again per bucket.
- */
-export async function getCountryRiderResults(
-  countryId: string,
-  locale: Locale,
-): Promise<Readonly<Record<SeriesRankingDiscipline, readonly CountryRiderRankingRow[]>>> {
-  const db = getDb();
-  const championshipRows = await db
-    .select({ id: championships.id })
-    .from(championshipCountries)
-    .innerJoin(championships, eq(championships.id, championshipCountries.championshipId))
-    .where(and(eq(championshipCountries.countryId, countryId), eq(championships.isPublished, true)));
-
-  const riderTotalsByDiscipline = new Map<
-    SeriesRankingDiscipline,
-    Map<string, { name: string; total: Decimal; pending: boolean }>
-  >(DISCIPLINE_FILTERS.map((discipline) => [discipline, new Map()]));
-
-  for (const championship of championshipRows) {
-    const [runs, championshipRiders] = await Promise.all([
-      loadConfirmedRuns(championship.id, undefined, { includePending: true }),
-      listChampionshipRiders(championship.id, locale),
-    ]);
-
-    const riderInfo = new Map(
-      championshipRiders
-        .filter((rider) => rider.countryId === countryId)
-        .map((rider) => [rider.championshipRiderId, rider]),
-    );
-    if (riderInfo.size === 0) continue;
-
-    for (const discipline of DISCIPLINE_FILTERS) {
-      const filteredRuns = runs.filter((run) => matchesDiscipline(run, discipline));
-      const totals = aggregateChampionship(filteredRuns);
-      const riderTotals = riderTotalsByDiscipline.get(discipline)!;
-
-      for (const [championshipRiderId, totalsForRider] of totals.riders) {
-        const info = riderInfo.get(championshipRiderId);
-        if (!info) continue;
-        const existing = riderTotals.get(info.riderId);
-        riderTotals.set(info.riderId, {
-          name: info.fullName,
-          total: (existing?.total ?? ZERO).plus(totalsForRider.overall),
-          pending: (existing?.pending ?? false) || totals.pendingRiderIds.has(championshipRiderId),
-        });
-      }
-    }
-  }
-
-  const result = {} as Record<SeriesRankingDiscipline, readonly CountryRiderRankingRow[]>;
-  for (const discipline of DISCIPLINE_FILTERS) {
-    const riderTotals = riderTotalsByDiscipline.get(discipline)!;
-    const standings = calculateStandings(
-      [...riderTotals.entries()].map(([riderId, info]) => ({ key: riderId, total: info.total })),
-    );
-    result[discipline] = standings.map((standing) => {
-      const info = riderTotals.get(standing.key)!;
-      return {
-        riderId: standing.key,
-        rank: standing.rank,
-        name: shortenPersonName(info.name),
-        total: formatPoints(standing.total),
-        pending: info.pending,
-      };
-    });
-  }
-  return result;
-}
-
 export async function getPublicCountryByIso2(
   iso2: string,
   locale: Locale,
@@ -263,4 +178,233 @@ export async function getCountryChampionshipHistory(
   }
 
   return entries;
+}
+
+export interface CountryProfileAthlete {
+  readonly riderId: string;
+  readonly rank: number;
+  readonly name: string;
+  readonly total: string;
+  /** Distinct published championships this rider has represented the country in. */
+  readonly championshipCount: number;
+  readonly hasLance: boolean;
+  readonly hasSword: boolean;
+  readonly hasHanging: boolean;
+  readonly pending: boolean;
+}
+
+export interface CountryProfileChampionshipAthleteRow {
+  readonly riderId: string;
+  readonly rank: number;
+  readonly name: string;
+  readonly lance: string;
+  readonly sword: string;
+  readonly hanging: string;
+  readonly total: string;
+  readonly pending: boolean;
+}
+
+export interface CountryProfileChampionship {
+  readonly championshipId: string;
+  readonly name: string;
+  readonly nameAr: string | null;
+  readonly slug: string;
+  readonly startDate: string;
+  readonly endDate: string;
+  readonly location: string;
+  readonly locationAr: string | null;
+  /** Null only if the country has no recorded total yet (no confirmed or saved runs). */
+  readonly rank: number | null;
+  readonly teamTotal: string | null;
+  readonly countryCount: number;
+  readonly pending: boolean;
+  /** This country's own riders in this championship, ranked against each other. */
+  readonly athletes: readonly CountryProfileChampionshipAthleteRow[];
+}
+
+export interface CountryProfile {
+  readonly championshipCount: number;
+  readonly athleteCount: number;
+  readonly bestRank: number | null;
+  readonly podiumCount: number;
+  readonly bestTeamScore: string | null;
+  readonly latestChampionshipDate: string | null;
+  readonly championships: readonly CountryProfileChampionship[];
+  readonly athletes: readonly CountryProfileAthlete[];
+}
+
+/**
+ * Everything the merged public country profile page needs — championship
+ * history, this country's own athlete rankings, and a per-championship
+ * Lance/Sword/Hanging Targets breakdown — computed in one pass per
+ * championship so each one's confirmed (and saved-but-unconfirmed) runs are
+ * only loaded once, the same way `getCountryRiderResults` and
+ * `getCountryChampionshipHistory` each do it separately today.
+ */
+export async function getCountryProfile(countryId: string, locale: Locale): Promise<CountryProfile> {
+  const db = getDb();
+  const championshipRows = await db
+    .select({
+      championshipId: championships.id,
+      name: championships.name,
+      nameAr: championships.nameAr,
+      slug: championships.slug,
+      startDate: championships.startDate,
+      location: championships.location,
+      locationAr: championships.locationAr,
+    })
+    .from(championshipCountries)
+    .innerJoin(championships, eq(championships.id, championshipCountries.championshipId))
+    .where(and(eq(championshipCountries.countryId, countryId), eq(championships.isPublished, true)))
+    .orderBy(sql`${championships.startDate} desc`);
+
+  const championshipsOut: CountryProfileChampionship[] = [];
+
+  // Combined across every championship: a rider's total, which disciplines
+  // they've actually scored in, and how many of this country's
+  // championships they've appeared in.
+  const riderAcc = new Map<
+    string,
+    { name: string; total: Decimal; championshipIds: Set<string>; hasLance: boolean; hasSword: boolean; hasHanging: boolean; pending: boolean }
+  >();
+
+  for (const row of championshipRows) {
+    const [runs, championshipRiders, championshipCountriesRows] = await Promise.all([
+      loadConfirmedRuns(row.championshipId, undefined, { includePending: true }),
+      listChampionshipRiders(row.championshipId, locale),
+      listChampionshipCountries(row.championshipId, locale),
+    ]);
+
+    const riderInfo = new Map(
+      championshipRiders
+        .filter((rider) => rider.countryId === countryId)
+        .map((rider) => [rider.championshipRiderId, rider]),
+    );
+    const thisCountry = championshipCountriesRows.find((entry) => entry.countryId === countryId);
+
+    // This country's OVERALL rank and raw team total for this championship,
+    // from every country's combined totals — same engine the championship's
+    // own results page uses.
+    const allTotals = aggregateChampionship(runs);
+    let rank: number | null = null;
+    let teamTotal: string | null = null;
+    let pending = false;
+    if (thisCountry) {
+      const standings = buildStandings(allTotals, { scope: "OVERALL", subject: "COUNTRY" });
+      const standing = standings.find((s) => s.key === thisCountry.championshipCountryId);
+      rank = standing?.rank ?? null;
+      const countryTotals = allTotals.countries.get(thisCountry.championshipCountryId);
+      teamTotal = countryTotals ? formatPoints(countryTotals.overall) : null;
+      pending = allTotals.pendingCountryIds.has(thisCountry.championshipCountryId);
+    }
+
+    // This championship's own athlete breakdown, rank by this championship's
+    // combined total alone (not the cross-championship combined total),
+    // with each discipline's own contribution as its own column.
+    const disciplineTotals = new Map<SeriesRankingDiscipline, ReturnType<typeof aggregateChampionship>>();
+    for (const discipline of DISCIPLINE_FILTERS) {
+      disciplineTotals.set(discipline, aggregateChampionship(runs.filter((run) => matchesDiscipline(run, discipline))));
+    }
+    const allForCountry = disciplineTotals.get("ALL")!;
+    const standingsForCountry = calculateStandings(
+      [...riderInfo.keys()].map((championshipRiderId) => ({
+        key: championshipRiderId,
+        total: allForCountry.riders.get(championshipRiderId)?.overall ?? ZERO,
+      })),
+    );
+    const athleteRows: CountryProfileChampionshipAthleteRow[] = standingsForCountry.map((standing) => {
+      const info = riderInfo.get(standing.key)!;
+      const lance = disciplineTotals.get("LANCE")!.riders.get(standing.key)?.overall ?? ZERO;
+      const sword = disciplineTotals.get("SWORD")!.riders.get(standing.key)?.overall ?? ZERO;
+      const hanging = disciplineTotals.get("HANGING")!.riders.get(standing.key)?.overall ?? ZERO;
+      return {
+        riderId: info.riderId,
+        rank: standing.rank,
+        name: shortenPersonName(info.fullName),
+        lance: formatPoints(lance),
+        sword: formatPoints(sword),
+        hanging: formatPoints(hanging),
+        total: formatPoints(standing.total),
+        pending: allTotals.pendingRiderIds.has(standing.key),
+      };
+    });
+
+    championshipsOut.push({
+      championshipId: row.championshipId,
+      name: row.name,
+      nameAr: row.nameAr,
+      slug: row.slug,
+      startDate: row.startDate,
+      endDate: addDays(row.startDate, CHAMPIONSHIP_DAYS - 1),
+      location: row.location,
+      locationAr: row.locationAr,
+      rank,
+      teamTotal,
+      countryCount: championshipCountriesRows.length,
+      pending,
+      athletes: athleteRows,
+    });
+
+    // Fold this championship's riders into the cross-championship accumulator.
+    for (const [championshipRiderId, info] of riderInfo) {
+      const riderTotal = allForCountry.riders.get(championshipRiderId);
+      if (!riderTotal) continue;
+      const existing = riderAcc.get(info.riderId);
+      const lance = disciplineTotals.get("LANCE")!.riders.get(championshipRiderId)?.overall ?? ZERO;
+      const sword = disciplineTotals.get("SWORD")!.riders.get(championshipRiderId)?.overall ?? ZERO;
+      const hanging = disciplineTotals.get("HANGING")!.riders.get(championshipRiderId)?.overall ?? ZERO;
+      const championshipIds = existing?.championshipIds ?? new Set<string>();
+      championshipIds.add(row.championshipId);
+      riderAcc.set(info.riderId, {
+        name: info.fullName,
+        total: (existing?.total ?? ZERO).plus(riderTotal.overall),
+        championshipIds,
+        hasLance: (existing?.hasLance ?? false) || lance.greaterThan(0),
+        hasSword: (existing?.hasSword ?? false) || sword.greaterThan(0),
+        hasHanging: (existing?.hasHanging ?? false) || hanging.greaterThan(0),
+        pending: (existing?.pending ?? false) || allTotals.pendingRiderIds.has(championshipRiderId),
+      });
+    }
+  }
+
+  const athleteStandings = calculateStandings(
+    [...riderAcc.entries()].map(([riderId, info]) => ({ key: riderId, total: info.total })),
+  );
+  const athletes: CountryProfileAthlete[] = athleteStandings.map((standing) => {
+    const info = riderAcc.get(standing.key)!;
+    return {
+      riderId: standing.key,
+      rank: standing.rank,
+      name: shortenPersonName(info.name),
+      total: formatPoints(standing.total),
+      championshipCount: info.championshipIds.size,
+      hasLance: info.hasLance,
+      hasSword: info.hasSword,
+      hasHanging: info.hasHanging,
+      pending: info.pending,
+    };
+  });
+
+  const ranked = championshipsOut.filter((c): c is CountryProfileChampionship & { rank: number } => c.rank !== null);
+  const bestRank = ranked.length > 0 ? Math.min(...ranked.map((c) => c.rank)) : null;
+  const podiumCount = ranked.filter((c) => c.rank <= 3).length;
+  const teamScores = championshipsOut
+    .map((c) => (c.teamTotal ? Number(c.teamTotal) : null))
+    .filter((value): value is number => value !== null);
+  const bestTeamScore = teamScores.length > 0 ? formatPoints(Math.max(...teamScores)) : null;
+  const latestChampionshipDate =
+    championshipsOut.length > 0
+      ? championshipsOut.reduce((latest, c) => (c.startDate > latest ? c.startDate : latest), championshipsOut[0]!.startDate)
+      : null;
+
+  return {
+    championshipCount: championshipsOut.length,
+    athleteCount: athletes.length,
+    bestRank,
+    podiumCount,
+    bestTeamScore,
+    latestChampionshipDate,
+    championships: championshipsOut,
+    athletes,
+  };
 }

@@ -30,7 +30,7 @@ export default async function PublicRidersIndexPage() {
             id: country.id,
             iso2: country.iso2,
             name: country.name,
-            href: `/results/riders/${country.iso2.toLowerCase()}`,
+            href: `/results/countries/${country.iso2.toLowerCase()}?tab=athletes`,
             countLabel: t("publicRiders.ridersCount", { count: country.riderCount }),
           }))}
           searchLabel={t("publicRiders.search")}

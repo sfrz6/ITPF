@@ -1,16 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { ChevronLeft, Users } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { CountryFlag } from "@/components/common/country-flag";
-import { championshipDisplayName, formatCompetitionDate, formatOrdinal } from "@/components/common/formatting";
-import { cn } from "@/lib/cn";
-import { Badge, Card } from "@/components/ui/surfaces";
 import { getTranslator } from "@/lib/i18n/server";
-import {
-  getCountryChampionshipHistory,
-  getPublicCountryByIso2,
-} from "@/server/services/public-countries";
+import { getCountryProfile, getPublicCountryByIso2 } from "@/server/services/public-countries";
+import { CountryProfileTabs } from "./country-profile-tabs";
 
 export async function generateMetadata({
   params,
@@ -28,20 +24,6 @@ export async function generateMetadata({
   };
 }
 
-/**
- * Matches the gold/silver/bronze podium treatment every other leaderboard
- * uses (see `RankBadge`): restrained color, not a generic status tone. Badge's
- * own `tone` variant always contributes its own background/text classes
- * (even when unset, it falls back to "neutral"), which would fight these
- * colors for the same CSS properties, so the podium ranks render as a plain
- * span with their own classes instead of going through `tone`.
- */
-function rankBadgeClassName(rank: number): string {
-  if (rank === 1) return "border-accent/40 bg-accent-subtle text-accent";
-  if (rank === 2) return "border-silver/50 bg-silver/15 text-foreground";
-  return "border-bronze/50 bg-bronze/15 text-foreground";
-}
-
 export default async function PublicCountryProfilePage({
   params,
 }: {
@@ -53,13 +35,11 @@ export default async function PublicCountryProfilePage({
   const country = await getPublicCountryByIso2(iso2, locale);
   if (!country) notFound();
 
-  const history = await getCountryChampionshipHistory(country.id, locale);
-  if (history.length === 0) notFound();
-
-  const mostRecent = history[0]!;
+  const profile = await getCountryProfile(country.id, locale);
+  if (profile.championshipCount === 0) notFound();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <Link
         href="/results/countries"
         className="inline-flex items-center gap-1 text-sm font-medium text-foreground hover:text-primary"
@@ -68,77 +48,34 @@ export default async function PublicCountryProfilePage({
         {t("publicCountries.allCountries")}
       </Link>
 
-      <header className="flex items-center gap-4">
-        <CountryFlag iso2={country.iso2} name={country.name} size="lg" className="h-10 w-14" />
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{country.name}</h1>
-          <p className="text-sm text-muted">
-            {t("publicCountries.championshipsCount", { count: history.length })} ·{" "}
-            {t("publicCountries.mostRecently", {
-              date: formatCompetitionDate(mostRecent.startDate, locale),
-            })}
-          </p>
+      {/* The banner photo (`public/brand/country-profile-banner.jpg`) sits
+          behind a left-to-right dark fade, so the flag and name always read
+          clearly on the left regardless of how wide the photo itself is —
+          same treatment on every tab, since the hero sits above them all. */}
+      <div
+        className="relative overflow-hidden rounded-2xl bg-ink-950 bg-cover bg-center"
+        style={{ backgroundImage: "url('/brand/country-profile-banner.jpg')" }}
+      >
+        <div
+          aria-hidden
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(90deg, rgba(6,13,18,0.92) 0%, rgba(6,13,18,0.65) 45%, rgba(6,13,18,0.1) 80%)",
+          }}
+        />
+        <div className="relative flex flex-wrap items-end gap-4 px-6 py-8 sm:px-8">
+          <CountryFlag iso2={country.iso2} name={country.name} size="lg" className="h-12 w-16 shrink-0" />
+          <div className="min-w-0">
+            <h1 className="text-2xl font-extrabold text-white sm:text-3xl">{country.name}</h1>
+            <p className="text-sm text-white/75">{t("publicCountries.heroSubtitle")}</p>
+          </div>
         </div>
-      </header>
+      </div>
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-foreground">{t("publicCountries.championshipHistory")}</h2>
-        <ul className="space-y-3">
-          {history.map((entry) => (
-            <li key={entry.championshipId}>
-              <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
-                <div className="min-w-0">
-                  <p className="truncate font-semibold text-foreground">
-                    {championshipDisplayName(entry.name, entry.nameAr, locale)}
-                  </p>
-                  <p className="text-sm text-muted">
-                    {formatCompetitionDate(entry.startDate, locale)} ·{" "}
-                    <bdi>{championshipDisplayName(entry.location, entry.locationAr, locale)}</bdi>
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  {entry.pending ? (
-                    <span
-                      className="size-1.5 shrink-0 rounded-full bg-success motion-safe:animate-pulse"
-                      aria-hidden
-                      title={t("results.liveScore")}
-                    />
-                  ) : null}
-                  {entry.rank !== null ? (
-                    entry.rank <= 3 ? (
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-1.5 rounded-sm border px-1.5 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-wide",
-                          rankBadgeClassName(entry.rank),
-                        )}
-                      >
-                        {t("publicCountries.overallRank", { rank: formatOrdinal(entry.rank, locale) })}
-                      </span>
-                    ) : (
-                      <Badge tone="neutral">
-                        {t("publicCountries.overallRank", { rank: formatOrdinal(entry.rank, locale) })}
-                      </Badge>
-                    )
-                  ) : null}
-                  <Link
-                    href={`/results/${entry.slug}`}
-                    className="text-sm font-medium text-primary hover:underline"
-                  >
-                    {t("publicResults.viewResults")}
-                  </Link>
-                  <Link
-                    href={`/results/${entry.slug}/participants`}
-                    className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
-                  >
-                    <Users className="size-3.5" aria-hidden />
-                    {t("publicResults.participatingCountries")}
-                  </Link>
-                </div>
-              </Card>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <Suspense fallback={null}>
+        <CountryProfileTabs countryName={country.name} profile={profile} />
+      </Suspense>
     </div>
   );
 }

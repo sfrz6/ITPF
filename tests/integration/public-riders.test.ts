@@ -97,7 +97,7 @@ suite("public riders directory and per-country results", () => {
 
     const {
       listCountriesWithPublishedRiders,
-      getCountryRiderResults,
+      getCountryProfile,
       getPublicCountryByIso2,
     } = await import("@/server/services/public-countries");
 
@@ -111,23 +111,23 @@ suite("public riders directory and per-country results", () => {
     expect(omanEntry.riderCount).toBe(5);
 
     const jordan = await getPublicCountryByIso2("JO", "en");
-    const jordanResults = await getCountryRiderResults(jordan!.id, "en");
+    const jordanProfile = await getCountryProfile(jordan!.id, "en");
 
     // Only Jordan's four active riders scored (the reserve never rides), and
     // every one of them must outscore the implicit zero floor, with no
     // Omani rider mixed in.
-    expect(jordanResults.ALL.length).toBeGreaterThan(0);
-    expect(jordanResults.ALL.length).toBeLessThanOrEqual(5);
-    for (const row of jordanResults.ALL) {
+    expect(jordanProfile.athletes.length).toBeGreaterThan(0);
+    expect(jordanProfile.athletes.length).toBeLessThanOrEqual(5);
+    for (const row of jordanProfile.athletes) {
       expect(row.name.startsWith("OM-")).toBe(false);
     }
     // All four scored riders tied at 6 points each, so they must all share
     // rank 1 — proof the ranking is computed only within Jordan's own rows.
-    expect(jordanResults.ALL.every((row) => row.rank === 1)).toBe(true);
-
-    // Individual Lance isn't Hanging Targets, so that bucket is empty for
-    // this fixture.
-    expect(jordanResults.HANGING).toHaveLength(0);
-    expect(jordanResults.LANCE.length).toBe(jordanResults.ALL.length);
+    expect(jordanProfile.athletes.every((row) => row.rank === 1)).toBe(true);
+    // Every scored rider appeared in exactly this one championship, and only
+    // Individual Lance was scored — never Hanging Targets.
+    expect(jordanProfile.athletes.every((row) => row.championshipCount === 1)).toBe(true);
+    expect(jordanProfile.athletes.every((row) => row.hasLance)).toBe(true);
+    expect(jordanProfile.athletes.every((row) => !row.hasHanging)).toBe(true);
   });
 });
