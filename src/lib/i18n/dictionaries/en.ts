@@ -593,7 +593,7 @@ export const en = {
     search: "Search countries",
     searchPlaceholder: "Search by country name",
     noMatches: "No countries match your search.",
-    heroSubtitle: "National team profile and championship history.",
+    heroSubtitle: "National Team Profile",
     searchAthletePlaceholder: "Search athlete by name",
     disciplinesColumn: "Disciplines",
     noAthleteMatches: "No athletes match your search.",

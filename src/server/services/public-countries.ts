@@ -190,6 +190,10 @@ export interface CountryProfileAthlete {
   readonly hasLance: boolean;
   readonly hasSword: boolean;
   readonly hasHanging: boolean;
+  /** This rider's combined total within just that one discipline, across every championship. */
+  readonly lanceTotal: string;
+  readonly swordTotal: string;
+  readonly hangingTotal: string;
   readonly pending: boolean;
 }
 
@@ -301,7 +305,18 @@ export async function getCountryProfile(countryId: string, locale: Locale): Prom
   // championships they've appeared in.
   const riderAcc = new Map<
     string,
-    { name: string; total: Decimal; championshipIds: Set<string>; hasLance: boolean; hasSword: boolean; hasHanging: boolean; pending: boolean }
+    {
+      name: string;
+      total: Decimal;
+      championshipIds: Set<string>;
+      hasLance: boolean;
+      hasSword: boolean;
+      hasHanging: boolean;
+      lanceTotal: Decimal;
+      swordTotal: Decimal;
+      hangingTotal: Decimal;
+      pending: boolean;
+    }
   >();
 
   for (const row of championshipRows) {
@@ -392,6 +407,9 @@ export async function getCountryProfile(countryId: string, locale: Locale): Prom
         hasLance: (existing?.hasLance ?? false) || lance.greaterThan(0),
         hasSword: (existing?.hasSword ?? false) || sword.greaterThan(0),
         hasHanging: (existing?.hasHanging ?? false) || hanging.greaterThan(0),
+        lanceTotal: (existing?.lanceTotal ?? ZERO).plus(lance),
+        swordTotal: (existing?.swordTotal ?? ZERO).plus(sword),
+        hangingTotal: (existing?.hangingTotal ?? ZERO).plus(hanging),
         pending: (existing?.pending ?? false) || allTotals.pendingRiderIds.has(championshipRiderId),
       });
     }
@@ -411,6 +429,9 @@ export async function getCountryProfile(countryId: string, locale: Locale): Prom
       hasLance: info.hasLance,
       hasSword: info.hasSword,
       hasHanging: info.hasHanging,
+      lanceTotal: formatPoints(info.lanceTotal),
+      swordTotal: formatPoints(info.swordTotal),
+      hangingTotal: formatPoints(info.hangingTotal),
       pending: info.pending,
     };
   });

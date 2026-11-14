@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Flag, Home, MoreHorizontal, Trophy, Users } from "lucide-react";
+import { Award, Flag, Home, MoreHorizontal, Trophy } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useI18n } from "@/lib/i18n/client";
 import { MobileNavDrawer } from "@/components/layout/mobile-nav-drawer";
@@ -28,7 +28,7 @@ export function PublicBottomNav() {
     { href: "/", label: t("nav.home"), icon: Home },
     { href: "/results", label: t("nav.championshipsShort"), icon: Trophy },
     { href: "/results/countries", label: t("publicCountries.title"), icon: Flag },
-    { href: "/results/riders", label: t("publicRiders.title"), icon: Users },
+    { href: "/rankings", label: t("rankings.title"), icon: Award },
   ] as const;
 
   return (

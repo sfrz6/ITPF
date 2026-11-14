@@ -590,7 +590,7 @@ export const ar: Dictionary = {
     search: "البحث عن دولة",
     searchPlaceholder: "البحث باسم الدولة",
     noMatches: "لا توجد دول مطابقة لبحثك.",
-    heroSubtitle: "الملف التعريفي للمنتخب الوطني وسجل بطولاته.",
+    heroSubtitle: "الملف التعريفي للمنتخب الوطني",
     searchAthletePlaceholder: "البحث باسم المتسابق",
     disciplinesColumn: "الفعاليات",
     noAthleteMatches: "لا يوجد متسابقون مطابقون لبحثك.",

@@ -326,6 +326,15 @@ function AthletesTab({ profile }: { profile: CountryProfile }) {
     return true;
   });
 
+  // The selected discipline also swaps which total is shown — the combined
+  // total only makes sense for "All events".
+  const totalFor = (athlete: CountryProfile["athletes"][number]): string => {
+    if (discipline === "LANCE") return athlete.lanceTotal;
+    if (discipline === "SWORD") return athlete.swordTotal;
+    if (discipline === "HANGING") return athlete.hangingTotal;
+    return athlete.total;
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -370,7 +379,7 @@ function AthletesTab({ profile }: { profile: CountryProfile }) {
                   <TdNum className="font-semibold">
                     <span className="inline-flex items-center justify-end gap-1.5">
                       {athlete.pending ? <PendingDot label={t("results.liveScore")} /> : null}
-                      {athlete.total}
+                      {totalFor(athlete)}
                     </span>
                   </TdNum>
                 </Tr>
